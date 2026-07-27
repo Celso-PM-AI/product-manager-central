@@ -1,7 +1,7 @@
 # Product Manager Central
 
 Product Manager Central (PMC) is an AI-assisted product management application designed to help product managers create, organize, and improve essential product artifacts.
-
+![Product Manager Central application interface](images/pmc-application.png)
 ## Product Vision
 
 Product managers often create strategies, requirements, user stories, acceptance criteria, risks, and success metrics across multiple disconnected tools.
