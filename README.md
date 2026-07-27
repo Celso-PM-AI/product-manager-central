@@ -1,56 +1,146 @@
 # Product Manager Central
 
-Product Manager Central (PMC) is a beginner-friendly Python and Streamlit project for organizing product information. Its long-term vision includes AI-assisted product documentation, but the first MVP focuses on reliable product management with SQLite.
+Product Manager Central (PMC) is an AI-assisted product management application designed to help product managers create, organize, and improve essential product artifacts.
 
-## Current status
+## Product Vision
 
-Phase 0 protected the existing SQLite data. Phase 1 repairs the filesystem structure and documents the approved MVP without changing application behavior.
+Product managers often create strategies, requirements, user stories, acceptance criteria, risks, and success metrics across multiple disconnected tools.
 
-The running application is still the original prototype: it creates products using four fields, stores them in SQLite, and lists saved products. The expanded model, centralized validation, CRUD operations, search, and dashboard workflows are planned for later approved phases.
+PMC’s long-term vision is to provide one structured workspace where product managers can maintain product context and use generative AI to produce high-quality product management artifacts.
 
-## Technology
+## Current Status
+
+PMC is currently a foundation release.
+
+Phases 0 through 3 are complete. The application has a protected SQLite database, a structured product model, centralized validation, automated tests, database operations, and a canonical database schema.
+
+Phase 4 has not started. No external AI model is currently connected, and PMC does not yet generate product artifacts using a large language model.
+
+## Current Capabilities
+
+- Streamlit user interface
+- Structured product-information capture
+- Persistent SQLite storage
+- Canonical product data model
+- Centralized input validation and normalization
+- Database backup and controlled migration
+- Automated validation and database tests
+- Modular Python project structure
+- Product and technical documentation
+
+## Planned Generative AI Capabilities
+
+Future versions of PMC are planned to help product managers create and improve:
+
+- Product strategies
+- Customer problem statements
+- Product requirements
+- User stories
+- Acceptance criteria
+- Success metrics and KPIs
+- Risks and assumptions
+- Roadmap recommendations
+- Additional product-management documents
+
+## Technology Stack
 
 - Python
 - Streamlit
 - SQLite
 - Pandas
+- Pytest
+- Generative AI and LLM integration — planned
+- Retrieval-augmented generation (RAG) — future roadmap
 
-SQLite is the application's only active data source. No external AI model is connected in the MVP.
+## Project Structure
 
-## Project structure
+- `app.py` — Streamlit application entry point
+- `src/database.py` — SQLite initialization and database operations
+- `src/models.py` — canonical Product data model and approved statuses
+- `src/validation.py` — centralized validation and normalization
+- `tests/test_validation.py` — automated validation tests
+- `tests/test_database.py` — automated database tests
+- `PROJECT_SPEC.md` — approved product and technical scope
+- `IMPLEMENTATION_PLAN.md` — phase-by-phase development plan
+- `IMPLEMENTATION_LOG.md` — development and verification history
+- `DECISIONS.md` — architecture and product decision record
 
-- `app.py`: Current Streamlit application and, later, the MVP navigation and interface.
-- `src/database.py`: Current SQLite initialization and persistence functions; CRUD and search are deferred to Phase 3.
-- `src/models.py`: Reserved for the Product data structure and approved statuses in Phase 2.
-- `src/validation.py`: Reserved for centralized validation and normalization in Phase 2.
-- `tests/test_validation.py`: Reserved for Phase 2 validation tests.
-- `tests/test_database.py`: Reserved for Phase 3 database tests.
-- `data/pmc.db`: Local live SQLite database; intentionally excluded from Git.
-- `archive/products.csv`: Preserved legacy CSV; not imported or used by the application.
-- `IMPLEMENTATION_PLAN.md`: Approved phase-by-phase development plan.
-- `PROJECT_SPEC.md`: Approved MVP product and technical scope.
-- `DECISIONS.md`: Architecture and product decision record.
+The live database, backups, virtual environment, and preserved legacy data are intentionally excluded from GitHub.
 
-## Run the current application
+## Run the Application
 
-From the project root, activate the local Python environment and run:
+### 1. Clone the repository
 
-```text
+```bash
+git clone https://github.com/Celso-PM-AI/product-manager-central.git
+cd product-manager-central
+```
+
+### 2. Create a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install the dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Start PMC
+
+```bash
 streamlit run app.py
 ```
 
-The current dependencies are listed in `requirements.txt`.
+## Run the Tests
 
-## Data safety
+Run the automated test suite from the project root:
 
-- Do not use automated tests against `data/pmc.db`.
+```bash
+pytest
+```
+
+Automated tests must not be run against the live database in `data/pmc.db`.
+
+## Development Roadmap
+
+- [x] Protect the existing product data
+- [x] Establish the project structure and documentation
+- [x] Implement the product model and centralized validation
+- [x] Complete database operations and canonical schema migration
+- [ ] Build the next product-management workflow
+- [ ] Generate product-management artifacts
+- [ ] Integrate an LLM and prompt-management layer
+- [ ] Add artifact review and editing
+- [ ] Support document export
+- [ ] Add RAG using organizational templates and documentation
+- [ ] Add authentication and cloud deployment
+
+## Data Protection
+
+- Do not commit API keys or sensitive product information.
+- Do not run automated tests against `data/pmc.db`.
 - Back up the live database before any schema change.
 - Keep database files and backups out of Git.
-- Preserve `archive/products.csv`; it is historical data, not an active data source.
+- Preserve `archive/products.csv` as historical data.
 - Do not test deletion using the preserved Product Manager Central record.
+- Store local secrets in `.env` files, which are excluded through `.gitignore`.
 
-## Development approach
+## Development Approach
 
-Development proceeds one approved phase at a time. Each phase has manual or automated checks and an approval checkpoint before the next phase begins.
+PMC is developed incrementally, one approved phase at a time. Each phase includes manual or automated verification and an approval checkpoint before the next phase begins.
 
-The following are deliberately deferred: external AI integration, AI generators, service and view layers, an ORM, advanced analytics, authentication, and cloud deployment.
+This approach demonstrates product planning, requirements definition, data modeling, validation, automated testing, controlled database migration, documentation, and responsible generative AI product development.
+
+## Portfolio Context
+
+PMC demonstrates how an AI Product Manager can translate a product vision into an incrementally delivered technical solution.
+
+The project combines product strategy with hands-on experience in Python, Streamlit, SQLite, application architecture, data protection, testing, migration planning, and a roadmap for generative AI integration.
+
+## License
+
+No open-source license has been assigned to this project.
