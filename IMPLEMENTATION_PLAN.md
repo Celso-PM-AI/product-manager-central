@@ -591,6 +591,32 @@ Before Phase 5:
 - Confirm invalid input creates no data.
 - Confirm the interface remains understandable without service or view layers.
 
+## Phase 4 completion record
+
+**Completed:** July 28, 2026
+
+The prototype behavior was documented before editing: one page displayed four
+legacy-labeled inputs, a create button with inline duplicate validation, and a
+full saved-products dataframe. It had no navigation, canonical optional fields,
+status selection, dashboard, detail view, or search.
+
+The completed Phase 4 application provides:
+
+- Sidebar navigation for Dashboard, Create Product, View Products, and Search
+  Products.
+- The four available dashboard metrics.
+- Canonical creation fields with `discovery` as the default status.
+- Centralized validation with all errors displayed and no invalid save.
+- Compact product lists and ID-based complete product details.
+- Case-insensitive search through the existing parameterized database API.
+- User-safe database errors with no direct SQLite operations in `app.py`.
+
+A permanent pre-change backup was created at
+`backups/phase4/pmc-20260728T120247Z.db` and verified as canonical with a
+successful integrity check, one preserved row, and the original ID 1 values.
+Edit and delete controls remain deferred to Phase 5; no Phase 5 implementation
+or generative AI work was started.
+
 # Phase 5: Build edit and delete workflows
 
 ## 1. Purpose

@@ -10,16 +10,18 @@ PMC’s long-term vision is to provide one structured workspace where product ma
 
 ## Current Status
 
-PMC is currently a foundation release.
+Phases 0 through 4 are complete. PMC now has a protected canonical SQLite database and a clean Streamlit interface for dashboard metrics, canonical product creation, product listing and detail views, and search.
 
-Phases 0 through 3 are complete. The application has a protected SQLite database, a structured product model, centralized validation, automated tests, database operations, and a canonical database schema.
-
-Phase 4 has not started. No external AI model is currently connected, and PMC does not yet generate product artifacts using a large language model.
+Phase 5 edit and delete workflows have not started. No external AI model is connected, and PMC does not generate product artifacts using a large language model.
 
 ## Current Capabilities
 
 - Streamlit user interface
-- Structured product-information capture
+- Dashboard metrics for total, active, launched, and recently updated products
+- Structured product creation using every canonical editable field
+- Complete saved-product detail views
+- Case-insensitive search across approved product text fields
+- Clear centralized validation errors that prevent invalid saves
 - Persistent SQLite storage
 - Canonical product data model
 - Centralized input validation and normalization
@@ -60,6 +62,7 @@ Future versions of PMC are planned to help product managers create and improve:
 - `src/validation.py` — centralized validation and normalization
 - `tests/test_validation.py` — automated validation tests
 - `tests/test_database.py` — automated database tests
+- `tests/test_app_helpers.py` — automated tests for UI presentation helpers
 - `PROJECT_SPEC.md` — approved product and technical scope
 - `IMPLEMENTATION_PLAN.md` — phase-by-phase development plan
 - `IMPLEMENTATION_LOG.md` — development and verification history
@@ -97,10 +100,10 @@ streamlit run app.py
 
 ## Run the Tests
 
-Run the automated test suite from the project root:
+Run the complete automated test suite from the project root:
 
 ```bash
-pytest
+python -m unittest discover -s tests -v
 ```
 
 Automated tests must not be run against the live database in `data/pmc.db`.
@@ -111,7 +114,8 @@ Automated tests must not be run against the live database in `data/pmc.db`.
 - [x] Establish the project structure and documentation
 - [x] Implement the product model and centralized validation
 - [x] Complete database operations and canonical schema migration
-- [ ] Build the next product-management workflow
+- [x] Build dashboard, create, view, detail, and search workflows
+- [ ] Add edit and confirmed-delete workflows
 - [ ] Generate product-management artifacts
 - [ ] Integrate an LLM and prompt-management layer
 - [ ] Add artifact review and editing

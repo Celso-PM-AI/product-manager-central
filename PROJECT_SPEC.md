@@ -102,6 +102,8 @@ The MVP deliberately avoids an ORM and additional service, view, configuration, 
 
 ## Current development status
 
-Phase 0, data protection, is complete and approved. Phase 1 repairs the project structure and documentation without changing application behavior. The current application remains the existing SQLite create-and-list prototype until later approved phases are implemented.
+Phases 0 through 4 are complete. The application uses the canonical Product model, centralized validation, and the SQLite database layer for dashboard, create, list, detail, and search workflows.
+
+Edit and confirmed-delete workflows remain deferred to Phase 5. Generative AI, external APIs, authentication, RAG, and other deferred features have not been started.
 
 Implementation must proceed one approved phase at a time according to `IMPLEMENTATION_PLAN.md`.
