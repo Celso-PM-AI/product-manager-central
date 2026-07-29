@@ -4,6 +4,9 @@ Product Manager Central (PMC) is a focused Streamlit workspace for capturing,
 finding, reviewing, editing, and safely deleting structured product information.
 The current MVP stores data locally in SQLite and does not connect to an
 external AI service.
+## Application Preview
+
+![Product Manager Central application](docs/images/pmc-application.png)
 
 ## Current capabilities
 
