@@ -6,7 +6,7 @@ The current MVP stores data locally in SQLite and does not connect to an
 external AI service.
 ## Application Preview
 
-![Product Manager Central application](docs/images/pmc-application.png)
+![Product Manager Central application](docs/images/pmc-v1 screenshot.png)
 
 ## Current capabilities
 
