@@ -77,8 +77,36 @@ Advanced charts are not part of the MVP.
 - Product definitions in `src/models.py`
 - Reusable validation in `src/validation.py`
 - Validation and database tests in `tests/`
+- Isolated Streamlit workflow tests in `tests/`
 
 The MVP deliberately avoids an ORM and additional service, view, configuration, and migration-script layers. These may be introduced later if the application becomes difficult to understand or maintain.
+
+The application accepts an optional `PMC_DATABASE_FILE` environment variable
+for isolated tests and disposable manual verification. The default and only
+live data source remains `data/pmc.db`.
+
+## Edit workflow
+
+- Edit is available from an opened product detail.
+- Every editable field is prepopulated with its current value.
+- Create and edit reuse the same field-rendering, validation, and normalization
+  behavior.
+- Invalid input displays all discovered errors and performs no update.
+- Cancel returns to the detail view without changing the database.
+- A successful edit preserves `id` and `created_at`, advances `updated_at`, and
+  returns to the refreshed detail view.
+- Missing records and database failures receive user-safe messages.
+
+## Delete workflow
+
+- Delete is available from an opened product detail.
+- The first action only opens a permanent-deletion warning identifying the
+  product name and ID.
+- Separate Confirm Delete and Cancel actions form the required second step.
+- Cancel leaves the product and database unchanged.
+- Confirmation deletes exactly one product by ID, prevents automatic repeated
+  deletion, displays a result message, and returns to the product list.
+- Missing and already-deleted IDs are handled without an unhandled error.
 
 ## Data policy
 
@@ -102,8 +130,12 @@ The MVP deliberately avoids an ORM and additional service, view, configuration, 
 
 ## Current development status
 
-Phases 0 through 4 are complete. The application uses the canonical Product model, centralized validation, and the SQLite database layer for dashboard, create, list, detail, and search workflows.
+Phases 0 through 5 are complete. The application uses the canonical Product
+model, centralized validation, and SQLite database layer for dashboard, create,
+list, detail, search, edit, and confirmed-delete workflows.
 
-Edit and confirmed-delete workflows remain deferred to Phase 5. Generative AI, external APIs, authentication, RAG, and other deferred features have not been started.
+Phase 6 has not started. Generative AI integration, external AI APIs,
+authentication, RAG, cloud deployment, export functionality, and other deferred
+features have not been started.
 
 Implementation must proceed one approved phase at a time according to `IMPLEMENTATION_PLAN.md`.

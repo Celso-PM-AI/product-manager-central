@@ -10,6 +10,17 @@
 - New timestamps will use one consistent format. UTC ISO 8601 is recommended.
 - Automated tests will use Python’s standard `unittest` and temporary databases, avoiding `requirements-dev.txt` and `conftest.py`.
 
+## Current phase status
+
+**Updated:** July 29, 2026
+
+- Phases 0 through 5 are complete.
+- Phase 6 has not started.
+- Generative AI integration has not started.
+
+The dashboard originally listed under the planned Phase 6 scope was delivered
+during Phase 4. That earlier delivery does not mark Phase 6 as started.
+
 ## Final MVP structure
 
 ```text
@@ -718,6 +729,54 @@ Before Phase 6:
 - Review confirmation wording.
 - Confirm ID-based operations protect duplicate-name records.
 - Confirm the preserved product and backup remain available.
+
+## Phase 5 completion record
+
+**Completed:** July 29, 2026
+
+The completed Phase 5 application provides:
+
+- Edit and Delete actions from each ID-based product detail.
+- One reusable canonical field renderer for create and edit.
+- Prepopulated editing of every editable field.
+- Centralized validation with all errors displayed and no invalid database
+  update.
+- Successful edits that preserve `id` and `created_at`, advance `updated_at`,
+  display confirmation, and return to the refreshed detail.
+- Explicit two-step permanent deletion that identifies the product name and ID.
+- Separate Confirm Delete and Cancel actions.
+- Safe handling for missing, already-deleted, and database-error cases.
+- Widget-safe session cleanup, success messages, and return navigation after
+  deletion.
+
+A permanent pre-change backup was created at
+`backups/phase5/pmc-pre-phase5-20260729T164045Z.db`. The live original and
+backup both had SHA-256
+`7577ddf8dc7db112a295ab862102c4e89e2485b21b8a274969dedeffbdd9f049`.
+Both passed SQLite integrity checks, contained one canonical product record,
+and produced the matching complete-rowset SHA-256
+`2b77fbbfcb5fe4914897cacf6d5f1784dd426ade8af5a1beb61e12f2601825c1`.
+The Product Manager Central record retained ID 1 and every field value.
+
+The complete automated suite passed 97 tests. Coverage includes all editable
+fields, validation immutability, system-field timestamp behavior, successful
+and repeated deletion, cancellation, missing records, database failures, and
+Phase 4 dashboard/create/list/detail/search regressions.
+
+A separate disposable-database Streamlit walkthrough passed 10 checks for edit
+prepopulation, invalid edit behavior, successful edit, search, first-step
+delete safety, canceled deletion, confirmed deletion, missing/repeated deletion,
+navigation, and persistence in a fresh session. The temporary Streamlit server
+was then stopped, restarted against the same temporary database, and returned a
+healthy status with the expected remaining record.
+
+No live product was edited or deleted. No schema migration was needed.
+`src/database.py`, `src/models.py`, and `src/validation.py` required no Phase 5
+application changes.
+
+Phase 6 was not started. Generative AI, authentication, RAG, cloud deployment,
+export functionality, new product artifacts, and unrelated architecture work
+were not started.
 
 # Phase 6: Add simple dashboard metrics and polish
 

@@ -1,5 +1,6 @@
 """Streamlit interface for Product Manager Central."""
 
+import os
 import sqlite3
 from collections.abc import Callable
 from typing import Final
@@ -7,26 +8,37 @@ from typing import Final
 import streamlit as st
 
 from src.database import (
+    DATABASE_FILE,
     DatabaseSchemaError,
     ProductValidationError,
     create_product,
+    delete_product,
     get_dashboard_metrics,
     get_product,
     initialize_database,
     list_products,
     search_products,
+    update_product,
 )
 from src.models import DEFAULT_PRODUCT_STATUS, Product, ProductStatus
 from src.validation import TEXT_FIELD_MAX_LENGTHS, validate_product
 
 
 APP_TITLE: Final[str] = "Product Manager Central"
+APP_DATABASE_FILE: Final[str] = os.environ.get("PMC_DATABASE_FILE", DATABASE_FILE)
 NAVIGATION_OPTIONS: Final[tuple[str, ...]] = (
     "Dashboard",
     "Create Product",
     "View Products",
     "Search Products",
 )
+DETAIL_MODE: Final[str] = "detail"
+EDIT_MODE: Final[str] = "edit"
+DELETE_CONFIRM_MODE: Final[str] = "delete_confirm"
+NAVIGATION_STATE_KEY: Final[str] = "navigation_section"
+PENDING_NAVIGATION_KEY: Final[str] = "_pending_navigation"
+PENDING_STATE_CLEANUP_KEY: Final[str] = "_pending_state_cleanup"
+WORKFLOW_FLASH_KEY: Final[str] = "_product_workflow_flash"
 
 
 def status_label(status: ProductStatus) -> str:
@@ -50,11 +62,11 @@ def target_users_summary(target_users: str, limit: int = 90) -> str:
     return f"{summary[: limit - 1].rstrip()}…"
 
 
-def display_database_error() -> None:
+def display_database_error(operation: str = "accessed") -> None:
     """Show a user-safe persistence error without exposing SQL details."""
 
     st.error(
-        "Product data is temporarily unavailable. "
+        f"Product data could not be {operation}. "
         "Please check the local database and try again."
     )
 
@@ -65,6 +77,181 @@ def display_validation_errors(errors: dict[str, str]) -> None:
     st.error("Please correct the following fields before saving:")
     for message in errors.values():
         st.markdown(f"- {message}")
+
+
+def editable_product_values(product: Product | None = None) -> dict[str, object]:
+    """Return form-ready values for create or edit without system fields."""
+
+    if product is None:
+        return {
+            "name": "",
+            "description": "",
+            "target_users": "",
+            "business_goal": "",
+            "status": DEFAULT_PRODUCT_STATUS,
+            "customer_problem": "",
+            "product_strategy": "",
+            "notes": "",
+        }
+
+    return {
+        "name": product.name,
+        "description": product.description,
+        "target_users": product.target_users,
+        "business_goal": product.business_goal,
+        "status": product.status,
+        "customer_problem": product.customer_problem or "",
+        "product_strategy": product.product_strategy or "",
+        "notes": product.notes or "",
+    }
+
+
+def render_product_fields(
+    *,
+    key_prefix: str,
+    product: Product | None = None,
+) -> dict[str, object]:
+    """Render every editable field and return the submitted values."""
+
+    values = editable_product_values(product)
+    name = st.text_input(
+        "Name *",
+        value=values["name"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["name"],
+        help="A clear product name.",
+        key=f"{key_prefix}_name",
+    )
+    description = st.text_area(
+        "Description *",
+        value=values["description"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["description"],
+        help="What the product is and what it enables.",
+        key=f"{key_prefix}_description",
+    )
+    target_users = st.text_area(
+        "Target users *",
+        value=values["target_users"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["target_users"],
+        help="The people or groups this product serves.",
+        key=f"{key_prefix}_target_users",
+    )
+    business_goal = st.text_area(
+        "Business goal *",
+        value=values["business_goal"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["business_goal"],
+        help="The business outcome this product should support.",
+        key=f"{key_prefix}_business_goal",
+    )
+    status = st.selectbox(
+        "Status *",
+        options=list(ProductStatus),
+        index=list(ProductStatus).index(values["status"]),
+        format_func=status_label,
+        key=f"{key_prefix}_status",
+    )
+
+    st.subheader("Optional context")
+    customer_problem = st.text_area(
+        "Customer problem",
+        value=values["customer_problem"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["customer_problem"],
+        key=f"{key_prefix}_customer_problem",
+    )
+    product_strategy = st.text_area(
+        "Product strategy",
+        value=values["product_strategy"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["product_strategy"],
+        key=f"{key_prefix}_product_strategy",
+    )
+    notes = st.text_area(
+        "Notes",
+        value=values["notes"],
+        max_chars=TEXT_FIELD_MAX_LENGTHS["notes"],
+        key=f"{key_prefix}_notes",
+    )
+
+    return {
+        "name": name,
+        "description": description,
+        "target_users": target_users,
+        "business_goal": business_goal,
+        "status": status,
+        "customer_problem": customer_problem,
+        "product_strategy": product_strategy,
+        "notes": notes,
+    }
+
+
+def action_state_keys(selector_key: str) -> tuple[str, str]:
+    """Return session-state keys for one product selector's workflow."""
+
+    return (
+        f"{selector_key}_action_mode",
+        f"{selector_key}_action_product_id",
+    )
+
+
+def set_product_action(
+    selector_key: str,
+    product_id: int,
+    mode: str,
+) -> None:
+    """Set the current ID-bound detail action."""
+
+    mode_key, product_id_key = action_state_keys(selector_key)
+    st.session_state[mode_key] = mode
+    st.session_state[product_id_key] = product_id
+
+
+def current_product_action(selector_key: str, product_id: int) -> str:
+    """Return the action for this product, resetting stale ID-bound state."""
+
+    mode_key, product_id_key = action_state_keys(selector_key)
+    if st.session_state.get(product_id_key) != product_id:
+        set_product_action(selector_key, product_id, DETAIL_MODE)
+    return str(st.session_state.get(mode_key, DETAIL_MODE))
+
+
+def request_state_cleanup(*keys: str) -> None:
+    """Schedule widget-safe session cleanup before the next app rerun."""
+
+    pending = set(st.session_state.get(PENDING_STATE_CLEANUP_KEY, ()))
+    pending.update(keys)
+    st.session_state[PENDING_STATE_CLEANUP_KEY] = tuple(pending)
+
+
+def apply_pending_state_changes() -> None:
+    """Apply navigation and cleanup requests before widgets are created."""
+
+    for key in st.session_state.pop(PENDING_STATE_CLEANUP_KEY, ()):
+        st.session_state.pop(key, None)
+
+    requested_navigation = st.session_state.pop(PENDING_NAVIGATION_KEY, None)
+    if requested_navigation in NAVIGATION_OPTIONS:
+        st.session_state[NAVIGATION_STATE_KEY] = requested_navigation
+
+
+def set_workflow_flash(level: str, message: str) -> None:
+    """Store a one-rerun workflow message."""
+
+    st.session_state[WORKFLOW_FLASH_KEY] = (level, message)
+
+
+def display_workflow_flash() -> None:
+    """Display and consume a pending workflow message."""
+
+    flash = st.session_state.pop(WORKFLOW_FLASH_KEY, None)
+    if flash is None:
+        return
+
+    level, message = flash
+    display = {
+        "success": st.success,
+        "warning": st.warning,
+        "error": st.error,
+        "info": st.info,
+    }.get(level, st.info)
+    display(message)
 
 
 def display_product_details(product: Product) -> None:
@@ -108,7 +295,7 @@ def render_dashboard() -> None:
     st.write("A quick overview of your saved product portfolio.")
 
     try:
-        metrics = get_dashboard_metrics()
+        metrics = get_dashboard_metrics(APP_DATABASE_FILE)
     except (DatabaseSchemaError, sqlite3.Error):
         display_database_error()
         return
@@ -139,47 +326,7 @@ def render_create_product() -> None:
     )
 
     with st.form("create_product_form"):
-        name = st.text_input(
-            "Name *",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["name"],
-            help="A clear product name.",
-        )
-        description = st.text_area(
-            "Description *",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["description"],
-            help="What the product is and what it enables.",
-        )
-        target_users = st.text_area(
-            "Target users *",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["target_users"],
-            help="The people or groups this product serves.",
-        )
-        business_goal = st.text_area(
-            "Business goal *",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["business_goal"],
-            help="The business outcome this product should support.",
-        )
-        status = st.selectbox(
-            "Status *",
-            options=list(ProductStatus),
-            index=list(ProductStatus).index(DEFAULT_PRODUCT_STATUS),
-            format_func=status_label,
-        )
-
-        st.subheader("Optional context")
-        customer_problem = st.text_area(
-            "Customer problem",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["customer_problem"],
-        )
-        product_strategy = st.text_area(
-            "Product strategy",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["product_strategy"],
-        )
-        notes = st.text_area(
-            "Notes",
-            max_chars=TEXT_FIELD_MAX_LENGTHS["notes"],
-        )
-
+        product_data = render_product_fields(key_prefix="create_product")
         submitted = st.form_submit_button(
             "Create product",
             type="primary",
@@ -189,32 +336,185 @@ def render_create_product() -> None:
     if not submitted:
         return
 
-    product_data = {
-        "name": name,
-        "description": description,
-        "target_users": target_users,
-        "business_goal": business_goal,
-        "status": status,
-        "customer_problem": customer_problem,
-        "product_strategy": product_strategy,
-        "notes": notes,
-    }
     validation_result = validate_product(product_data)
     if not validation_result.is_valid:
         display_validation_errors(validation_result.errors)
         return
 
     try:
-        product = create_product(validation_result.normalized_data)
+        product = create_product(
+            validation_result.normalized_data,
+            APP_DATABASE_FILE,
+        )
     except ProductValidationError as error:
         display_validation_errors(error.errors)
         return
     except (DatabaseSchemaError, sqlite3.Error):
-        display_database_error()
+        display_database_error("saved")
         return
 
     st.success(f'"{product.name}" was created successfully as product ID {product.id}.')
     st.info("Open View Products to review the complete saved record.")
+
+
+def render_edit_product(product: Product, *, selector_key: str) -> None:
+    """Render a prepopulated edit form and save only valid changes."""
+
+    if product.id is None:
+        st.warning("This product cannot be edited because it has no saved ID.")
+        return
+
+    st.subheader(f"Edit {product.name}")
+    st.caption(
+        f"Product ID {product.id}. The ID and original creation time are preserved."
+    )
+    form_key = f"{selector_key}_edit_{product.id}"
+    with st.form(form_key):
+        product_data = render_product_fields(
+            key_prefix=form_key,
+            product=product,
+        )
+        save_column, cancel_column = st.columns(2)
+        save = save_column.form_submit_button(
+            "Save changes",
+            type="primary",
+            width="stretch",
+        )
+        cancel = cancel_column.form_submit_button(
+            "Cancel",
+            width="stretch",
+        )
+
+    if cancel:
+        set_product_action(selector_key, product.id, DETAIL_MODE)
+        st.rerun()
+    if not save:
+        return
+
+    validation_result = validate_product(product_data)
+    if not validation_result.is_valid:
+        display_validation_errors(validation_result.errors)
+        return
+
+    try:
+        updated = update_product(
+            product.id,
+            validation_result.normalized_data,
+            APP_DATABASE_FILE,
+        )
+    except ProductValidationError as error:
+        display_validation_errors(error.errors)
+        return
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error("updated")
+        return
+
+    if updated is None:
+        set_product_action(selector_key, product.id, DETAIL_MODE)
+        st.warning("This product no longer exists and could not be updated.")
+        return
+
+    set_product_action(selector_key, product.id, DETAIL_MODE)
+    set_workflow_flash(
+        "success",
+        f'"{updated.name}" was updated successfully.',
+    )
+    st.rerun()
+
+
+def render_delete_confirmation(product: Product, *, selector_key: str) -> None:
+    """Render the explicit second deletion step for one product ID."""
+
+    if product.id is None:
+        st.warning("This product cannot be deleted because it has no saved ID.")
+        return
+
+    st.warning(
+        f'You are about to permanently delete "{product.name}" '
+        f"(product ID {product.id}). This action cannot be undone."
+    )
+    confirm_column, cancel_column = st.columns(2)
+    confirmed = confirm_column.button(
+        "Confirm Delete",
+        type="primary",
+        width="stretch",
+        key=f"{selector_key}_confirm_delete_{product.id}",
+    )
+    canceled = cancel_column.button(
+        "Cancel",
+        width="stretch",
+        key=f"{selector_key}_cancel_delete_{product.id}",
+    )
+
+    if canceled:
+        set_product_action(selector_key, product.id, DETAIL_MODE)
+        st.rerun()
+    if not confirmed:
+        return
+
+    try:
+        deleted = delete_product(product.id, APP_DATABASE_FILE)
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error("deleted")
+        return
+
+    mode_key, product_id_key = action_state_keys(selector_key)
+    request_state_cleanup(
+        selector_key,
+        mode_key,
+        product_id_key,
+        "view_product_selector",
+        "search_product_selector",
+    )
+    st.session_state[PENDING_NAVIGATION_KEY] = "View Products"
+
+    if deleted:
+        set_workflow_flash(
+            "success",
+            f'"{product.name}" (product ID {product.id}) was permanently deleted.',
+        )
+    else:
+        set_workflow_flash(
+            "warning",
+            f'"{product.name}" (product ID {product.id}) was already deleted.',
+        )
+    st.rerun()
+
+
+def render_product_actions(product: Product, *, selector_key: str) -> None:
+    """Render ID-bound detail, edit, and two-step delete states."""
+
+    if product.id is None:
+        display_product_details(product)
+        return
+
+    mode = current_product_action(selector_key, product.id)
+    if mode == EDIT_MODE:
+        render_edit_product(product, selector_key=selector_key)
+        return
+
+    display_product_details(product)
+    if mode == DELETE_CONFIRM_MODE:
+        st.divider()
+        render_delete_confirmation(product, selector_key=selector_key)
+        return
+
+    edit_column, delete_column = st.columns(2)
+    if edit_column.button(
+        "Edit",
+        type="primary",
+        width="stretch",
+        key=f"{selector_key}_edit_action_{product.id}",
+    ):
+        set_product_action(selector_key, product.id, EDIT_MODE)
+        st.rerun()
+    if delete_column.button(
+        "Delete",
+        width="stretch",
+        key=f"{selector_key}_delete_action_{product.id}",
+    ):
+        set_product_action(selector_key, product.id, DELETE_CONFIRM_MODE)
+        st.rerun()
 
 
 def render_product_list(
@@ -255,7 +555,7 @@ def render_product_list(
     )
 
     try:
-        selected_product = get_product(selected_id)
+        selected_product = get_product(selected_id, APP_DATABASE_FILE)
     except (DatabaseSchemaError, sqlite3.Error):
         display_database_error()
         return
@@ -265,7 +565,7 @@ def render_product_list(
         return
 
     st.divider()
-    display_product_details(selected_product)
+    render_product_actions(selected_product, selector_key=selector_key)
 
 
 def render_view_products() -> None:
@@ -273,8 +573,9 @@ def render_view_products() -> None:
 
     st.header("View Products")
     st.write("Review your saved products and open a complete product record.")
+    display_workflow_flash()
     try:
-        products = list_products()
+        products = list_products(APP_DATABASE_FILE)
     except (DatabaseSchemaError, sqlite3.Error):
         display_database_error()
         return
@@ -291,13 +592,14 @@ def render_search_products() -> None:
 
     st.header("Search Products")
     st.write("Search names, descriptions, users, goals, and optional context.")
+    display_workflow_flash()
     query = st.text_input(
         "Search",
         placeholder="Enter a name, user, goal, or keyword",
     )
 
     try:
-        products = search_products(query)
+        products = search_products(query, APP_DATABASE_FILE)
     except (DatabaseSchemaError, sqlite3.Error):
         display_database_error()
         return
@@ -328,8 +630,10 @@ def main() -> None:
         layout="wide",
     )
 
+    apply_pending_state_changes()
+
     try:
-        initialize_database()
+        initialize_database(APP_DATABASE_FILE)
     except (DatabaseSchemaError, sqlite3.Error):
         st.title(APP_TITLE)
         display_database_error()
@@ -341,6 +645,7 @@ def main() -> None:
         "Navigation",
         NAVIGATION_OPTIONS,
         label_visibility="collapsed",
+        key=NAVIGATION_STATE_KEY,
     )
 
     st.title(APP_TITLE)

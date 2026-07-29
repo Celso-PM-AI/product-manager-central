@@ -339,7 +339,11 @@ class CanonicalCrudTests(TemporaryDatabaseTestCase):
         self.assertEqual(updated.updated_at, "2026-07-02T00:00:00.000000Z")
 
     def test_update_can_change_every_editable_field(self):
-        original = create_product(valid_product_data(), self.database_path)
+        with patch(
+            "src.database._utc_now",
+            return_value="2026-07-01T00:00:00.000000Z",
+        ):
+            original = create_product(valid_product_data(), self.database_path)
         updates = valid_product_data(
             name="Updated",
             description="Updated description",
@@ -351,17 +355,54 @@ class CanonicalCrudTests(TemporaryDatabaseTestCase):
             notes="Updated notes",
         )
 
-        updated = update_product(
-            original.id,
-            updates,
-            self.database_path,
-        )
+        with patch(
+            "src.database._utc_now",
+            return_value="2026-07-02T00:00:00.000000Z",
+        ):
+            updated = update_product(
+                original.id,
+                updates,
+                self.database_path,
+            )
 
+        self.assertEqual(updated.id, original.id)
         self.assertEqual(updated.name, "Updated")
+        self.assertEqual(updated.description, "Updated description")
+        self.assertEqual(updated.target_users, "Product leaders")
+        self.assertEqual(updated.business_goal, "Updated goal")
         self.assertIs(updated.status, ProductStatus.LAUNCHED)
         self.assertEqual(updated.customer_problem, "Updated problem")
         self.assertEqual(updated.product_strategy, "Updated strategy")
         self.assertEqual(updated.notes, "Updated notes")
+        self.assertEqual(updated.created_at, original.created_at)
+        self.assertEqual(updated.created_at, "2026-07-01T00:00:00.000000Z")
+        self.assertEqual(updated.updated_at, "2026-07-02T00:00:00.000000Z")
+
+    def test_invalid_update_does_not_change_any_stored_value(self):
+        original = create_product(
+            valid_product_data(
+                customer_problem="Original problem",
+                product_strategy="Original strategy",
+                notes="Original notes",
+            ),
+            self.database_path,
+        )
+
+        with self.assertRaises(ProductValidationError):
+            update_product(
+                original.id,
+                {
+                    "name": " ",
+                    "description": "Changed description",
+                    "notes": "Changed notes",
+                },
+                self.database_path,
+            )
+
+        self.assertEqual(
+            get_product(original.id, self.database_path),
+            original,
+        )
 
     def test_update_none_explicitly_clears_optional_field(self):
         product = create_product(
