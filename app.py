@@ -260,19 +260,18 @@ def display_product_details(product: Product) -> None:
     st.subheader(product.name)
     st.caption(f"Product ID {product.id} · {status_label(product.status)}")
 
-    left, right = st.columns(2)
-    with left:
-        st.markdown("**Description**")
-        st.write(product.description)
-        st.markdown("**Target users**")
-        st.write(product.target_users)
-    with right:
-        st.markdown("**Business goal**")
-        st.write(product.business_goal)
-        st.markdown("**Status**")
-        st.write(status_label(product.status))
+    core_fields = (
+        ("Description", product.description),
+        ("Target users", product.target_users),
+        ("Business goal", product.business_goal),
+        ("Status", status_label(product.status)),
+    )
+    for label, value in core_fields:
+        st.markdown(f"**{label}**")
+        st.write(value)
 
     st.divider()
+    st.markdown("#### Optional context")
     optional_fields = (
         ("Customer problem", product.customer_problem),
         ("Product strategy", product.product_strategy),
@@ -305,7 +304,7 @@ def render_dashboard() -> None:
         ("Total products", metrics["total_products"]),
         ("Active products", metrics["active_products"]),
         ("Launched products", metrics["launched_products"]),
-        ("Updated in 30 days", metrics["recently_updated_products"]),
+        ("Updated in last 30 days", metrics["recently_updated_products"]),
     )
     for column, (label, value) in zip(columns, metric_items, strict=True):
         column.metric(label, value)
@@ -314,6 +313,11 @@ def render_dashboard() -> None:
         "Active excludes archived products. Recently updated covers the "
         "previous 30 days."
     )
+    if metrics["total_products"] == 0:
+        st.info(
+            "No products yet. Use Create Product to add the first product "
+            "to your workspace."
+        )
 
 
 def render_create_product() -> None:
@@ -435,7 +439,7 @@ def render_delete_confirmation(product: Product, *, selector_key: str) -> None:
     )
     confirm_column, cancel_column = st.columns(2)
     confirmed = confirm_column.button(
-        "Confirm Delete",
+        "Delete permanently",
         type="primary",
         width="stretch",
         key=f"{selector_key}_confirm_delete_{product.id}",
@@ -582,7 +586,10 @@ def render_view_products() -> None:
 
     render_product_list(
         products,
-        empty_message="No products have been saved yet.",
+        empty_message=(
+            "No products yet. Use Create Product to add the first product "
+            "to your workspace."
+        ),
         selector_key="view_product_selector",
     )
 
@@ -609,10 +616,16 @@ def render_search_products() -> None:
             f"{len(products)} result{'s' if len(products) != 1 else ''} "
             f'for "{query.strip()}"'
         )
-        empty_message = "No products match this search."
+        empty_message = (
+            "No products match this search. Try a different name, user, "
+            "goal, or keyword."
+        )
     else:
         st.caption("Enter a keyword, or browse all products below.")
-        empty_message = "No products have been saved yet."
+        empty_message = (
+            "No products yet. Use Create Product to add the first product "
+            "to your workspace."
+        )
 
     render_product_list(
         products,

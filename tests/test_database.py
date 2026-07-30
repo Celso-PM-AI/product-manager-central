@@ -631,31 +631,61 @@ class DashboardMetricTests(TemporaryDatabaseTestCase):
             },
         )
 
-    def test_metrics_include_both_supported_timestamp_formats(self):
-        threshold = "2026-06-27T12:00:00Z"
+    def test_total_active_archived_launched_and_mixed_status_counts(self):
+        for status in ProductStatus:
+            insert_canonical_record(
+                self.database_path,
+                name=f"{status.value} product",
+                status=status.value,
+                updated_at="2026-07-01T00:00:00Z",
+            )
+
+        metrics = get_dashboard_metrics(
+            self.database_path,
+            now=self.reference_time,
+        )
+
+        self.assertEqual(metrics["total_products"], len(ProductStatus))
+        self.assertEqual(
+            metrics["active_products"],
+            len(ProductStatus) - 1,
+        )
+        self.assertEqual(metrics["launched_products"], 1)
+
+    def test_recently_updated_boundary_is_inclusive(self):
         insert_canonical_record(
             self.database_path,
-            name="UTC boundary",
-            status="launched",
-            updated_at=threshold,
+            name="Exactly at boundary",
+            updated_at="2026-06-27T12:00:00Z",
         )
         insert_canonical_record(
             self.database_path,
-            name="UTC old",
-            status="archived",
+            name="One second outside boundary",
             updated_at="2026-06-27T11:59:59Z",
         )
+
+        metrics = get_dashboard_metrics(
+            self.database_path,
+            now=self.reference_time,
+        )
+
+        self.assertEqual(metrics["recently_updated_products"], 1)
+
+    def test_metrics_include_supported_canonical_and_legacy_timestamps(self):
         insert_canonical_record(
             self.database_path,
-            name="Legacy recent",
-            status="planning",
+            name="Canonical recent",
+            updated_at="2026-07-19T10:03:17.000000Z",
+        )
+        insert_canonical_record(
+            self.database_path,
+            name="Legacy-format recent",
             created_at="2026-07-19 10:03:17",
             updated_at="2026-07-19 10:03:17",
         )
         insert_canonical_record(
             self.database_path,
-            name="Legacy old",
-            status="idea",
+            name="Legacy-format old",
             created_at="2026-06-01 10:03:17",
             updated_at="2026-06-01 10:03:17",
         )
@@ -666,19 +696,14 @@ class DashboardMetricTests(TemporaryDatabaseTestCase):
         )
 
         self.assertEqual(
-            metrics,
-            {
-                "total_products": 4,
-                "active_products": 3,
-                "launched_products": 1,
-                "recently_updated_products": 2,
-            },
+            metrics["recently_updated_products"],
+            2,
         )
 
-    def test_metrics_change_after_create_update_and_delete(self):
+    def test_metrics_change_after_create_edit_status_change_and_delete(self):
         with patch(
             "src.database._utc_now",
-            return_value="2026-07-27T11:00:00.000000Z",
+            return_value="2026-06-01T11:00:00.000000Z",
         ):
             product = create_product(
                 valid_product_data(status="planning"),
@@ -689,27 +714,65 @@ class DashboardMetricTests(TemporaryDatabaseTestCase):
             self.database_path,
             now=self.reference_time,
         )
+        self.assertEqual(initial["total_products"], 1)
         self.assertEqual(initial["active_products"], 1)
         self.assertEqual(initial["launched_products"], 0)
-        self.assertEqual(initial["recently_updated_products"], 1)
+        self.assertEqual(initial["recently_updated_products"], 0)
+
+        with patch(
+            "src.database._utc_now",
+            return_value="2026-07-27T11:00:00.000000Z",
+        ):
+            update_product(
+                product.id,
+                {"description": "Recently edited description"},
+                self.database_path,
+            )
+        edited = get_dashboard_metrics(
+            self.database_path,
+            now=self.reference_time,
+        )
+        self.assertEqual(edited["recently_updated_products"], 1)
+
+        update_product(
+            product.id,
+            {"status": "archived"},
+            self.database_path,
+        )
+        archived = get_dashboard_metrics(
+            self.database_path,
+            now=self.reference_time,
+        )
+        self.assertEqual(archived["total_products"], 1)
+        self.assertEqual(archived["active_products"], 0)
+        self.assertEqual(archived["launched_products"], 0)
 
         update_product(
             product.id,
             {"status": "launched"},
             self.database_path,
         )
-        updated = get_dashboard_metrics(
+        launched = get_dashboard_metrics(
             self.database_path,
             now=self.reference_time,
         )
-        self.assertEqual(updated["launched_products"], 1)
+        self.assertEqual(launched["active_products"], 1)
+        self.assertEqual(launched["launched_products"], 1)
 
         delete_product(product.id, self.database_path)
         deleted = get_dashboard_metrics(
             self.database_path,
             now=self.reference_time,
         )
-        self.assertEqual(deleted["total_products"], 0)
+        self.assertEqual(
+            deleted,
+            {
+                "total_products": 0,
+                "active_products": 0,
+                "launched_products": 0,
+                "recently_updated_products": 0,
+            },
+        )
 
     def test_metrics_require_timezone_aware_reference_time(self):
         with self.assertRaises(ValueError):

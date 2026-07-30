@@ -18,6 +18,12 @@ htmlcov/
 /data/*.db-wal
 /data/*.db-shm
 
+# Disposable databases and local scratch files
+*.db
+*.db-wal
+*.db-shm
+pasted-text.txt
+
 # Local backups and preserved CSV data
 /backups/
 /archive/products.csv

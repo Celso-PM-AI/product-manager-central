@@ -11,9 +11,11 @@ from streamlit.testing.v1 import AppTest
 
 from src.database import (
     create_product,
+    delete_product,
     get_product,
     initialize_database,
     list_products,
+    update_product,
 )
 from src.models import ProductStatus
 
@@ -314,7 +316,10 @@ class DeleteWorkflowTests(StreamlitWorkflowTestCase):
         )
         self.assertEqual(
             [message.value for message in self.app.info],
-            ["No products have been saved yet."],
+            [
+                "No products yet. Use Create Product to add the first product "
+                "to your workspace."
+            ],
         )
 
     def test_already_deleted_product_is_handled_without_repeating_delete(self):
@@ -384,6 +389,8 @@ class Phase4WorkflowRegressionTests(StreamlitWorkflowTestCase):
         metric_values = {metric.label: metric.value for metric in self.app.metric}
         self.assertEqual(metric_values["Total products"], "1")
         self.assertEqual(metric_values["Active products"], "1")
+        self.assertEqual(metric_values["Launched products"], "0")
+        self.assertEqual(metric_values["Updated in last 30 days"], "1")
 
         self.app.radio[0].set_value("Create Product").run()
         self.app.text_input(key="create_product_name").set_value(
@@ -426,6 +433,107 @@ class Phase4WorkflowRegressionTests(StreamlitWorkflowTestCase):
             self.app.selectbox(key="search_product_selector").value,
             2,
         )
+
+
+class Phase6InterfaceTests(StreamlitWorkflowTestCase):
+    def test_dashboard_metrics_change_after_status_change_and_delete(self):
+        update_product(
+            self.product.id,
+            {"status": ProductStatus.LAUNCHED},
+            self.database_path,
+        )
+        self.app.run()
+        launched_metrics = {
+            metric.label: metric.value for metric in self.app.metric
+        }
+        self.assertEqual(launched_metrics["Total products"], "1")
+        self.assertEqual(launched_metrics["Active products"], "1")
+        self.assertEqual(launched_metrics["Launched products"], "1")
+        self.assertEqual(launched_metrics["Updated in last 30 days"], "1")
+
+        update_product(
+            self.product.id,
+            {"status": ProductStatus.ARCHIVED},
+            self.database_path,
+        )
+        self.app.run()
+        archived_metrics = {
+            metric.label: metric.value for metric in self.app.metric
+        }
+        self.assertEqual(archived_metrics["Total products"], "1")
+        self.assertEqual(archived_metrics["Active products"], "0")
+        self.assertEqual(archived_metrics["Launched products"], "0")
+
+        delete_product(self.product.id, self.database_path)
+        self.app.run()
+        empty_metrics = {
+            metric.label: metric.value for metric in self.app.metric
+        }
+        self.assertTrue(all(value == "0" for value in empty_metrics.values()))
+        self.assertIn(
+            "No products yet. Use Create Product to add the first product "
+            "to your workspace.",
+            [message.value for message in self.app.info],
+        )
+
+    def test_empty_product_and_search_states_offer_clear_guidance(self):
+        delete_product(self.product.id, self.database_path)
+
+        self.app.radio[0].set_value("View Products").run()
+        self.assertIn(
+            "No products yet. Use Create Product to add the first product "
+            "to your workspace.",
+            [message.value for message in self.app.info],
+        )
+
+        self.app.radio[0].set_value("Search Products").run()
+        self.app.text_input[0].set_value("missing keyword").run()
+        self.assertIn(
+            "No products match this search. Try a different name, user, "
+            "goal, or keyword.",
+            [message.value for message in self.app.info],
+        )
+
+    def test_long_text_is_preserved_in_full_detail_view(self):
+        long_description = ("Long product context " * 60).strip()
+        update_product(
+            self.product.id,
+            {
+                "description": long_description,
+                "status": ProductStatus.IN_DEVELOPMENT,
+            },
+            self.database_path,
+        )
+
+        self.open_product_list()
+        rendered_text = "\n".join(
+            element.value for element in self.app.markdown
+        )
+        self.assertIn(long_description, rendered_text)
+        self.assertIn("In Development", rendered_text)
+
+    def test_primary_and_secondary_action_labels_are_clear(self):
+        self.open_product_list()
+        self.assertIsNotNone(
+            self.app.button(
+                key=f"view_product_selector_edit_action_{self.product.id}"
+            )
+        )
+        self.assertIsNotNone(
+            self.app.button(
+                key=f"view_product_selector_delete_action_{self.product.id}"
+            )
+        )
+
+        self.open_delete_confirmation()
+        confirm = self.app.button(
+            key=f"view_product_selector_confirm_delete_{self.product.id}"
+        )
+        cancel = self.app.button(
+            key=f"view_product_selector_cancel_delete_{self.product.id}"
+        )
+        self.assertEqual(confirm.label, "Delete permanently")
+        self.assertEqual(cancel.label, "Cancel")
 
 
 if __name__ == "__main__":

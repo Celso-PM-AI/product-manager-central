@@ -3,10 +3,12 @@
 Product Manager Central (PMC) is a focused Streamlit workspace for capturing,
 finding, reviewing, editing, and safely deleting structured product information.
 The current MVP stores data locally in SQLite and does not connect to an
-external AI service.ral application](docs/images/pmc-v1-screenshot.png)
+external AI service.
+
 ## Application Preview
 
 ![Product Manager Central application](docs/images/pmc-v1-screenshot.png)
+
 ## Current capabilities
 
 - Dashboard metrics for total, active, launched, and recently updated products.
@@ -20,6 +22,18 @@ external AI service.ral application](docs/images/pmc-v1-screenshot.png)
 
 Duplicate product names are allowed. Updates and deletion always target the
 product ID rather than its name.
+
+## Dashboard metrics
+
+The dashboard provides four portfolio counts:
+
+- Total products includes every saved product.
+- Active products includes every product whose status is not `archived`.
+- Launched products includes products whose status is `launched`.
+- Updated in the last 30 days includes products whose `updated_at` value is
+  exactly at or later than the 30-day cutoff.
+
+The dashboard intentionally contains no charts or advanced analytics.
 
 ## Product fields
 
@@ -108,17 +122,23 @@ timestamp, advance the updated timestamp, and return to the refreshed detail
 view.
 
 Deleting requires two distinct actions. The first Delete action only opens a
-warning that names the product and ID. The user must then choose Confirm Delete
-or Cancel. Cancel does not change the database. A successful confirmation
-deletes exactly one ID and returns to the product list.
+warning that names the product and ID. The user must then choose Delete
+permanently or Cancel. Cancel does not change the database. A successful
+confirmation deletes exactly one ID and returns to the product list.
+
+The interface uses readable status labels, guided empty states, consistent
+user-safe messages, and full-width detail sections so long product context
+remains readable.
 
 ## Data protection
 
 The following local data is intentionally excluded from Git:
 
 - `data/*.db` and SQLite sidecar files
+- disposable `*.db` files and their sidecars outside `data/`
 - `backups/`
 - `archive/products.csv`
+- `pasted-text.txt`
 - `.venv/`
 - caches, operating-system files, secrets, and local environment files
 
@@ -128,8 +148,8 @@ record counts, every product value, and checksums before and after the work.
 
 ## Development status
 
-Phases 0 through 5 are complete as of July 29, 2026.
+Phases 0 through 6 are complete as of July 30, 2026.
 
-Phase 6 has not started. Generative AI integration has not started. External AI
-APIs, authentication, RAG, cloud deployment, export functionality, advanced
+Phase 7 has not started. Generative AI integration has not started. External
+AI APIs, authentication, RAG, cloud deployment, export functionality, advanced
 analytics services, and generated product-management artifacts remain deferred.

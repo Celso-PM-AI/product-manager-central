@@ -12,14 +12,15 @@
 
 ## Current phase status
 
-**Updated:** July 29, 2026
+**Updated:** July 30, 2026
 
-- Phases 0 through 5 are complete.
-- Phase 6 has not started.
+- Phases 0 through 6 are complete.
+- Phase 7 has not started.
 - Generative AI integration has not started.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
-during Phase 4. That earlier delivery does not mark Phase 6 as started.
+during Phase 4. Phase 6 completed its required coverage and interface-polish
+work without expanding the product scope.
 
 ## Final MVP structure
 
@@ -855,6 +856,40 @@ Before Phase 7:
 - Confirm no chart or advanced analytics work was added.
 - Confirm `app.py` remains understandable at its current size.
 - Decide whether any UI concern is important enough to fix before final testing.
+
+## Phase 6 completion record
+
+**Completed:** July 30, 2026
+
+The completed Phase 6 application provides:
+
+- Four native Streamlit dashboard metrics for total, active, launched, and
+  products updated within the last 30 days.
+- An inclusive 30-day boundary: a product updated exactly at the cutoff counts
+  as recently updated.
+- Clear primary and secondary action labels, including an explicit
+  `Delete permanently` confirmation.
+- Readable title-cased status labels.
+- Guided empty states for the dashboard, product list, and search results.
+- Consistent user-safe success, warning, validation, and database-error
+  messages.
+- Full-width product detail fields and compact list summaries for sensible
+  long-text presentation.
+
+The complete automated suite passed 103 tests. Phase 6 coverage includes zero,
+total, active, archived, launched, mixed-status, recently updated, exact
+30-day-boundary, create, edit, status-change, delete, empty-state, action-label,
+and long-text cases. Every automated test used a temporary database.
+
+A separate disposable-database Streamlit walkthrough passed empty dashboard,
+create, edit, launched status, archived status, two-step delete, and immediate
+metric-refresh checks. Its temporary product and database were removed during
+cleanup.
+
+The live Product Manager Central record was not edited or deleted. The database
+schema and persistence implementation did not change. No charts, advanced
+styling framework, AI integration, external LLM, authentication, analytics,
+deployment, or Phase 7 functionality were added.
 
 # Phase 7: Final testing, documentation, and Git setup
 
