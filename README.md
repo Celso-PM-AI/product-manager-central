@@ -5,6 +5,13 @@ finding, reviewing, editing, and safely deleting structured product information.
 The current MVP stores data locally in SQLite and does not connect to an
 external AI service.
 
+## MVP scope
+
+The MVP provides dependable local product-information management for a single
+user. It covers structured product records, validation, search, lifecycle
+status, dashboard counts, and safe edit/delete workflows in one Streamlit
+application. It does not generate product artifacts or call an AI service.
+
 ## Application Preview
 
 ![Product Manager Central application](docs/images/pmc-v1-screenshot.png)
@@ -60,6 +67,26 @@ System-managed fields:
 Approved statuses are `idea`, `discovery`, `planning`, `in_development`,
 `launched`, and `archived`. New products default to `discovery`.
 
+## Validation rules
+
+All editable text is trimmed at its outer edges while internal paragraphs and
+line breaks are preserved. Required values cannot be empty or whitespace-only.
+Blank optional fields are stored as `NULL`.
+
+| Field | Requirement | Maximum length |
+| --- | --- | ---: |
+| Name | Required | 120 |
+| Description | Required | 2,000 |
+| Target users | Required | 1,000 |
+| Business goal | Required | 2,000 |
+| Status | Required; approved value only | — |
+| Customer problem | Optional | 2,000 |
+| Product strategy | Optional | 3,000 |
+| Notes | Optional | 5,000 |
+
+ID and timestamps are system-managed and cannot be supplied through product
+forms. Validation reports all discovered field errors together.
+
 ## Architecture
 
 PMC deliberately uses a small MVP architecture:
@@ -71,6 +98,7 @@ PMC deliberately uses a small MVP architecture:
   dashboard metrics, and controlled legacy migration.
 - `tests/` contains isolated validation, database, presentation-helper, and
   Streamlit workflow tests.
+- `requirements.txt` lists the Streamlit and pandas runtime dependencies.
 - `data/pmc.db` is the only live application data source.
 
 Database operations remain outside the Streamlit view code. No ORM, service
@@ -113,7 +141,15 @@ PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -v
 All automated tests use temporary databases. They do not read from or write to
 `data/pmc.db`.
 
-## Edit and delete behavior
+## Product workflows
+
+Creating a product uses every approved editable field, defaults status to
+`discovery`, validates the complete submission, and saves one canonical record.
+
+View Products lists name, readable status, a compact target-user summary, and
+updated time. Selecting a product by ID opens every stored field and both
+system-managed timestamps. Search is case-insensitive across all approved text
+fields; an empty query returns the complete list.
 
 Editing loads the selected product's current values into the shared canonical
 form. Invalid submissions display all discovered errors and do not update the
@@ -140,16 +176,32 @@ The following local data is intentionally excluded from Git:
 - `archive/products.csv`
 - `pasted-text.txt`
 - `.venv/`
-- caches, operating-system files, secrets, and local environment files
+- Python, test, and tool caches
+- operating-system files
+- `.env` and other secret-bearing environment files
 
 Before application phases that could affect persistence behavior, create and
 verify a permanent timestamped database backup. Verify SQLite integrity,
 record counts, every product value, and checksums before and after the work.
 
+Disposable manual testing must set `PMC_DATABASE_FILE` to a temporary database.
+Disposable products must never be created in `data/pmc.db`, and permanent
+backups and `archive/products.csv` must remain unchanged.
+
+## Deferred features
+
+- Generative AI, external LLM APIs, RAG, and prompt management
+- Generated product-management artifacts and export functionality
+- Authentication, multi-user permissions, and cloud deployment
+- Analytics integrations, charts, and advanced styling frameworks
+- ORM, service-layer, separate view-layer, or general migration frameworks
+
 ## Development status
 
-Phases 0 through 6 are complete as of July 30, 2026.
+Phases 0 through 7 are complete as of July 30, 2026. The final MVP acceptance
+criteria passed with 103 automated tests and a complete disposable-database
+workflow and restart walkthrough.
 
-Phase 7 has not started. Generative AI integration has not started. External
-AI APIs, authentication, RAG, cloud deployment, export functionality, advanced
-analytics services, and generated product-management artifacts remain deferred.
+The Product Manager Central MVP is complete and awaiting approval to commit and
+push the Phase 7 documentation and Git-safety changes. All deferred features
+remain unstarted.

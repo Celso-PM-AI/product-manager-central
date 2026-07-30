@@ -1,55 +1,48 @@
 # Product Manager Central
 
-## Product vision
+## Product purpose and MVP scope
 
-Product Manager Central (PMC) is an AI-assisted workspace that helps product managers create high-quality product documentation, organize product information, and make better product decisions faster.
+Product Manager Central (PMC) is a local Streamlit workspace for product
+managers to capture, find, review, update, and safely delete structured product
+information. The MVP establishes dependable product-information management in
+SQLite. It prepares for possible future AI-assisted work but does not connect
+to an AI model or generate product artifacts.
 
-The initial user is a product manager who needs a structured place to capture product strategy, customer needs, business goals, requirements, roadmaps, and decisions.
+The MVP provides:
 
-## MVP goal
+1. Canonical product creation with centralized validation.
+2. Compact product listing and complete ID-based detail views.
+3. Case-insensitive search across every approved text field.
+4. Prepopulated editing with cancellation and safe error handling.
+5. Two-step, ID-based permanent deletion.
+6. Four portfolio dashboard metrics.
+7. Persistent local SQLite storage in one Streamlit application.
 
-The first MVP establishes dependable product-information management. It prepares a clear foundation for future AI-assisted documentation without connecting to an external AI model.
+Duplicate product names are allowed. Identity-sensitive operations always use
+the system-managed product ID.
 
-## MVP capabilities
+## Product fields and validation
 
-1. Create a product.
-2. Save product information in SQLite.
-3. View a list of saved products.
-4. Open and view a saved product.
-5. Edit an existing product.
-6. Permanently delete a product after two-step confirmation.
-7. Validate required fields and prevent invalid data.
-8. Search saved products.
-9. Display simple dashboard metrics.
-10. Provide a clean, professional, single-application Streamlit interface.
+| Field | Category | Rule |
+| --- | --- | --- |
+| `name` | Required | Trimmed; 1–120 characters |
+| `description` | Required | Trimmed; 1–2,000 characters |
+| `target_users` | Required | Trimmed; 1–1,000 characters |
+| `business_goal` | Required | Trimmed; 1–2,000 characters |
+| `status` | Required | One approved status; defaults to `discovery` in create |
+| `customer_problem` | Optional | Blank becomes `NULL`; maximum 2,000 characters |
+| `product_strategy` | Optional | Blank becomes `NULL`; maximum 3,000 characters |
+| `notes` | Optional | Blank becomes `NULL`; maximum 5,000 characters |
+| `id` | System-managed | SQLite integer primary key |
+| `created_at` | System-managed | Set on creation and preserved during edits |
+| `updated_at` | System-managed | Set on creation and advanced during edits |
 
-Duplicate product names are allowed.
+Outer whitespace is removed while internal spaces, paragraphs, Unicode, and
+line breaks are preserved. Whitespace-only required fields are invalid.
+Validation reports all discovered errors together, rejects unknown fields, and
+does not allow forms to supply system-managed fields.
 
-## Product fields
-
-### Required
-
-- `name`
-- `description`
-- `target_users`
-- `business_goal`
-- `status`
-
-The create form defaults `status` to `discovery`.
-
-### Optional
-
-- `customer_problem`
-- `product_strategy`
-- `notes`
-
-### System-managed
-
-- `id`
-- `created_at`
-- `updated_at`
-
-## Approved statuses
+Approved statuses are:
 
 - `idea`
 - `discovery`
@@ -58,84 +51,105 @@ The create form defaults `status` to `discovery`.
 - `launched`
 - `archived`
 
+## Implemented workflows
+
+### Create
+
+- Displays every editable field and clearly identifies required fields.
+- Defaults status to `discovery`.
+- Uses centralized validation and creates exactly one row after a valid submit.
+- Displays all validation errors without creating invalid data.
+
+### List and detail
+
+- Lists products in descending ID order with name, readable status, compact
+  target-user context, and updated time.
+- Selects and opens records by ID, so duplicate names remain unambiguous.
+- Displays every field plus created and updated timestamps.
+- Shows friendly values for unpopulated optional fields.
+
+### Search
+
+- Searches name, description, target users, business goal, customer problem,
+  product strategy, and notes.
+- Is case-insensitive and treats `%`, `_`, backslashes, and apostrophes safely.
+- Returns the normal product list when the query is blank.
+
+### Edit
+
+- Opens a prepopulated form from product detail.
+- Reuses create-field rendering, validation, and normalization.
+- Cancel leaves the database unchanged.
+- Invalid edits leave the complete stored record unchanged.
+- Successful edits preserve `id` and `created_at`, advance `updated_at`, and
+  return to refreshed detail.
+
+### Confirmed delete
+
+- The first Delete action only opens a warning naming the product and ID.
+- Separate `Delete permanently` and Cancel actions provide confirmation.
+- Cancel leaves the record unchanged.
+- Confirmation deletes exactly one ID and returns to the product list.
+- Missing, already-deleted, and database-error cases use user-safe messages.
+
 ## Dashboard metrics
 
-- Total products.
-- Active products: products whose status is not `archived`.
-- Launched products.
-- Recently updated products: products updated within the previous 30 days.
+- **Total products:** every saved product.
+- **Active products:** every product whose status is not `archived`.
+- **Launched products:** every product whose status is `launched`.
+- **Updated in last 30 days:** every product whose `updated_at` is exactly at
+  or later than the inclusive 30-day cutoff.
 
-Advanced charts are not part of the MVP.
+Charts and advanced analytics are not part of the MVP.
 
-## Technology and architecture
+## Technology and file responsibilities
 
-- Python
-- Streamlit
-- SQLite as the only active data source
-- One Streamlit application in `app.py`
-- Standard-library SQLite access in `src/database.py`
-- Product definitions in `src/models.py`
-- Reusable validation in `src/validation.py`
-- Validation and database tests in `tests/`
-- Isolated Streamlit workflow tests in `tests/`
+- Python is the implementation language.
+- Streamlit provides the single application in `app.py`.
+- SQLite is the only active data source.
+- `src/models.py` owns the `Product` model, status enum, and field categories.
+- `src/validation.py` owns normalization and reusable validation.
+- `src/database.py` owns schema detection, canonical initialization,
+  parameterized CRUD/search/metrics, and the controlled known-legacy migration.
+- `tests/` contains temporary-database model, validation, persistence,
+  presentation-helper, and Streamlit workflow tests.
+- `requirements.txt` contains the Streamlit and pandas runtime dependencies.
 
-The MVP deliberately avoids an ORM and additional service, view, configuration, and migration-script layers. These may be introduced later if the application becomes difficult to understand or maintain.
+The application accepts `PMC_DATABASE_FILE` for isolated automated or manual
+verification. Without it, the only live data source is `data/pmc.db`.
 
-The application accepts an optional `PMC_DATABASE_FILE` environment variable
-for isolated tests and disposable manual verification. The default and only
-live data source remains `data/pmc.db`.
+The MVP deliberately has no ORM, service layer, separate view layer, schema
+framework, multipage architecture, charts, or advanced styling framework.
 
-## Edit workflow
+## Data-protection policy
 
-- Edit is available from an opened product detail.
-- Every editable field is prepopulated with its current value.
-- Create and edit reuse the same field-rendering, validation, and normalization
-  behavior.
-- Invalid input displays all discovered errors and performs no update.
-- Cancel returns to the detail view without changing the database.
-- A successful edit preserves `id` and `created_at`, advances `updated_at`, and
-  returns to the refreshed detail view.
-- Missing records and database failures receive user-safe messages.
-
-## Delete workflow
-
-- Delete is available from an opened product detail.
-- The first action only opens a permanent-deletion warning identifying the
-  product name and ID.
-- Separate Confirm Delete and Cancel actions form the required second step.
-- Cancel leaves the product and database unchanged.
-- Confirmation deletes exactly one product by ID, prevents automatic repeated
-  deletion, displays a result message, and returns to the product list.
-- Missing and already-deleted IDs are handled without an unhandled error.
-
-## Data policy
-
-- `data/pmc.db` is the application's source of truth.
-- The existing Product Manager Central database record must be preserved.
-- The legacy CSV is preserved at `archive/products.csv` but is not imported or used by the application.
-- The live database, backups, CSV, virtual environment, caches, and operating-system files must not be committed to Git.
-- Deletion in the application is permanent and requires two-step confirmation.
+- The preserved Product Manager Central record in `data/pmc.db` must not be
+  edited or deleted during testing.
+- Automated tests use new temporary databases and never use the live database.
+- Manual destructive testing uses disposable products in a disposable database
+  selected with `PMC_DATABASE_FILE`.
+- Permanent backups under `backups/` and the unused preserved legacy CSV at
+  `archive/products.csv` remain local and unchanged.
+- Databases and sidecars, backups, the CSV, virtual environments, Python/test/
+  tool caches, operating-system files, `pasted-text.txt`, and secret-bearing
+  `.env` files are excluded from Git.
 
 ## Deferred features
 
-- External AI integration and AI generators
-- AI provider abstractions
-- Generated PRDs and other product artifacts
-- Advanced analytics and status charts
-- Authentication and multi-user permissions
-- Cloud deployment
-- An ORM
+- Generative AI, external LLM APIs, RAG, and prompt management
+- Generated product-management artifacts and export functionality
+- Authentication, multi-user permissions, and cloud deployment
+- Analytics integrations, charts, and advanced styling frameworks
+- ORM, service-layer, separate view-layer, or general migration frameworks
 - Automated CSV importing
-- A service or separate view layer
 
 ## Current development status
 
-Phases 0 through 5 are complete. The application uses the canonical Product
-model, centralized validation, and SQLite database layer for dashboard, create,
-list, detail, search, edit, and confirmed-delete workflows.
+Phases 0 through 7 are complete as of July 30, 2026. The complete automated
+suite and disposable-database acceptance walkthrough passed, including an
+actual Streamlit stop/restart and persistence check. Live data, permanent
+backups, and the preserved CSV remained unchanged.
 
-Phase 6 has not started. Generative AI integration, external AI APIs,
-authentication, RAG, cloud deployment, export functionality, and other deferred
-features have not been started.
-
-Implementation must proceed one approved phase at a time according to `IMPLEMENTATION_PLAN.md`.
+The Product Manager Central MVP is complete and awaiting approval to commit and
+push the Phase 7 documentation and Git-safety changes. All deferred features
+remain unstarted.

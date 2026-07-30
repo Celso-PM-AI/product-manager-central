@@ -14,8 +14,8 @@
 
 **Updated:** July 30, 2026
 
-- Phases 0 through 6 are complete.
-- Phase 7 has not started.
+- Phases 0 through 7 are complete.
+- The Product Manager Central MVP acceptance criteria passed.
 - Generative AI integration has not started.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
@@ -745,7 +745,7 @@ The completed Phase 5 application provides:
 - Successful edits that preserve `id` and `created_at`, advance `updated_at`,
   display confirmation, and return to the refreshed detail.
 - Explicit two-step permanent deletion that identifies the product name and ID.
-- Separate Confirm Delete and Cancel actions.
+- Separate Delete permanently and Cancel actions.
 - Safe handling for missing, already-deleted, and database-error cases.
 - Widget-safe session cleanup, success messages, and return navigation after
   deletion.
@@ -891,11 +891,13 @@ schema and persistence implementation did not change. No charts, advanced
 styling framework, AI integration, external LLM, authentication, analytics,
 deployment, or Phase 7 functionality were added.
 
-# Phase 7: Final testing, documentation, and Git setup
+# Phase 7: Final testing, documentation, and Git safety verification
 
 ## 1. Purpose
 
-Verify the entire MVP, finalize beginner-friendly documentation, and establish safe version control only after generated and private data are excluded.
+Verify the entire MVP, finalize beginner-friendly documentation, and confirm
+that the existing Git repository safely excludes generated, private, preserved,
+and disposable data.
 
 ## 2. Files created or changed
 
@@ -906,7 +908,7 @@ Verify the entire MVP, finalize beginner-friendly documentation, and establish s
 - `tests/test_validation.py`
 - `tests/test_database.py`
 - Other MVP files only for defects found during final testing
-- Git repository metadata after final approval of `.gitignore`
+- Existing Git configuration and ignore behavior, without reinitializing Git
 
 The following must not be committed:
 
@@ -919,6 +921,8 @@ The following must not be committed:
 - `.pyc` files
 - `.DS_Store`
 - Test/tool caches
+- `pasted-text.txt`
+- `.env` and other secret-bearing environment files
 
 ## 3. Exact expected result
 
@@ -934,9 +938,11 @@ The following must not be committed:
   - Database location and backup expectations.
   - Deferred features.
 - PROJECT_SPEC matches the implemented fields, statuses, workflows, and metrics.
-- Git is initialized only after ignore rules are verified.
+- Existing Git configuration and ignore rules are verified without
+  reinitializing the repository.
 - A pre-commit status check proves excluded files are not staged or tracked.
-- The first commit contains source, tests, and documentation only.
+- The proposed Phase 7 commit contains only approved source, tests, and
+  documentation changes.
 - Existing SQLite and CSV data remain preserved locally.
 - No external AI calls or credentials exist.
 
@@ -944,26 +950,28 @@ The following must not be committed:
 
 Complete acceptance walkthrough:
 
-1. Launch the application.
-2. Confirm the existing Product Manager Central record.
-3. Review dashboard metrics.
+1. Inspect the existing Product Manager Central record read-only.
+2. Point `PMC_DATABASE_FILE` to a new disposable database.
+3. Launch the application and confirm the empty dashboard.
 4. Create a valid disposable product.
 5. Create another product with the same name.
 6. Search for both.
 7. Open both by ID.
 8. Edit one without affecting the other.
-9. Attempt an invalid edit.
-10. Cancel deletion.
-11. Confirm permanent deletion.
-12. Restart Streamlit.
-13. Confirm remaining data persists.
-14. Confirm dashboard metrics remain correct.
-15. Confirm the CSV archive and database backup still exist.
-16. Confirm ignored data does not appear in the Git staging set.
+9. Attempt an invalid edit and confirm no stored value changes.
+10. Cancel deletion and confirm the record remains.
+11. Permanently delete only the intended record.
+12. Confirm dashboard metrics refresh correctly.
+13. Stop and restart Streamlit against the same disposable database.
+14. Confirm the remaining record persists.
+15. Remove the disposable database and temporary artifacts.
+16. Confirm the live database, CSV archive, and permanent backups are unchanged.
+17. Confirm ignored data does not appear in the proposed staging set.
 
 ## 5. Automated tests
 
-Run the complete validation and database test suite.
+Run the complete model, validation, database, presentation-helper, and
+Streamlit workflow test suite.
 
 Final automated coverage must include:
 
@@ -984,13 +992,59 @@ The tests must not read from or write to `data/pmc.db`.
 
 ## 6. Approval checkpoint
 
-Before declaring the MVP complete or making the first Git commit:
+Before declaring the MVP complete or making the Phase 7 commit:
 
 - Review the automated test results.
 - Complete the manual acceptance walkthrough.
 - Review final README and PROJECT_SPEC.
 - Review the Git staging set.
 - Confirm the live database, backup, and CSV are excluded.
-- Approve the first commit contents.
+- Approve the Phase 7 commit contents.
 
 No later refactor, AI integration, service layer, view layer, or advanced feature work begins without a separate plan and approval.
+
+## Phase 7 completion record
+
+**Completed:** July 30, 2026
+
+The Phase 7 preflight confirmed:
+
+- `main` was clean and matched `origin/main` at Phase 6 commit
+  `975da63b635bb70f95ec5c65623f1f616c851948`.
+- Git was already initialized and was not reinitialized.
+- The implemented application, persistence layer, validation rules,
+  dependencies, and tests were reviewed in full.
+- Documentation drift was limited to outdated phase status, action wording,
+  incomplete validation/workflow detail, and obsolete first-commit Git
+  instructions.
+
+Final verification completed successfully:
+
+- All 103 automated tests passed using temporary databases.
+- The disposable acceptance walkthrough passed empty dashboard, valid create,
+  duplicate-name create, search, ID-specific detail, isolated edit, rejected
+  invalid edit, canceled deletion, confirmed deletion, metric refresh, actual
+  Streamlit stop/restart, and persistence checks.
+- The disposable database and server logs were removed during cleanup.
+- `git diff --check` passed.
+- Runtime dependencies were complete; `requirements.txt` did not change.
+- No application, test, database, schema, or migration change was required.
+
+Data-safety verification confirmed:
+
+- The live database passed SQLite integrity checking and retained the complete
+  Product Manager Central record at ID 1.
+- The live database remained unchanged at SHA-256
+  `7577ddf8dc7db112a295ab862102c4e89e2485b21b8a274969dedeffbdd9f049`.
+- `archive/products.csv` remained unchanged at SHA-256
+  `3c9e8eb9190ead8c8708d8ab0b957ece195d6704cb3682adf23ca55671be21f3`.
+- All four permanent backup files retained their preflight checksums.
+- Databases and sidecars, backups, the CSV, virtual environments, Python/test/
+  tool caches, operating-system files, temporary pasted text, and secret-bearing
+  environment files are ignored and are neither tracked nor staged.
+
+No Generative AI, external LLM, RAG, prompt management, generated artifacts,
+export, authentication, deployment, analytics, charts, advanced styling, ORM,
+service/view layers, schema changes, migrations, or unrelated refactoring were
+added. Phase 7 and the Product Manager Central MVP are complete, pending
+approval to commit and push these final documentation and Git-safety changes.
