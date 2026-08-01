@@ -1125,3 +1125,22 @@ successful disposable-copy dry run. The migration preserved both existing
 product rows and every value, left the database integrity check at `ok`, and
 created zero initial documents. Final test counts and Git verification are
 recorded in the implementation handoff rather than hard-coded here.
+
+## Phase 8 focused navigation improvement
+
+**Implemented:** August 1, 2026
+
+The primary sidebar now places Create PRD and Create BRD after Create Product
+and before View Products. Each page starts with an explicit placeholder and
+requires an ID-safe product selection before displaying the fixed document-type
+form. Duplicate product names remain unambiguous. An empty database displays
+product-first guidance and a Go to Create Product action without rendering an
+unusable document form.
+
+The primary routes reuse the existing Phase 8 form, prepopulation, validation,
+persistence, preview, editing, and stable document ID behavior. Route-specific
+widget and workflow keys prevent PRD, BRD, and product-detail state from
+leaking into one another. The product-detail Create Document path remains
+available as a secondary convenience. No database, migration, model, template,
+validation, dependency, LLM, RAG, export, authentication, or deployment change
+was introduced.

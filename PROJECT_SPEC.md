@@ -97,8 +97,16 @@ Approved statuses are:
 
 ### Product document builder
 
-- Document creation begins from an existing product detail.
-- The user chooses BRD or PRD and receives template-specific guided sections.
+- Primary navigation provides separate Create PRD and Create BRD options.
+- Each primary path requires an explicit ID-safe product selection before the
+  appropriate template form appears; the first product is never auto-selected.
+- When no products exist, the page explains that a product must be created
+  first and provides a route to Create Product without rendering a document
+  form.
+- An existing product detail retains Create Document as a secondary pathway,
+  where the user chooses BRD or PRD.
+- Both pathways use the same template-specific guided form and saved-document
+  preview/edit behavior.
 - Title, version `1.0`, and Draft status receive deterministic defaults.
 - High-confidence product context is copied once into the approved template
   sections; later product edits do not rewrite saved documents.

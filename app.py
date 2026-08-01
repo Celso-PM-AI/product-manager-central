@@ -55,6 +55,8 @@ APP_DATABASE_FILE: Final[str] = os.environ.get("PMC_DATABASE_FILE", DATABASE_FIL
 NAVIGATION_OPTIONS: Final[tuple[str, ...]] = (
     "Dashboard",
     "Create Product",
+    "Create PRD",
+    "Create BRD",
     "View Products",
     "Search Products",
 )
@@ -480,6 +482,7 @@ def render_document_editor(
     *,
     selector_key: str,
     document: ProductDocument | None = None,
+    on_create_cancel: Callable[[], None] | None = None,
 ) -> None:
     """Render and save a shared create or edit form."""
 
@@ -511,7 +514,10 @@ def render_document_editor(
 
     if cancel:
         if document is None:
-            set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
+            if on_create_cancel is None:
+                set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
+            else:
+                on_create_cancel()
         else:
             set_document_action(
                 selector_key,
@@ -570,13 +576,83 @@ def render_document_editor(
     st.rerun()
 
 
+def render_document_preview_or_edit(
+    product: Product,
+    *,
+    selector_key: str,
+    mode: str,
+    on_preview_back: Callable[[], None] | None = None,
+    preview_back_label: str = "Back to documents",
+) -> bool:
+    """Render shared stable-ID preview or edit state when active."""
+
+    if product.id is None or mode not in {
+        DOCUMENT_PREVIEW_MODE,
+        DOCUMENT_EDIT_MODE,
+    }:
+        return False
+
+    _, _, document_key, _ = document_action_state_keys(selector_key)
+    document_id = st.session_state.get(document_key)
+    try:
+        document = (
+            get_document(document_id, APP_DATABASE_FILE)
+            if isinstance(document_id, int)
+            else None
+        )
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error()
+        return True
+
+    if document is None or document.product_id != product.id:
+        st.warning("That document is no longer available for this product.")
+        set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
+        return True
+
+    if mode == DOCUMENT_EDIT_MODE:
+        render_document_editor(
+            product,
+            document.document_type,
+            selector_key=selector_key,
+            document=document,
+        )
+        return True
+
+    display_document_preview(document, product)
+    edit_column, back_column = st.columns(2)
+    if edit_column.button(
+        "Edit document",
+        type="primary",
+        width="stretch",
+        key=f"{selector_key}_edit_document_{document.id}",
+    ):
+        set_document_action(
+            selector_key,
+            product.id,
+            DOCUMENT_EDIT_MODE,
+            document_id=document.id,
+        )
+        st.rerun()
+    if back_column.button(
+        preview_back_label,
+        width="stretch",
+        key=f"{selector_key}_back_documents_{document.id}",
+    ):
+        if on_preview_back is None:
+            set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
+        else:
+            on_preview_back()
+        st.rerun()
+    return True
+
+
 def render_product_documents(product: Product, *, selector_key: str) -> None:
     """Render create, list, preview, and edit states for one product's documents."""
 
     if product.id is None:
         return
     mode = current_document_action(selector_key, product.id)
-    mode_key, _, document_key, type_key = document_action_state_keys(selector_key)
+    mode_key, _, _, type_key = document_action_state_keys(selector_key)
 
     st.divider()
     st.subheader("Product documents")
@@ -625,52 +701,11 @@ def render_product_documents(product: Product, *, selector_key: str) -> None:
         )
         return
 
-    if mode in {DOCUMENT_PREVIEW_MODE, DOCUMENT_EDIT_MODE}:
-        document_id = st.session_state.get(document_key)
-        try:
-            document = (
-                get_document(document_id, APP_DATABASE_FILE)
-                if isinstance(document_id, int)
-                else None
-            )
-        except (DatabaseSchemaError, sqlite3.Error):
-            display_database_error()
-            return
-        if document is None or document.product_id != product.id:
-            st.warning("That document is no longer available for this product.")
-            set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
-            return
-        if mode == DOCUMENT_EDIT_MODE:
-            render_document_editor(
-                product,
-                document.document_type,
-                selector_key=selector_key,
-                document=document,
-            )
-            return
-
-        display_document_preview(document, product)
-        edit_column, back_column = st.columns(2)
-        if edit_column.button(
-            "Edit document",
-            type="primary",
-            width="stretch",
-            key=f"{selector_key}_edit_document_{document.id}",
-        ):
-            set_document_action(
-                selector_key,
-                product.id,
-                DOCUMENT_EDIT_MODE,
-                document_id=document.id,
-            )
-            st.rerun()
-        if back_column.button(
-            "Back to documents",
-            width="stretch",
-            key=f"{selector_key}_back_documents_{document.id}",
-        ):
-            set_document_action(selector_key, product.id, DOCUMENT_LIST_MODE)
-            st.rerun()
+    if render_document_preview_or_edit(
+        product,
+        selector_key=selector_key,
+        mode=mode,
+    ):
         return
 
     try:
@@ -730,6 +765,113 @@ def render_product_documents(product: Product, *, selector_key: str) -> None:
             document_id=selected_id,
         )
         st.rerun()
+
+
+def reset_primary_document_flow(
+    selector_key: str,
+) -> None:
+    """Schedule a widget-safe return to a primary document product selector."""
+
+    request_state_cleanup(
+        f"{selector_key}_product_selector",
+        *document_action_state_keys(selector_key),
+    )
+
+
+def render_primary_document_creation(document_type: DocumentType) -> None:
+    """Render an ID-safe product selector and the shared document workflow."""
+
+    document_label = document_type.value
+    selector_key = f"primary_create_{document_label.lower()}"
+    st.header(f"Create {document_label}")
+    st.write(
+        f"Select the product that this {document_label} should be associated with."
+    )
+    display_workflow_flash()
+
+    try:
+        products = list_products(APP_DATABASE_FILE)
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error()
+        return
+
+    if not products:
+        st.info("A product must be created before you can create a BRD or PRD.")
+        st.write("Use Create Product to add the first product, then return here.")
+        if st.button(
+            "Go to Create Product",
+            type="primary",
+            key=f"{selector_key}_go_to_create_product",
+        ):
+            reset_primary_document_flow(selector_key)
+            st.session_state[PENDING_NAVIGATION_KEY] = "Create Product"
+            st.rerun()
+        return
+
+    products_by_id = {
+        product.id: product for product in products if product.id is not None
+    }
+    selected_id = st.selectbox(
+        "Select a product",
+        options=[None, *products_by_id],
+        format_func=(
+            lambda product_id: (
+                "Select a product"
+                if product_id is None
+                else product_option_label(products_by_id[product_id])
+            )
+        ),
+        key=f"{selector_key}_product_selector",
+    )
+    if selected_id is None:
+        st.info(f"Select a product to begin the {document_label}.")
+        return
+
+    try:
+        selected_product = get_product(selected_id, APP_DATABASE_FILE)
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error()
+        return
+    if selected_product is None:
+        st.warning("The associated product no longer exists.")
+        return
+
+    mode_key, product_key, _, _ = document_action_state_keys(selector_key)
+    if st.session_state.get(product_key) != selected_id:
+        set_document_action(
+            selector_key,
+            selected_id,
+            DOCUMENT_CREATE_MODE,
+            document_type=document_type,
+        )
+
+    mode = str(st.session_state.get(mode_key, DOCUMENT_CREATE_MODE))
+
+    def on_return() -> None:
+        reset_primary_document_flow(selector_key)
+
+    if render_document_preview_or_edit(
+        selected_product,
+        selector_key=selector_key,
+        mode=mode,
+        on_preview_back=on_return,
+        preview_back_label="Back to product selection",
+    ):
+        return
+
+    if mode != DOCUMENT_CREATE_MODE:
+        set_document_action(
+            selector_key,
+            selected_id,
+            DOCUMENT_CREATE_MODE,
+            document_type=document_type,
+        )
+    render_document_editor(
+        selected_product,
+        document_type,
+        selector_key=selector_key,
+        on_create_cancel=on_return,
+    )
 
 
 def render_dashboard() -> None:
@@ -1129,6 +1271,8 @@ def main() -> None:
     renderers: dict[str, Callable[[], None]] = {
         "Dashboard": render_dashboard,
         "Create Product": render_create_product,
+        "Create PRD": lambda: render_primary_document_creation(DocumentType.PRD),
+        "Create BRD": lambda: render_primary_document_creation(DocumentType.BRD),
         "View Products": render_view_products,
         "Search Products": render_search_products,
     }
