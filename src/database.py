@@ -10,14 +10,28 @@ from typing import Final
 
 import pandas as pd
 
-from src.models import DEFAULT_PRODUCT_STATUS, Product, ProductStatus
-from src.validation import ValidationResult, validate_product
+from src.document_templates import document_template
+from src.models import (
+    DEFAULT_PRODUCT_STATUS,
+    DocumentStatus,
+    DocumentType,
+    Product,
+    ProductDocument,
+    ProductStatus,
+)
+from src.validation import (
+    DocumentValidationResult,
+    ValidationResult,
+    validate_document,
+    validate_product,
+)
 
 
 DATABASE_FILE = "data/pmc.db"
 
 SCHEMA_MISSING: Final[str] = "missing"
 SCHEMA_LEGACY: Final[str] = "legacy"
+SCHEMA_PRODUCT_ONLY: Final[str] = "canonical_product_only"
 SCHEMA_CANONICAL: Final[str] = "canonical"
 SCHEMA_UNKNOWN: Final[str] = "unknown"
 
@@ -42,6 +56,23 @@ CANONICAL_COLUMNS: Final[tuple[str, ...]] = (
     "notes",
     "created_at",
     "updated_at",
+)
+
+DOCUMENT_COLUMNS: Final[tuple[str, ...]] = (
+    "id",
+    "product_id",
+    "document_type",
+    "title",
+    "version",
+    "document_status",
+    "created_at",
+    "updated_at",
+)
+
+DOCUMENT_SECTION_COLUMNS: Final[tuple[str, ...]] = (
+    "document_id",
+    "section_key",
+    "content",
 )
 
 LEGACY_COLUMN_SIGNATURE: Final[tuple[tuple[object, ...], ...]] = (
@@ -73,6 +104,18 @@ class ProductValidationError(ValueError):
         super().__init__(f"Invalid product data: {self.errors}")
 
 
+class DocumentValidationError(ValueError):
+    """Raised when document data fails centralized validation."""
+
+    def __init__(self, errors: Mapping[str, str]):
+        self.errors = dict(errors)
+        super().__init__(f"Invalid document data: {self.errors}")
+
+
+class DocumentAssociationError(ValueError):
+    """Raised when a document references a missing product."""
+
+
 def _database_path(database_path: str | os.PathLike[str]) -> Path:
     return Path(database_path)
 
@@ -92,6 +135,7 @@ def _connect(
         isolation_level=isolation_level,
     )
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -122,6 +166,7 @@ def _connect_read_only(
     uri = f"{_database_path(database_path).resolve().as_uri()}?mode=ro"
     connection = sqlite3.connect(uri, uri=True)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -155,7 +200,13 @@ def _table_info(
     connection: sqlite3.Connection,
     table_name: str = "products",
 ) -> tuple[sqlite3.Row, ...]:
-    if table_name not in {"products", MIGRATION_TABLE_NAME, LEGACY_TABLE_NAME}:
+    if table_name not in {
+        "products",
+        "documents",
+        "document_sections",
+        MIGRATION_TABLE_NAME,
+        LEGACY_TABLE_NAME,
+    }:
         raise ValueError("Unsupported internal table name.")
     return tuple(connection.execute(f'PRAGMA table_info("{table_name}")'))
 
@@ -178,23 +229,36 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
     tables = _user_tables(connection)
     if not tables:
         return SCHEMA_MISSING
-    if tables != ("products",):
+    if tables == ("products",):
+        table_info = _table_info(connection)
+        columns = tuple(row["name"] for row in table_info)
+        if columns == CANONICAL_COLUMNS:
+            return SCHEMA_PRODUCT_ONLY
+        if columns == LEGACY_COLUMNS and _legacy_signature_is_exact(table_info):
+            return SCHEMA_LEGACY
         return SCHEMA_UNKNOWN
 
-    table_info = _table_info(connection)
-    columns = tuple(row["name"] for row in table_info)
-
-    if columns == CANONICAL_COLUMNS:
-        return SCHEMA_CANONICAL
-    if columns == LEGACY_COLUMNS and _legacy_signature_is_exact(table_info):
-        return SCHEMA_LEGACY
+    if tables == ("document_sections", "documents", "products"):
+        product_columns = tuple(row["name"] for row in _table_info(connection))
+        document_columns = tuple(
+            row["name"] for row in _table_info(connection, "documents")
+        )
+        section_columns = tuple(
+            row["name"] for row in _table_info(connection, "document_sections")
+        )
+        if (
+            product_columns == CANONICAL_COLUMNS
+            and document_columns == DOCUMENT_COLUMNS
+            and section_columns == DOCUMENT_SECTION_COLUMNS
+        ):
+            return SCHEMA_CANONICAL
     return SCHEMA_UNKNOWN
 
 
 def detect_database_schema(
     database_path: str | os.PathLike[str] = DATABASE_FILE,
 ) -> str:
-    """Return missing, legacy, canonical, or unknown without changing data."""
+    """Return the recognized schema state without changing data."""
 
     path = _database_path(database_path)
     if not path.exists():
@@ -254,6 +318,77 @@ def _create_canonical_table(
     connection.execute(_canonical_table_sql(table_name))
 
 
+def _create_document_tables(connection: sqlite3.Connection) -> None:
+    """Add the normalized Phase 8 document schema."""
+
+    connection.execute(
+        """
+        CREATE TABLE documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            document_type TEXT NOT NULL
+                CHECK (document_type IN ('BRD', 'PRD')),
+            title TEXT NOT NULL
+                CHECK (length(trim(title)) BETWEEN 1 AND 200),
+            version TEXT NOT NULL
+                CHECK (length(trim(version)) BETWEEN 1 AND 50),
+            document_status TEXT NOT NULL DEFAULT 'draft'
+                CHECK (document_status IN ('draft', 'approved')),
+            created_at TEXT NOT NULL
+                CHECK (length(trim(created_at)) > 0),
+            updated_at TEXT NOT NULL
+                CHECK (length(trim(updated_at)) > 0),
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE document_sections (
+            document_id INTEGER NOT NULL,
+            section_key TEXT NOT NULL
+                CHECK (length(trim(section_key)) > 0),
+            content TEXT NOT NULL
+                CHECK (length(content) <= 10000),
+            PRIMARY KEY (document_id, section_key),
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX idx_documents_product_id
+        ON documents (product_id, id DESC)
+        """
+    )
+
+
+def _add_document_schema(connection: sqlite3.Connection) -> None:
+    """Transactionally add document tables while verifying product rows."""
+
+    before = tuple(
+        tuple(row)
+        for row in connection.execute(
+            "SELECT * FROM products ORDER BY id"
+        ).fetchall()
+    )
+    _create_document_tables(connection)
+    after = tuple(
+        tuple(row)
+        for row in connection.execute(
+            "SELECT * FROM products ORDER BY id"
+        ).fetchall()
+    )
+    if after != before:
+        raise MigrationVerificationError(
+            "Document migration changed existing product data."
+        )
+    if _detect_schema(connection) != SCHEMA_CANONICAL:
+        raise MigrationVerificationError(
+            "Document schema verification failed."
+        )
+
+
 def initialize_database(
     database_path: str | os.PathLike[str] = DATABASE_FILE,
 ) -> None:
@@ -264,7 +399,22 @@ def initialize_database(
     with _open_connection(database_path) as connection:
         schema = _detect_schema(connection)
         if schema == SCHEMA_MISSING:
-            _create_canonical_table(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _create_canonical_table(connection)
+                _create_document_tables(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_PRODUCT_ONLY:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _add_document_schema(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
         elif schema in {SCHEMA_LEGACY, SCHEMA_CANONICAL}:
             return
         else:
@@ -276,9 +426,17 @@ def initialize_database(
 
 def _require_canonical_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema != SCHEMA_CANONICAL:
+    if schema not in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
         raise DatabaseSchemaError(
             f"Canonical database schema required; found {schema}."
+        )
+
+
+def _require_document_schema(connection: sqlite3.Connection) -> None:
+    schema = _detect_schema(connection)
+    if schema != SCHEMA_CANONICAL:
+        raise DatabaseSchemaError(
+            f"Phase 8 document schema required; found {schema}."
         )
 
 
@@ -300,6 +458,15 @@ def _normalized_or_raise(
     result = validate_product(product_data)
     if not result.is_valid:
         raise ProductValidationError(result.errors)
+    return result
+
+
+def _normalized_document_or_raise(
+    document_data: Mapping[str, object],
+) -> DocumentValidationResult:
+    result = validate_document(document_data)
+    if not result.is_valid:
+        raise DocumentValidationError(result.errors)
     return result
 
 
@@ -607,6 +774,265 @@ def get_dashboard_metrics(
     }
 
 
+def _select_document_sections(
+    connection: sqlite3.Connection,
+    document_id: int,
+) -> dict[str, str]:
+    rows = connection.execute(
+        """
+        SELECT section_key, content
+        FROM document_sections
+        WHERE document_id = ?
+        """,
+        (document_id,),
+    ).fetchall()
+    return {row["section_key"]: row["content"] for row in rows}
+
+
+def _row_to_document(
+    connection: sqlite3.Connection,
+    row: sqlite3.Row,
+) -> ProductDocument:
+    document_id = int(row["id"])
+    return ProductDocument(
+        id=document_id,
+        product_id=row["product_id"],
+        document_type=DocumentType(row["document_type"]),
+        title=row["title"],
+        version=row["version"],
+        document_status=DocumentStatus(row["document_status"]),
+        sections=_select_document_sections(connection, document_id),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _select_document_by_id(
+    connection: sqlite3.Connection,
+    document_id: int,
+) -> ProductDocument | None:
+    row = connection.execute(
+        """
+        SELECT
+            id, product_id, document_type, title, version,
+            document_status, created_at, updated_at
+        FROM documents
+        WHERE id = ?
+        """,
+        (document_id,),
+    ).fetchone()
+    return _row_to_document(connection, row) if row is not None else None
+
+
+def create_document(
+    document_data: Mapping[str, object],
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> ProductDocument:
+    """Validate and atomically create one product document and its sections."""
+
+    result = _normalized_document_or_raise(document_data)
+    data = result.normalized_data
+    timestamp = _utc_now()
+
+    with _open_connection(database_path) as connection:
+        _require_document_schema(connection)
+        product_exists = connection.execute(
+            "SELECT 1 FROM products WHERE id = ?",
+            (data["product_id"],),
+        ).fetchone()
+        if product_exists is None:
+            raise DocumentAssociationError(
+                f"Product ID {data['product_id']} does not exist."
+            )
+
+        cursor = connection.execute(
+            """
+            INSERT INTO documents (
+                product_id, document_type, title, version,
+                document_status, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data["product_id"],
+                data["document_type"].value,
+                data["title"],
+                data["version"],
+                data["document_status"].value,
+                timestamp,
+                timestamp,
+            ),
+        )
+        document_id = int(cursor.lastrowid)
+        sections = data["sections"]
+        connection.executemany(
+            """
+            INSERT INTO document_sections (document_id, section_key, content)
+            VALUES (?, ?, ?)
+            """,
+            (
+                (document_id, definition.key, sections[definition.key])
+                for definition in document_template(data["document_type"])
+            ),
+        )
+        document = _select_document_by_id(connection, document_id)
+
+    if document is None:
+        raise RuntimeError("Created document could not be retrieved.")
+    return document
+
+
+def get_document(
+    document_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> ProductDocument | None:
+    """Return one document by stable database ID."""
+
+    with _open_connection(database_path) as connection:
+        _require_document_schema(connection)
+        return _select_document_by_id(connection, document_id)
+
+
+def list_documents_for_product(
+    product_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> list[ProductDocument]:
+    """Return a product's documents in descending stable-ID order."""
+
+    with _open_connection(database_path) as connection:
+        _require_document_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT
+                id, product_id, document_type, title, version,
+                document_status, created_at, updated_at
+            FROM documents
+            WHERE product_id = ?
+            ORDER BY id DESC
+            """,
+            (product_id,),
+        ).fetchall()
+        return [_row_to_document(connection, row) for row in rows]
+
+
+def count_documents_for_product(
+    product_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> int:
+    """Return the number of documents that product deletion will cascade."""
+
+    with _open_connection(database_path) as connection:
+        _require_document_schema(connection)
+        row = connection.execute(
+            "SELECT COUNT(*) AS document_count FROM documents WHERE product_id = ?",
+            (product_id,),
+        ).fetchone()
+        return int(row["document_count"])
+
+
+def update_document(
+    document_id: int,
+    updates: Mapping[str, object],
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> ProductDocument | None:
+    """Update editable content by stable document ID."""
+
+    supplied_updates = dict(updates)
+    immutable = {"id", "product_id", "document_type", "created_at", "updated_at"}
+    invalid = immutable.intersection(supplied_updates)
+    if invalid:
+        errors = {
+            field: f"{field.replace('_', ' ').title()} cannot be changed."
+            for field in invalid
+        }
+        raise DocumentValidationError(errors)
+
+    with _open_connection(database_path) as connection:
+        _require_document_schema(connection)
+        existing = _select_document_by_id(connection, document_id)
+        if existing is None:
+            return None
+        if not supplied_updates:
+            return existing
+
+        sections = dict(existing.sections)
+        if "sections" in supplied_updates:
+            supplied_sections = supplied_updates.pop("sections")
+            if not isinstance(supplied_sections, Mapping):
+                raise DocumentValidationError(
+                    {"sections": "Document sections must be supplied."}
+                )
+            sections.update(supplied_sections)
+
+        merged: dict[str, object] = {
+            "product_id": existing.product_id,
+            "document_type": existing.document_type,
+            "title": existing.title,
+            "version": existing.version,
+            "document_status": existing.document_status,
+            "sections": sections,
+        }
+        merged.update(supplied_updates)
+        result = _normalized_document_or_raise(merged)
+        data = result.normalized_data
+        updated_at = _utc_now()
+
+        connection.execute(
+            """
+            UPDATE documents
+            SET title = ?, version = ?, document_status = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                data["title"],
+                data["version"],
+                data["document_status"].value,
+                updated_at,
+                document_id,
+            ),
+        )
+        connection.executemany(
+            """
+            INSERT INTO document_sections (content, document_id, section_key)
+            VALUES (?, ?, ?)
+            ON CONFLICT (document_id, section_key)
+            DO UPDATE SET content = excluded.content
+            """,
+            (
+                (data["sections"][definition.key], document_id, definition.key)
+                for definition in document_template(existing.document_type)
+            ),
+        )
+        return _select_document_by_id(connection, document_id)
+
+
+def migrate_document_database(
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> bool:
+    """Add the Phase 8 tables to an exact product-only canonical database."""
+
+    path = _database_path(database_path)
+    if not path.exists():
+        raise DatabaseSchemaError("Cannot migrate a missing database.")
+
+    with _open_connection(path) as connection:
+        schema = _detect_schema(connection)
+        if schema == SCHEMA_CANONICAL:
+            return False
+        if schema != SCHEMA_PRODUCT_ONLY:
+            raise DatabaseSchemaError(
+                "Document migration requires the product-only canonical schema."
+            )
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            _add_document_schema(connection)
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+    return True
+
+
 def _integrity_is_ok(connection: sqlite3.Connection) -> bool:
     row = connection.execute("PRAGMA integrity_check").fetchone()
     return row is not None and row[0] == "ok"
@@ -740,6 +1166,8 @@ def migrate_legacy_database(
             )
             connection.execute(f'DROP TABLE "{LEGACY_TABLE_NAME}"')
 
+            _create_document_tables(connection)
+
             if _detect_schema(connection) != SCHEMA_CANONICAL:
                 raise MigrationVerificationError(
                     "Canonical schema verification failed."
@@ -796,7 +1224,7 @@ def save_product(
             )
         return
 
-    if schema == SCHEMA_CANONICAL:
+    if schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
         create_product(
             {
                 "name": product_name,
@@ -835,7 +1263,7 @@ def load_products(
                 FROM products
                 ORDER BY id DESC
             """
-        elif schema == SCHEMA_CANONICAL:
+        elif schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
             query = """
                 SELECT
                     id AS "ID",

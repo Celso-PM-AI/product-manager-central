@@ -4,9 +4,9 @@
 
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
-information. The MVP establishes dependable product-information management in
-SQLite. It prepares for possible future AI-assisted work but does not connect
-to an AI model or generate product artifacts.
+information and to author template-guided product documents. SQLite remains the
+single local data source. Phase 8 uses deterministic BRD and PRD templates; it
+does not create or integrate an LLM, call an AI API, or require API tokens.
 
 The MVP provides:
 
@@ -17,6 +17,7 @@ The MVP provides:
 5. Two-step, ID-based permanent deletion.
 6. Four portfolio dashboard metrics.
 7. Persistent local SQLite storage in one Streamlit application.
+8. Product-associated BRD and PRD creation, preview, and stable-ID editing.
 
 Duplicate product names are allowed. Identity-sensitive operations always use
 the system-managed product ID.
@@ -91,6 +92,28 @@ Approved statuses are:
 - Cancel leaves the record unchanged.
 - Confirmation deletes exactly one ID and returns to the product list.
 - Missing, already-deleted, and database-error cases use user-safe messages.
+- The confirmation reports how many associated documents will also be
+  permanently deleted through the database cascade.
+
+### Product document builder
+
+- Document creation begins from an existing product detail.
+- The user chooses BRD or PRD and receives template-specific guided sections.
+- Title, version `1.0`, and Draft status receive deterministic defaults.
+- High-confidence product context is copied once into the approved template
+  sections; later product edits do not rewrite saved documents.
+- Draft documents require valid metadata but may retain empty body sections.
+- Approved documents require content in every section and identify each
+  incomplete section in validation messages.
+- Each document has a stable SQLite ID and remains associated with one product.
+- A product may have multiple BRDs and PRDs.
+- Saved documents have formatted previews and ID-based editing.
+- Export and document deletion controls are not included in Phase 8.
+
+Document title is limited to 200 characters, version to 50 characters, and
+each long-form section to 10,000 characters. Version is nonblank free text.
+Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
+storage and appear as Draft and Approved in the interface.
 
 ## Dashboard metrics
 
@@ -108,9 +131,12 @@ Charts and advanced analytics are not part of the MVP.
 - Streamlit provides the single application in `app.py`.
 - SQLite is the only active data source.
 - `src/models.py` owns the `Product` model, status enum, and field categories.
+- `src/document_templates.py` owns persistent document section keys, labels,
+  guidance, order, and one-time product prepopulation.
 - `src/validation.py` owns normalization and reusable validation.
 - `src/database.py` owns schema detection, canonical initialization,
-  parameterized CRUD/search/metrics, and the controlled known-legacy migration.
+  parameterized product/document persistence, metrics, the controlled
+  known-legacy migration, and the additive Phase 8 migration.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit and pandas runtime dependencies.
@@ -118,8 +144,11 @@ Charts and advanced analytics are not part of the MVP.
 The application accepts `PMC_DATABASE_FILE` for isolated automated or manual
 verification. Without it, the only live data source is `data/pmc.db`.
 
-The MVP deliberately has no ORM, service layer, separate view layer, schema
-framework, multipage architecture, charts, or advanced styling framework.
+Documents use normalized `documents` and `document_sections` tables. Foreign
+keys are enforced, product deletion cascades to associated documents, and an
+index supports product document listings. The application deliberately has no
+ORM, service layer, separate view layer, general schema framework, multipage
+architecture, charts, or advanced styling framework.
 
 ## Data-protection policy
 
@@ -137,7 +166,7 @@ framework, multipage architecture, charts, or advanced styling framework.
 ## Deferred features
 
 - Generative AI, external LLM APIs, RAG, and prompt management
-- Generated product-management artifacts and export functionality
+- AI-generated content and Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
 - ORM, service-layer, separate view-layer, or general migration frameworks
@@ -145,11 +174,7 @@ framework, multipage architecture, charts, or advanced styling framework.
 
 ## Current development status
 
-Phases 0 through 7 are complete as of July 30, 2026. The complete automated
-suite and disposable-database acceptance walkthrough passed, including an
-actual Streamlit stop/restart and persistence check. Live data, permanent
-backups, and the preserved CSV remained unchanged.
-
-The Product Manager Central MVP is complete and awaiting approval to commit and
-push the Phase 7 documentation and Git-safety changes. All deferred features
-remain unstarted.
+Phases 0 through 7 are complete. Phase 8 adds the deterministic Product
+Document Builder while preserving the established product workflows. Phase 8
+does not use an LLM, AI API, token, authentication, cloud deployment, or export
+facility.

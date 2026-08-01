@@ -16,6 +16,20 @@ class ProductStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class DocumentType(str, Enum):
+    """Supported deterministic product-document templates."""
+
+    BRD = "BRD"
+    PRD = "PRD"
+
+
+class DocumentStatus(str, Enum):
+    """Approval states for a saved product document."""
+
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
 DEFAULT_PRODUCT_STATUS: Final[ProductStatus] = ProductStatus.DISCOVERY
 
 REQUIRED_PRODUCT_FIELDS: Final[tuple[str, ...]] = (
@@ -50,6 +64,19 @@ LEGACY_TO_CANONICAL_FIELD_MAP: Final[dict[str, str]] = {
     "date_created": "created_at",
 }
 
+EDITABLE_DOCUMENT_FIELDS: Final[tuple[str, ...]] = (
+    "title",
+    "version",
+    "document_status",
+    "sections",
+)
+
+SYSTEM_MANAGED_DOCUMENT_FIELDS: Final[tuple[str, ...]] = (
+    "id",
+    "created_at",
+    "updated_at",
+)
+
 
 @dataclass
 class Product:
@@ -63,6 +90,21 @@ class Product:
     customer_problem: str | None = None
     product_strategy: str | None = None
     notes: str | None = None
+    id: int | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+@dataclass
+class ProductDocument:
+    """A BRD or PRD associated with one saved product."""
+
+    product_id: int
+    document_type: DocumentType
+    title: str
+    version: str
+    document_status: DocumentStatus
+    sections: dict[str, str]
     id: int | None = None
     created_at: str | None = None
     updated_at: str | None = None

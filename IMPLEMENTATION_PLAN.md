@@ -1048,3 +1048,80 @@ export, authentication, deployment, analytics, charts, advanced styling, ORM,
 service/view layers, schema changes, migrations, or unrelated refactoring were
 added. Phase 7 and the Product Manager Central MVP are complete, pending
 approval to commit and push these final documentation and Git-safety changes.
+
+# Phase 8: Product Document Builder
+
+## 1. Purpose
+
+Add deterministic, template-guided BRD and PRD authoring for existing products.
+Phase 8 does not create or integrate an LLM, call an AI API, require API tokens,
+or generate document content.
+
+## 2. Files created or changed
+
+- `app.py`
+- `src/models.py`
+- `src/document_templates.py`
+- `src/validation.py`
+- `src/database.py`
+- Document validation, persistence, migration, and Streamlit workflow tests
+- `PROJECT_SPEC.md`
+- `IMPLEMENTATION_PLAN.md`
+- `DECISIONS.md`
+- `README.md`
+
+No runtime dependency is added.
+
+## 3. Data design and migration
+
+- `documents` stores stable document ID, product ID, type, title, version,
+  status, and timestamps.
+- `document_sections` stores one row per stable template section key.
+- SQLite foreign keys are enabled on application connections.
+- Both relationships use `ON DELETE CASCADE`.
+- `idx_documents_product_id` supports product document listings.
+- Empty databases receive the complete schema directly.
+- Existing product-only canonical databases receive the document tables and
+  index in one additive transaction.
+- Migration verifies that the complete ordered product rowset is unchanged.
+- Known legacy and unknown-schema protections remain in place.
+
+## 4. Validation and workflow
+
+- Document type, associated product ID, title, version, and status are required.
+- Titles allow 200 characters; versions allow 50; sections allow 10,000 each.
+- Version is nonblank free text.
+- Draft body sections may be empty.
+- Approved documents require every template section and report every incomplete
+  section by readable label.
+- Creation begins from an existing product and supports BRD or PRD selection.
+- Approved product fields are copied once into the new-document form.
+- Saved documents are listed by product, previewed in template order, and edited
+  by stable document ID.
+- Multiple documents may be associated with one product.
+- Product deletion confirmation reports the number of documents that will
+  cascade.
+- Document export and explicit document deletion are outside Phase 8.
+
+## 5. Verification requirements
+
+- Migration, rollback, schema, foreign-key, index, preservation, BRD, PRD,
+  association, multiplicity, validation, stable update, version/status,
+  timestamp, cascade, prepopulation snapshot, preview, edit, and regression
+  tests use disposable databases.
+- A verified ignored backup precedes active migration.
+- The migration is dry-run against a disposable copy and compares every product
+  row and value before active migration.
+- The complete automated suite, disposable Streamlit walkthrough, SQLite
+  integrity check, `git diff --check`, and Git artifact review must pass.
+
+## Phase 8 completion record
+
+**Implemented:** August 1, 2026
+
+Phase 8 implements the approved normalized schema and deterministic document
+workflow. The active migration was preceded by an ignored SQLite backup and a
+successful disposable-copy dry run. The migration preserved both existing
+product rows and every value, left the database integrity check at `ok`, and
+created zero initial documents. Final test counts and Git verification are
+recorded in the implementation handoff rather than hard-coded here.
