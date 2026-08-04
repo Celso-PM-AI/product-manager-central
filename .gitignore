@@ -35,3 +35,6 @@ pasted-text.txt
 .env
 .env.*
 !.env.example
+.envrc
+.direnv/
+.streamlit/secrets.toml

@@ -5,8 +5,9 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 8 uses deterministic BRD and PRD templates; it
-does not create or integrate an LLM, call an AI API, or require API tokens.
+single local data source. Phase 9 Checkpoint 1 adds an optional OpenAI
+configuration/client boundary and deterministic retrieval of approved BRD/PRD
+sections without adding an AI Assistant interface or generated content.
 
 The MVP provides:
 
@@ -123,6 +124,23 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
+### Phase 9 Checkpoint 1 AI foundation
+
+- AI configuration is optional and reads only `OPENAI_API_KEY` from the process
+  environment. Status reporting never returns or logs the key.
+- `OPENAI_MODEL` may override the documented default model without a code
+  change.
+- The OpenAI service uses the official Python SDK's Responses API through an
+  injectable client boundary. Automated tests use mocks and make no API calls.
+- Deterministic retrieval returns sections only from documents whose status is
+  `approved` and whose type is `BRD` or `PRD`. Drafts and unsupported types are
+  excluded.
+- Every retrieved section includes product ID/name, document ID/title/type,
+  section key/title, and unchanged section content for future citations.
+- Original BRDs and PRDs are never modified by AI. Future generated content
+  must remain separate and require human review and explicit acceptance before
+  it can be saved.
+
 ## Dashboard metrics
 
 - **Total products:** every saved product.
@@ -143,11 +161,15 @@ Charts and advanced analytics are not part of the MVP.
   guidance, order, and one-time product prepopulation.
 - `src/validation.py` owns normalization and reusable validation.
 - `src/database.py` owns schema detection, canonical initialization,
-  parameterized product/document persistence, metrics, the controlled
-  known-legacy migration, and the additive Phase 8 migration.
+  parameterized product/document persistence, approved-source retrieval,
+  metrics, the controlled known-legacy migration, and the additive Phase 8
+  migration.
+- `src/ai_service.py` owns non-secret OpenAI configuration status and the
+  injectable Responses API service boundary.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
-- `requirements.txt` contains the Streamlit and pandas runtime dependencies.
+- `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
+  SDK runtime dependencies.
 
 The application accepts `PMC_DATABASE_FILE` for isolated automated or manual
 verification. Without it, the only live data source is `data/pmc.db`.
@@ -155,8 +177,9 @@ verification. Without it, the only live data source is `data/pmc.db`.
 Documents use normalized `documents` and `document_sections` tables. Foreign
 keys are enforced, product deletion cascades to associated documents, and an
 index supports product document listings. The application deliberately has no
-ORM, service layer, separate view layer, general schema framework, multipage
-architecture, charts, or advanced styling framework.
+ORM, general service/view framework, general schema framework, multipage
+architecture, charts, or advanced styling framework. Phase 9 adds only a
+narrow AI service boundary for secure configuration, SDK isolation, and tests.
 
 ## Data-protection policy
 
@@ -173,8 +196,12 @@ architecture, charts, or advanced styling framework.
 
 ## Deferred features
 
-- Generative AI, external LLM APIs, RAG, and prompt management
-- AI-generated content and Word/PDF document export
+- Embeddings, semantic search, the full AI Assistant interface, answer
+  generation, prompt management, and RAG evaluation
+- Separate generated-content persistence plus human review and explicit
+  acceptance workflow
+- AI-generated document updates and automatic modification of source BRDs/PRDs
+- Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
 - ORM, service-layer, separate view-layer, or general migration frameworks
@@ -182,7 +209,7 @@ architecture, charts, or advanced styling framework.
 
 ## Current development status
 
-Phases 0 through 7 are complete. Phase 8 adds the deterministic Product
-Document Builder while preserving the established product workflows. Phase 8
-does not use an LLM, AI API, token, authentication, cloud deployment, or export
-facility.
+Phases 0 through 8 and Phase 9 Checkpoint 1 are complete. The checkpoint adds
+the secure OpenAI connection boundary and approved-document retrieval boundary.
+No embedding, semantic search, full assistant UI, answer generation, generated-
+content acceptance workflow, or RAG evaluation is implemented.

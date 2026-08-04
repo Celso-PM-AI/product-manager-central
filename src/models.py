@@ -108,3 +108,17 @@ class ProductDocument:
     id: int | None = None
     created_at: str | None = None
     updated_at: str | None = None
+
+
+@dataclass(frozen=True)
+class RetrievableDocumentSection:
+    """One approved source section with citation-ready metadata."""
+
+    product_id: int
+    product_name: str
+    document_id: int
+    document_title: str
+    document_type: DocumentType
+    section_key: str
+    section_title: str
+    section_content: str

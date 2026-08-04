@@ -4,8 +4,9 @@ Product Manager Central (PMC) is a focused Streamlit workspace for capturing,
 finding, reviewing, editing, and safely deleting structured product information.
 It also provides a template-guided builder for product-associated Business
 Requirements Documents (BRDs) and Product Requirements Documents (PRDs). Data
-is stored locally in SQLite. Phase 8 uses deterministic structured templates
-and does not create or integrate an LLM, call an AI API, or require API tokens.
+is stored locally in SQLite. Phase 9 Checkpoint 1 adds an optional, inactive-by-
+default OpenAI connection and approved-document retrieval foundation. It does
+not yet add an AI Assistant interface or generate content in the application.
 
 ## MVP scope
 
@@ -105,17 +106,22 @@ PMC deliberately uses a small MVP architecture:
   guidance, order, and prepopulation mappings.
 - `src/validation.py` provides reusable validation and normalization.
 - `src/database.py` owns parameterized SQLite initialization, product and
-  document persistence, search, dashboard metrics, and controlled migrations.
+  document persistence, approved-source retrieval, search, dashboard metrics,
+  and controlled migrations.
+- `src/ai_service.py` reports non-secret AI configuration status and isolates
+  the official OpenAI Responses API client behind an injectable boundary.
 - `tests/` contains isolated validation, database, presentation-helper, and
   Streamlit workflow tests.
-- `requirements.txt` lists the Streamlit and pandas runtime dependencies.
+- `requirements.txt` lists the Streamlit, pandas, and OpenAI runtime
+  dependencies.
 - `data/pmc.db` is the only live application data source.
 
 Documents are normalized across `documents` and `document_sections` tables.
 SQLite foreign keys are enabled, product deletion cascades to its documents,
 and document listings use a product-ID index. Database operations remain
-outside the Streamlit view code. No ORM, service layer, separate view layer, or
-general schema framework is used.
+outside the Streamlit view code. No ORM, general service/view framework, or
+general schema framework is used; the AI integration has one narrow service
+boundary for configuration, SDK isolation, and testing.
 
 ## Setup
 
@@ -142,6 +148,61 @@ PMC_DATABASE_FILE=/tmp/pmc-test.db streamlit run app.py
 ```
 
 Never use the live Product Manager Central record for destructive testing.
+
+## Activate the AI Assistant
+
+AI capability is optional. PMC continues to run without an OpenAI API key, and
+Phase 9 Checkpoint 1 provides only the secure connection and approved-source
+foundation. The question-answer interface is not available yet.
+
+ChatGPT Plus and OpenAI API billing are separate. A ChatGPT Plus subscription
+does not include API usage, and OpenAI API usage can incur charges. Review the
+[API billing settings](https://platform.openai.com/settings/organization/billing/overview)
+and set an appropriate budget before activation.
+
+1. Sign in to the [OpenAI API platform](https://platform.openai.com/).
+2. Create or select a project in the project menu. Use a dedicated project for
+   PMC so its access, usage, and budget can be managed separately.
+3. Open the project's [API Keys page](https://platform.openai.com/api-keys) and
+   create a new secret key. Keep the key in a password manager. Never paste it
+   into source code, documentation, prompts, tests, committed files, or GitHub,
+   and never share it.
+4. Approve at least one complete BRD or PRD in PMC. Future RAG features will
+   retrieve only Approved BRDs and PRDs; Draft documents are excluded.
+
+On macOS, open Terminal in the PMC folder, activate the virtual environment,
+and enter the key through a hidden prompt for the current terminal session:
+
+```bash
+source .venv/bin/activate
+read -s "OPENAI_API_KEY?OpenAI API key: "
+export OPENAI_API_KEY
+echo
+python -m pip install -r requirements.txt
+streamlit run app.py
+```
+
+On Windows, open PowerShell in the PMC folder, activate the virtual environment,
+and enter the key through a masked prompt for the current PowerShell session:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+$SecureOpenAIKey = Read-Host "OpenAI API key" -AsSecureString
+$env:OPENAI_API_KEY = [System.Net.NetworkCredential]::new("", $SecureOpenAIKey).Password
+Remove-Variable SecureOpenAIKey
+python -m pip install -r requirements.txt
+streamlit run app.py
+```
+
+PMC uses the balanced `gpt-5.6-terra` model by default. Product Managers do not
+need to change it. Developers evaluating another supported model can set the
+optional `OPENAI_MODEL` environment variable before launching PMC.
+
+To deactivate AI for the current macOS terminal, run `unset OPENAI_API_KEY`. In
+Windows PowerShell, run `Remove-Item Env:OPENAI_API_KEY`. If a key may have been
+exposed, immediately revoke it from the project's API Keys page, create a
+replacement, update the current environment using the steps above, and review
+project usage. Do not reuse the compromised key.
 
 ## Tests
 
@@ -231,14 +292,19 @@ backups and `archive/products.csv` must remain unchanged.
 
 ## Deferred features
 
-- Generative AI, external LLM APIs, RAG, and prompt management
-- AI-generated content and Word/PDF document export
+- The full AI Assistant question-answer interface, answer generation, prompt
+  management, embeddings, semantic search, and RAG evaluation
+- Human review/explicit acceptance and separate storage for AI-generated
+  content; automatic changes to source BRDs/PRDs are prohibited
+- Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
 - ORM, service-layer, separate view-layer, or general migration frameworks
 
 ## Development status
 
-Phases 0 through 7 are complete. Phase 8 implements the deterministic Product
-Document Builder without an LLM, AI API, credentials, export, authentication,
-or cloud deployment.
+Phases 0 through 8 and Phase 9 Checkpoint 1 are complete. Secure
+optional OpenAI configuration, an injectable Responses API boundary, and
+deterministic retrieval of citation-ready sections from Approved BRDs and PRDs
+are implemented. No UI, real API request, embeddings, semantic search, answer
+generation, acceptance workflow, or RAG evaluation is included yet.

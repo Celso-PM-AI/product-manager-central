@@ -12,11 +12,12 @@
 
 ## Current phase status
 
-**Updated:** July 30, 2026
+**Updated:** August 4, 2026
 
-- Phases 0 through 7 are complete.
+- Phases 0 through 8 and Phase 9 Checkpoint 1 are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Generative AI integration has not started.
+- Secure OpenAI configuration/client and approved-source retrieval boundaries
+  are implemented; the full AI Assistant remains deferred.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
 during Phase 4. Phase 6 completed its required coverage and interface-polish
@@ -1144,3 +1145,36 @@ leaking into one another. The product-detail Create Document path remains
 available as a secondary convenience. No database, migration, model, template,
 validation, dependency, LLM, RAG, export, authentication, or deployment change
 was introduced.
+
+# Phase 9: AI Assistant
+
+## Checkpoint 1: Secure connection and approved-source boundaries
+
+**Completed:** August 4, 2026
+
+Checkpoint 1 introduces only the foundations approved for this increment:
+
+- Add the compatible official OpenAI Python SDK runtime dependency.
+- Read `OPENAI_API_KEY` only from the environment and expose only non-secret
+  configured/inactive status.
+- Allow the default Responses API model to be overridden with `OPENAI_MODEL`.
+- Isolate `client.responses.create` behind an injectable service so automated
+  tests make no network request and consume no tokens.
+- Query the existing normalized schema read-only for sections belonging only to
+  Approved BRDs and PRDs.
+- Return product, document, type, and section metadata needed for future source
+  citations.
+- Document optional activation, separate ChatGPT/API billing, secure macOS and
+  Windows environment setup, deactivation, and key replacement.
+- Preserve Phase 8 workflows and the current schema.
+
+Checkpoint 1 does not add embeddings, semantic ranking, a question-answer UI,
+answer generation, prompt management, generated-content persistence, human
+acceptance controls, or RAG evaluation. AI must never automatically modify an
+original BRD or PRD; any later generated content must remain separate until a
+human explicitly accepts it.
+
+The complete suite passed 146 tests, including the unchanged Phase 8 workflow
+coverage and seven new AI/retrieval tests. `git diff --check`, secret and
+artifact review, and database/backup checksum comparisons passed. No schema,
+live database, backup, UI, or production-data change was made.

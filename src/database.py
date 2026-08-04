@@ -18,6 +18,7 @@ from src.models import (
     Product,
     ProductDocument,
     ProductStatus,
+    RetrievableDocumentSection,
 )
 from src.validation import (
     DocumentValidationResult,
@@ -928,6 +929,72 @@ def count_documents_for_product(
             (product_id,),
         ).fetchone()
         return int(row["document_count"])
+
+
+def list_retrievable_document_sections(
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> list[RetrievableDocumentSection]:
+    """Return only approved BRD/PRD sections with citation metadata.
+
+    This deterministic, read-only boundary performs no semantic ranking and
+    makes no external API calls.
+    """
+
+    section_titles = {
+        (document_type, definition.key): definition.label
+        for document_type in (DocumentType.BRD, DocumentType.PRD)
+        for definition in document_template(document_type)
+    }
+    with _open_read_only(database_path) as connection:
+        _require_document_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT
+                products.id AS product_id,
+                products.name AS product_name,
+                documents.id AS document_id,
+                documents.title AS document_title,
+                documents.document_type,
+                document_sections.section_key,
+                document_sections.content AS section_content
+            FROM document_sections
+            INNER JOIN documents
+                ON documents.id = document_sections.document_id
+            INNER JOIN products
+                ON products.id = documents.product_id
+            WHERE documents.document_status = ?
+              AND documents.document_type IN (?, ?)
+            ORDER BY
+                products.id,
+                documents.id,
+                document_sections.section_key
+            """,
+            (
+                DocumentStatus.APPROVED.value,
+                DocumentType.BRD.value,
+                DocumentType.PRD.value,
+            ),
+        ).fetchall()
+
+    sections: list[RetrievableDocumentSection] = []
+    for row in rows:
+        document_type = DocumentType(row["document_type"])
+        title = section_titles.get((document_type, row["section_key"]))
+        if title is None:
+            continue
+        sections.append(
+            RetrievableDocumentSection(
+                product_id=int(row["product_id"]),
+                product_name=row["product_name"],
+                document_id=int(row["document_id"]),
+                document_title=row["document_title"],
+                document_type=document_type,
+                section_key=row["section_key"],
+                section_title=title,
+                section_content=row["section_content"],
+            )
+        )
+    return sections
 
 
 def update_document(
