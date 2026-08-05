@@ -8,6 +8,7 @@ from src.ai_service import (
     DEFAULT_OPENAI_EMBEDDING_MODEL,
     DEFAULT_OPENAI_MODEL,
     AIConfigurationError,
+    AIServiceError,
     OpenAIService,
     get_ai_configuration,
 )
@@ -112,6 +113,32 @@ class OpenAIServiceTests(unittest.TestCase):
             service.create_text_response("Test the injected factory."),
             "Factory-backed mock response.",
         )
+
+    def test_mocked_api_failure_is_sanitized(self):
+        client = Mock()
+        client.responses.create.side_effect = RuntimeError(
+            "provider details and credential-like material"
+        )
+        service = OpenAIService(client, "model-selected-for-test")
+
+        with self.assertRaisesRegex(
+            AIServiceError,
+            "temporarily unavailable",
+        ) as raised:
+            service.create_text_response("Draft from approved sources.")
+
+        self.assertNotIn("provider details", str(raised.exception))
+
+    def test_malformed_text_response_is_rejected(self):
+        client = Mock()
+        for malformed in (None, "", "   ", 42):
+            with self.subTest(malformed=malformed):
+                client.responses.create.return_value = SimpleNamespace(
+                    output_text=malformed
+                )
+                service = OpenAIService(client, "model-selected-for-test")
+                with self.assertRaisesRegex(AIServiceError, "no text response"):
+                    service.create_text_response("Draft from approved sources.")
 
 
 if __name__ == "__main__":

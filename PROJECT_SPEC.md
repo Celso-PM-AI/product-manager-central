@@ -5,10 +5,9 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 9 Checkpoints 1 and 2 add an optional OpenAI
-configuration/client boundary plus embedding-based semantic retrieval of
-approved BRD/PRD chunks without adding an AI Assistant interface or generated
-content.
+single local data source. Phase 9 Checkpoints 1 through 3 add an optional OpenAI
+configuration/client boundary, embedding-based semantic retrieval of Approved
+BRD/PRD chunks, and temporary grounded draft generation with citations.
 
 The MVP provides:
 
@@ -125,7 +124,7 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
-### Phase 9 Checkpoints 1 and 2 AI retrieval foundation
+### Phase 9 Checkpoints 1 through 3 AI Assistant
 
 - AI configuration is optional and reads only `OPENAI_API_KEY` from the process
   environment. Status reporting never returns or logs the key.
@@ -152,9 +151,17 @@ storage and appear as Draft and Approved in the interface.
   as trusted results.
 - Retrieval reports distinct empty states when no Approved BRD/PRD sources are
   available or when none meet the relevance threshold.
-- Original BRDs and PRDs are never modified by AI. Future generated content
-  must remain separate and require human review and explicit acceptance before
-  it can be saved.
+- A clean generation service validates a Product Manager's request, retrieves
+  relevant Approved sources, constructs a source-numbered prompt, and sends it
+  through the existing injectable OpenAI Responses API boundary.
+- Generated output is clearly labeled as an AI-generated draft and is returned
+  separately from structured citations containing product name/ID, document
+  title/ID/type, and section title/key.
+- No approved retrieval context means no generation call and no claim that a
+  response is grounded.
+- Original BRDs and PRDs are never modified by AI. Generated content remains
+  temporary, unaccepted, and unsavable in Checkpoint 3; human review and
+  explicit acceptance are required before future saving.
 
 ## Dashboard metrics
 
@@ -183,6 +190,8 @@ Charts and advanced analytics are not part of the MVP.
   injectable Responses and Embeddings API service boundary.
 - `src/semantic_retrieval.py` owns stable chunking, similarity ranking, result
   limits, live eligibility revalidation, and semantic-retrieval empty states.
+- `src/grounded_generation.py` owns request validation, grounded prompt
+  construction, temporary generated-draft results, and structured citations.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
@@ -218,10 +227,9 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Deferred features
 
-- The full AI Assistant interface, answer generation, prompt management, and
-  RAG evaluation
-- Separate generated-content persistence plus human review and explicit
-  acceptance workflow
+- Generated-content persistence plus human review and explicit acceptance
+  workflow
+- Prompt management and RAG evaluation
 - AI-generated document updates and automatic modification of source BRDs/PRDs
 - Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
@@ -231,8 +239,8 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Current development status
 
-Phases 0 through 8 and Phase 9 Checkpoints 1 and 2 are complete. Secure OpenAI
-boundaries, stable approved-source chunking, injectable embeddings, and ranked
-semantic retrieval are implemented. Checkpoints 3, 4, 5, and 6 are not started;
-there is no assistant UI, answer generation, generated-content acceptance
-workflow, prompt management, or RAG evaluation.
+Phases 0 through 8 and Phase 9 Checkpoints 1 through 3 are complete. Secure
+OpenAI boundaries, stable approved-source retrieval, and temporary grounded
+draft generation with citations are implemented. Checkpoints 4, 5, and 6 are
+not started; there is no generated-content persistence or acceptance workflow,
+prompt management, or RAG evaluation.

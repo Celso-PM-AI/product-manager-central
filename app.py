@@ -7,6 +7,12 @@ from typing import Final
 
 import streamlit as st
 
+from src.ai_service import (
+    AIConfigurationError,
+    AIServiceError,
+    OpenAIService,
+    get_ai_configuration,
+)
 from src.database import (
     DATABASE_FILE,
     DatabaseSchemaError,
@@ -31,6 +37,10 @@ from src.document_templates import (
     derived_document_title,
     document_template,
     prepopulated_sections,
+)
+from src.grounded_generation import (
+    DatabaseGroundedGenerationService,
+    GenerationRequestError,
 )
 from src.models import (
     DEFAULT_PRODUCT_STATUS,
@@ -57,6 +67,7 @@ NAVIGATION_OPTIONS: Final[tuple[str, ...]] = (
     "Create Product",
     "Create PRD",
     "Create BRD",
+    "AI Assistant",
     "View Products",
     "Search Products",
 )
@@ -72,6 +83,83 @@ DOCUMENT_CHOOSE_MODE: Final[str] = "document_choose"
 DOCUMENT_CREATE_MODE: Final[str] = "document_create"
 DOCUMENT_PREVIEW_MODE: Final[str] = "document_preview"
 DOCUMENT_EDIT_MODE: Final[str] = "document_edit"
+
+
+def render_ai_assistant() -> None:
+    """Render temporary grounded draft generation without any save workflow."""
+
+    st.header("AI Assistant")
+    st.caption(
+        "Generate a temporary draft grounded only in Approved BRDs and PRDs. "
+        "Draft documents are excluded."
+    )
+    configuration = get_ai_configuration()
+    if configuration.configured:
+        st.info(configuration.status_message)
+    else:
+        st.warning(configuration.status_message)
+
+    with st.form("grounded_generation_form"):
+        request = st.text_area(
+            "What would you like to draft?",
+            placeholder=(
+                "For example: Draft a launch-readiness summary using the approved "
+                "product requirements."
+            ),
+            max_chars=10_000,
+            key="grounded_generation_request",
+        )
+        generate = st.form_submit_button("Generate draft", type="primary")
+
+    if not generate:
+        st.info(
+            "Generated content is not an original BRD or PRD. Human review and "
+            "explicit acceptance are required before saving; saving is not "
+            "available in this checkpoint."
+        )
+        return
+
+    try:
+        ai_service = OpenAIService.from_environment()
+        result = DatabaseGroundedGenerationService(
+            ai_service,
+            APP_DATABASE_FILE,
+        ).generate(request)
+    except GenerationRequestError as error:
+        st.error(str(error))
+        return
+    except AIConfigurationError as error:
+        st.error(str(error))
+        return
+    except AIServiceError as error:
+        st.error(str(error))
+        return
+    except (ValueError, DatabaseSchemaError, sqlite3.Error):
+        st.error(
+            "A grounded draft could not be generated safely. Please check the "
+            "request and try again."
+        )
+        return
+
+    if not result.grounded:
+        st.warning(result.message)
+        return
+
+    st.subheader("Generated draft content")
+    st.warning(
+        "AI-generated draft — review carefully. It has not been accepted or saved, "
+        "and no source document was changed."
+    )
+    st.markdown(result.content or "")
+    st.markdown("### Citations")
+    for citation in result.citations:
+        st.markdown(
+            f"**[Source {citation.source_number}]** "
+            f"{citation.product} (product ID {citation.product_id}) · "
+            f"{citation.document_title} (document ID {citation.document_id}) · "
+            f"{citation.document_type.value} · {citation.section}"
+        )
+    st.info(result.message)
 
 
 def status_label(status: ProductStatus) -> str:
@@ -1273,6 +1361,7 @@ def main() -> None:
         "Create Product": render_create_product,
         "Create PRD": lambda: render_primary_document_creation(DocumentType.PRD),
         "Create BRD": lambda: render_primary_document_creation(DocumentType.BRD),
+        "AI Assistant": render_ai_assistant,
         "View Products": render_view_products,
         "Search Products": render_search_products,
     }

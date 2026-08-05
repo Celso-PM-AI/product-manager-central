@@ -291,6 +291,7 @@ class PrimaryDocumentNavigationTests(PrimaryDocumentNavigationTestCase):
                 "Create Product",
                 "Create PRD",
                 "Create BRD",
+                "AI Assistant",
                 "View Products",
                 "Search Products",
             ],
@@ -310,6 +311,25 @@ class PrimaryDocumentNavigationTests(PrimaryDocumentNavigationTestCase):
                     "Save document",
                     [button.label for button in self.app.button],
                 )
+
+    def test_ai_assistant_missing_configuration_never_constructs_live_client(self):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}), patch(
+            "src.ai_service._create_official_client"
+        ) as client_factory:
+            self.open_navigation("AI Assistant")
+            self.app.text_area(key="grounded_generation_request").set_value(
+                "Draft a product summary."
+            )
+            self.app.button(
+                key="FormSubmitter:grounded_generation_form-Generate draft"
+            ).click().run()
+
+        self.assertEqual(list(self.app.exception), [])
+        client_factory.assert_not_called()
+        self.assertTrue(
+            any("currently inactive" in message.value for message in self.app.error)
+        )
+        self.assertNotIn("Save", [button.label for button in self.app.button])
 
     def test_duplicate_names_use_id_labels_and_selected_prd_association(self):
         self.open_navigation("Create PRD")

@@ -65,7 +65,7 @@ def get_ai_configuration(
         or DEFAULT_OPENAI_EMBEDDING_MODEL
     )
     if configured:
-        message = "AI is configured and ready for a future assistant workflow."
+        message = "AI is configured and ready for grounded draft generation."
     else:
         message = (
             "AI is optional and currently inactive. Set OPENAI_API_KEY in your "
@@ -134,10 +134,15 @@ class OpenAIService:
         if any(not text for text in normalized_texts):
             raise ValueError("Embedding input cannot be empty.")
 
-        response = self._client.embeddings.create(
-            model=self.embedding_model,
-            input=normalized_texts,
-        )
+        try:
+            response = self._client.embeddings.create(
+                model=self.embedding_model,
+                input=normalized_texts,
+            )
+        except Exception as error:
+            raise AIServiceError(
+                "OpenAI embeddings are temporarily unavailable. Please try again."
+            ) from error
         data = getattr(response, "data", None)
         if not isinstance(data, (list, tuple)) or len(data) != len(texts):
             raise AIServiceError("OpenAI returned an invalid embedding response.")
@@ -179,7 +184,12 @@ class OpenAIService:
         if instructions is not None and instructions.strip():
             request["instructions"] = instructions.strip()
 
-        response = self._client.responses.create(**request)
+        try:
+            response = self._client.responses.create(**request)
+        except Exception as error:
+            raise AIServiceError(
+                "OpenAI generation is temporarily unavailable. Please try again."
+            ) from error
         output_text = getattr(response, "output_text", None)
         if not isinstance(output_text, str) or not output_text.strip():
             raise AIServiceError("OpenAI returned no text response. Please try again.")

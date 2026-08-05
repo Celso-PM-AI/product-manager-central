@@ -4,6 +4,10 @@
 - DEC-002 Archive CSV
 - DEC-003 Simplified Architecture
 - DEC-004 AI Deferred Until MVP
+- DEC-005 Deterministic Templates and Normalized Document Storage
+- DEC-006 Isolated OpenAI and Approved-Source Boundaries
+- DEC-007 Revalidated Semantic Retrieval
+- DEC-008 Cited Generated Drafts Without Persistence
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -15,6 +19,10 @@ This document records significant product, architecture, and technical decisions
 - DEC-002 Archive CSV
 - DEC-003 Simplified Architecture
 - DEC-004 AI Deferred Until MVP
+- DEC-005 Deterministic Templates and Normalized Document Storage
+- DEC-006 Isolated OpenAI and Approved-Source Boundaries
+- DEC-007 Revalidated Semantic Retrieval
+- DEC-008 Cited Generated Drafts Without Persistence
 
 ## Decision 001
 
@@ -187,6 +195,51 @@ similarity despite different wording.
 Checkpoint 2 requires no schema migration and never writes to products or
 documents. The assistant interface, answer generation, generated-content
 acceptance/saving, prompt management, and RAG evaluation remain deferred.
+
+**Status:**
+Approved
+
+## Decision 008
+
+**Date:** August 5, 2026
+
+**Category:** Grounded AI generation and human control
+
+**Title:** Checkpoint 3 returns cited generated drafts without persistence
+
+**Decision:**
+PMC will accept generation requests through a Streamlit-independent service,
+retrieve only currently Approved BRD and PRD chunks, construct a source-numbered
+grounded prompt, and call the Responses API through the existing injectable
+OpenAI boundary. The result carries immutable structured citations containing
+the product name/ID, document title/ID/type, and section title/key.
+
+Generated text is explicitly identified as an AI-generated draft and remains
+separate from source documents. When no approved or relevant context is found,
+PMC will not call text generation and will not claim grounding. Checkpoint 3
+provides no save or acceptance operation. Original BRDs and PRDs are never
+modified, overwritten, or appended by this workflow; later saving requires
+human review and explicit acceptance in Checkpoint 4.
+
+**Reason:**
+- Deterministic citations keep generated claims traceable to trusted sources.
+- A service boundary makes prompt construction and safety behavior testable
+  without Streamlit, a network, or a real API key.
+- No-result short-circuiting prevents unsupported output from being presented
+  as grounded.
+- Deferring persistence preserves human control and avoids a schema change.
+
+**Alternatives Considered:**
+- Generating when retrieval returns no Approved context.
+- Including Draft or unsupported documents in the prompt.
+- Letting model output update or append to original BRDs or PRDs.
+- Adding generated-content storage and acceptance controls in Checkpoint 3.
+
+**Impact:**
+The AI Assistant can produce temporary cited drafts. Provider and malformed
+response failures are reported with safe messages, tests remain fully mocked,
+and the database schema and source documents remain unchanged. Generated-draft
+review, explicit acceptance, and saving remain Checkpoint 4 work.
 
 **Status:**
 Approved

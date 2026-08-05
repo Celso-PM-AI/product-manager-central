@@ -14,11 +14,11 @@
 
 **Updated:** August 5, 2026
 
-- Phases 0 through 8 and Phase 9 Checkpoints 1 and 2 are complete.
+- Phases 0 through 8 and Phase 9 Checkpoints 1 through 3 are complete.
 - The Product Manager Central MVP acceptance criteria passed.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
-  and semantic retrieval are implemented; the full AI Assistant remains
-  deferred.
+  semantic retrieval, and temporary grounded draft generation are implemented;
+  saving and acceptance remain deferred.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
 during Phase 4. Phase 6 completed its required coverage and interface-polish
@@ -1213,9 +1213,33 @@ mutation, or RAG evaluation. The complete suite passed 155 tests with
 deterministic fake or mocked embeddings and no network or API key requirement.
 `git diff --check` and final artifact/secret review also passed.
 
+## Checkpoint 3: Assistant interface and grounded draft generation
+
+**Completed:** August 5, 2026
+
+Checkpoint 3 adds the approved generation workflow without adding persistence:
+
+- Accept a Product Manager's request through a Streamlit-independent service.
+- Retrieve and revalidate only Approved BRD and PRD chunks; exclude Draft and
+  unsupported content.
+- Construct a source-numbered prompt from the request and trusted context, then
+  call the Responses API through the existing injectable OpenAI service.
+- Return clearly labeled generated draft content with structured citations for
+  product name/ID, document title/ID/type, and section title/key.
+- Return explicit ungrounded empty states and skip generation when no approved
+  or relevant context is available.
+- Keep generated content temporary and separate. No original document is
+  modified, and Checkpoint 3 exposes no save operation; human review and
+  explicit acceptance are prerequisites for the later saving workflow.
+- Handle missing configuration, invalid requests, provider failures, and
+  malformed responses with non-secret, user-safe messages.
+
+The existing schema remains sufficient. Tests use injected fakes/mocks and
+explicit temporary database paths, make no live API calls, and never access the
+live database.
+
 ## Remaining Phase 9 checkpoints
 
-- Checkpoint 3: Assistant interface and grounded answer generation — Not started
 - Checkpoint 4: Generated-content review, acceptance, and saving — Not started
 - Checkpoint 5: Prompt management and assistant workflow hardening — Not started
 - Checkpoint 6: RAG evaluation and release verification — Not started
