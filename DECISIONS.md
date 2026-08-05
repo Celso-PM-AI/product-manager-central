@@ -142,3 +142,51 @@ generated-content acceptance, and RAG evaluation remain deferred.
 
 **Status:**
 Approved
+
+## Decision 007
+
+**Date:** August 5, 2026
+
+**Category:** Semantic retrieval and source trust
+
+**Title:** Phase 9 semantic retrieval revalidates approved source chunks
+
+**Decision:**
+PMC will create deterministic, paragraph-aware chunks only from Approved BRDs
+and PRDs. Each chunk retains product ID/name, document ID/title/type/approval
+status, section key/title, chunk index, stable content-derived ID, and unchanged
+source text. Embeddings use the existing injectable official OpenAI client
+boundary, and the embedding model is configurable with
+`OPENAI_EMBEDDING_MODEL`.
+
+Semantic results use cosine similarity, descending rank order, a configurable
+result limit, and a configurable minimum similarity. PMC re-reads eligible
+sources after embedding and excludes any chunk whose source was deleted,
+edited, made Draft, or otherwise became ineligible. Empty source sets and empty
+relevance sets produce distinct results.
+
+Keyword search remains literal product-field substring matching. Semantic
+retrieval is a separate approved-document capability that can find conceptual
+similarity despite different wording.
+
+**Reason:**
+- Stable meaningful chunks make ranking repeatable and citations precise.
+- Dependency injection keeps tests deterministic, network-free, and token-free.
+- Live eligibility revalidation prevents stale embeddings from bypassing the
+  Approved-only trust boundary.
+- Keeping retrieval separate from generation prevents source documents from
+  being treated as generated or editable output.
+
+**Alternatives Considered:**
+- Retrieving whole documents as single embeddings.
+- Persisting embeddings before an invalidation design is required.
+- Including Draft documents and filtering them only in a future interface.
+- Combining semantic document retrieval with existing product keyword search.
+
+**Impact:**
+Checkpoint 2 requires no schema migration and never writes to products or
+documents. The assistant interface, answer generation, generated-content
+acceptance/saving, prompt management, and RAG evaluation remain deferred.
+
+**Status:**
+Approved

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from src.ai_service import (
+    DEFAULT_OPENAI_EMBEDDING_MODEL,
     DEFAULT_OPENAI_MODEL,
     AIConfigurationError,
     OpenAIService,
@@ -18,6 +19,10 @@ class AIConfigurationTests(unittest.TestCase):
 
         self.assertFalse(configuration.configured)
         self.assertEqual(configuration.model, DEFAULT_OPENAI_MODEL)
+        self.assertEqual(
+            configuration.embedding_model,
+            DEFAULT_OPENAI_EMBEDDING_MODEL,
+        )
         self.assertIn("optional", configuration.status_message)
         self.assertIn("OPENAI_API_KEY", configuration.status_message)
 
@@ -32,17 +37,44 @@ class AIConfigurationTests(unittest.TestCase):
             {
                 "OPENAI_API_KEY": secret,
                 "OPENAI_MODEL": "model-selected-for-test",
+                "OPENAI_EMBEDDING_MODEL": "embedding-model-for-test",
             }
         )
 
         self.assertTrue(configuration.configured)
         self.assertEqual(configuration.model, "model-selected-for-test")
+        self.assertEqual(
+            configuration.embedding_model,
+            "embedding-model-for-test",
+        )
         self.assertNotIn(secret, repr(configuration))
         self.assertNotIn(secret, configuration.status_message)
         self.assertNotIn("api_key", configuration.__dict__)
 
 
 class OpenAIServiceTests(unittest.TestCase):
+    def test_injected_client_creates_ordered_embeddings_without_network(self):
+        client = Mock()
+        client.embeddings.create.return_value = SimpleNamespace(
+            data=[
+                SimpleNamespace(index=1, embedding=[0, 1]),
+                SimpleNamespace(index=0, embedding=[1, 0]),
+            ]
+        )
+        service = OpenAIService(
+            client,
+            "response-model-for-test",
+            "embedding-model-for-test",
+        )
+
+        vectors = service.create_embeddings([" First ", "Second"])
+
+        self.assertEqual(vectors, [(1.0, 0.0), (0.0, 1.0)])
+        client.embeddings.create.assert_called_once_with(
+            model="embedding-model-for-test",
+            input=["First", "Second"],
+        )
+
     def test_injected_client_uses_responses_api_without_network(self):
         client = Mock()
         client.responses.create.return_value = SimpleNamespace(

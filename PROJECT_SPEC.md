@@ -5,9 +5,10 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 9 Checkpoint 1 adds an optional OpenAI
-configuration/client boundary and deterministic retrieval of approved BRD/PRD
-sections without adding an AI Assistant interface or generated content.
+single local data source. Phase 9 Checkpoints 1 and 2 add an optional OpenAI
+configuration/client boundary plus embedding-based semantic retrieval of
+approved BRD/PRD chunks without adding an AI Assistant interface or generated
+content.
 
 The MVP provides:
 
@@ -124,19 +125,33 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
-### Phase 9 Checkpoint 1 AI foundation
+### Phase 9 Checkpoints 1 and 2 AI retrieval foundation
 
 - AI configuration is optional and reads only `OPENAI_API_KEY` from the process
   environment. Status reporting never returns or logs the key.
 - `OPENAI_MODEL` may override the documented default model without a code
   change.
-- The OpenAI service uses the official Python SDK's Responses API through an
-  injectable client boundary. Automated tests use mocks and make no API calls.
+- `OPENAI_EMBEDDING_MODEL` may override the documented embedding model without
+  a code change.
+- The OpenAI service uses the official Python SDK's Responses and Embeddings
+  APIs through an injectable client boundary. Automated tests use mocks and
+  make no API calls.
 - Deterministic retrieval returns sections only from documents whose status is
   `approved` and whose type is `BRD` or `PRD`. Drafts and unsupported types are
   excluded.
 - Every retrieved section includes product ID/name, document ID/title/type,
-  section key/title, and unchanged section content for future citations.
+  approval status, section key/title, and unchanged section content.
+- Approved sections are divided deterministically at meaningful paragraph and
+  word boundaries. Every chunk retains a stable ID, chunk index, unchanged
+  source text, and the complete section citation metadata.
+- An injectable embedding provider creates ordered vectors. Cosine similarity
+  ranks chunks in descending order, with configurable result limits and minimum
+  similarity. Automated tests use deterministic fake or mocked embeddings.
+- Eligibility is checked again after embeddings are created. Deleted, missing,
+  edited, Draft, unsupported, and no-longer-approved sources cannot be returned
+  as trusted results.
+- Retrieval reports distinct empty states when no Approved BRD/PRD sources are
+  available or when none meet the relevance threshold.
 - Original BRDs and PRDs are never modified by AI. Future generated content
   must remain separate and require human review and explicit acceptance before
   it can be saved.
@@ -165,7 +180,9 @@ Charts and advanced analytics are not part of the MVP.
   metrics, the controlled known-legacy migration, and the additive Phase 8
   migration.
 - `src/ai_service.py` owns non-secret OpenAI configuration status and the
-  injectable Responses API service boundary.
+  injectable Responses and Embeddings API service boundary.
+- `src/semantic_retrieval.py` owns stable chunking, similarity ranking, result
+  limits, live eligibility revalidation, and semantic-retrieval empty states.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
@@ -178,8 +195,13 @@ Documents use normalized `documents` and `document_sections` tables. Foreign
 keys are enforced, product deletion cascades to associated documents, and an
 index supports product document listings. The application deliberately has no
 ORM, general service/view framework, general schema framework, multipage
-architecture, charts, or advanced styling framework. Phase 9 adds only a
-narrow AI service boundary for secure configuration, SDK isolation, and tests.
+architecture, charts, or advanced styling framework. Phase 9 keeps API access
+and semantic retrieval behind narrow, testable boundaries.
+
+Keyword search and semantic retrieval serve different needs. Product keyword
+search performs literal, case-insensitive substring matching over product
+fields. Semantic retrieval embeds a natural-language query and approved source
+chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Data-protection policy
 
@@ -196,8 +218,8 @@ narrow AI service boundary for secure configuration, SDK isolation, and tests.
 
 ## Deferred features
 
-- Embeddings, semantic search, the full AI Assistant interface, answer
-  generation, prompt management, and RAG evaluation
+- The full AI Assistant interface, answer generation, prompt management, and
+  RAG evaluation
 - Separate generated-content persistence plus human review and explicit
   acceptance workflow
 - AI-generated document updates and automatic modification of source BRDs/PRDs
@@ -209,7 +231,8 @@ narrow AI service boundary for secure configuration, SDK isolation, and tests.
 
 ## Current development status
 
-Phases 0 through 8 and Phase 9 Checkpoint 1 are complete. The checkpoint adds
-the secure OpenAI connection boundary and approved-document retrieval boundary.
-No embedding, semantic search, full assistant UI, answer generation, generated-
-content acceptance workflow, or RAG evaluation is implemented.
+Phases 0 through 8 and Phase 9 Checkpoints 1 and 2 are complete. Secure OpenAI
+boundaries, stable approved-source chunking, injectable embeddings, and ranked
+semantic retrieval are implemented. Checkpoints 3, 4, 5, and 6 are not started;
+there is no assistant UI, answer generation, generated-content acceptance
+workflow, prompt management, or RAG evaluation.

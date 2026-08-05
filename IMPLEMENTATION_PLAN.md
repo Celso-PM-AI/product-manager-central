@@ -12,12 +12,13 @@
 
 ## Current phase status
 
-**Updated:** August 4, 2026
+**Updated:** August 5, 2026
 
-- Phases 0 through 8 and Phase 9 Checkpoint 1 are complete.
+- Phases 0 through 8 and Phase 9 Checkpoints 1 and 2 are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Secure OpenAI configuration/client and approved-source retrieval boundaries
-  are implemented; the full AI Assistant remains deferred.
+- Secure OpenAI configuration/client, approved-source boundaries, embeddings,
+  and semantic retrieval are implemented; the full AI Assistant remains
+  deferred.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
 during Phase 4. Phase 6 completed its required coverage and interface-polish
@@ -1178,3 +1179,43 @@ The complete suite passed 146 tests, including the unchanged Phase 8 workflow
 coverage and seven new AI/retrieval tests. `git diff --check`, secret and
 artifact review, and database/backup checksum comparisons passed. No schema,
 live database, backup, UI, or production-data change was made.
+
+## Checkpoint 2: Embeddings and semantic retrieval
+
+**Completed:** August 5, 2026
+
+Checkpoint 2 adds only the approved retrieval capabilities for this increment:
+
+- Split nonblank Approved BRD/PRD sections into deterministic,
+  paragraph-aware chunks with stable content-derived IDs.
+- Preserve product ID/name, document ID/title/type/approval status, section
+  key/title, chunk index, and unchanged source text with every chunk.
+- Extend the injectable official OpenAI client boundary to embeddings, with
+  `OPENAI_EMBEDDING_MODEL` configuration and no live calls in tests.
+- Rank chunks by cosine similarity, return scores in descending order, and
+  support configurable result limits and minimum relevance thresholds.
+- Re-read the approved-source boundary after embedding so deleted, missing,
+  edited, Draft, unsupported, or no-longer-approved content cannot be returned
+  as a trusted result.
+- Return explicit states for no Approved BRD/PRD sources and for no relevant
+  results.
+- Preserve the normalized schema and all original products, BRDs, PRDs, and
+  document sections unchanged.
+
+Keyword search and semantic retrieval remain distinct. Existing product search
+matches literal words or substrings across product fields. Semantic retrieval
+compares embedding vectors so conceptually related approved document chunks can
+rank even when they use different wording.
+
+Checkpoint 2 does not add the assistant interface, answer generation, prompt
+management, generated-content persistence or acceptance, source-document
+mutation, or RAG evaluation. The complete suite passed 155 tests with
+deterministic fake or mocked embeddings and no network or API key requirement.
+`git diff --check` and final artifact/secret review also passed.
+
+## Remaining Phase 9 checkpoints
+
+- Checkpoint 3: Assistant interface and grounded answer generation — Not started
+- Checkpoint 4: Generated-content review, acceptance, and saving — Not started
+- Checkpoint 5: Prompt management and assistant workflow hardening — Not started
+- Checkpoint 6: RAG evaluation and release verification — Not started

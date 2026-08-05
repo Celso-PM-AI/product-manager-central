@@ -119,6 +119,7 @@ class RetrievableDocumentSection:
     document_id: int
     document_title: str
     document_type: DocumentType
+    document_status: DocumentStatus
     section_key: str
     section_title: str
     section_content: str

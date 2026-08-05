@@ -955,6 +955,7 @@ def list_retrievable_document_sections(
                 documents.id AS document_id,
                 documents.title AS document_title,
                 documents.document_type,
+                documents.document_status,
                 document_sections.section_key,
                 document_sections.content AS section_content
             FROM document_sections
@@ -989,6 +990,7 @@ def list_retrievable_document_sections(
                 document_id=int(row["document_id"]),
                 document_title=row["document_title"],
                 document_type=document_type,
+                document_status=DocumentStatus(row["document_status"]),
                 section_key=row["section_key"],
                 section_title=title,
                 section_content=row["section_content"],

@@ -8,7 +8,9 @@ from typing import Protocol
 
 OPENAI_API_KEY_VARIABLE = "OPENAI_API_KEY"
 OPENAI_MODEL_VARIABLE = "OPENAI_MODEL"
+OPENAI_EMBEDDING_MODEL_VARIABLE = "OPENAI_EMBEDDING_MODEL"
 DEFAULT_OPENAI_MODEL = "gpt-5.6-terra"
+DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 
 
 class AIConfigurationError(RuntimeError):
@@ -25,6 +27,7 @@ class AIConfiguration:
 
     configured: bool
     model: str
+    embedding_model: str
     status_message: str
 
 
@@ -35,10 +38,18 @@ class ResponsesResource(Protocol):
         """Create one response."""
 
 
+class EmbeddingsResource(Protocol):
+    """Small part of the official client used for embeddings."""
+
+    def create(self, **kwargs: object) -> object:
+        """Create embeddings for one ordered input batch."""
+
+
 class OpenAIClient(Protocol):
     """Injectable client contract used by OpenAIService."""
 
     responses: ResponsesResource
+    embeddings: EmbeddingsResource
 
 
 def get_ai_configuration(
@@ -49,6 +60,10 @@ def get_ai_configuration(
     source = os.environ if environ is None else environ
     configured = bool(source.get(OPENAI_API_KEY_VARIABLE, "").strip())
     model = source.get(OPENAI_MODEL_VARIABLE, "").strip() or DEFAULT_OPENAI_MODEL
+    embedding_model = (
+        source.get(OPENAI_EMBEDDING_MODEL_VARIABLE, "").strip()
+        or DEFAULT_OPENAI_EMBEDDING_MODEL
+    )
     if configured:
         message = "AI is configured and ready for a future assistant workflow."
     else:
@@ -59,6 +74,7 @@ def get_ai_configuration(
     return AIConfiguration(
         configured=configured,
         model=model,
+        embedding_model=embedding_model,
         status_message=message,
     )
 
@@ -74,12 +90,21 @@ def _create_official_client() -> OpenAIClient:
 class OpenAIService:
     """Minimal Responses API adapter; no question-answer workflow lives here."""
 
-    def __init__(self, client: OpenAIClient, model: str) -> None:
+    def __init__(
+        self,
+        client: OpenAIClient,
+        model: str,
+        embedding_model: str = DEFAULT_OPENAI_EMBEDDING_MODEL,
+    ) -> None:
         normalized_model = model.strip()
+        normalized_embedding_model = embedding_model.strip()
         if not normalized_model:
             raise ValueError("An OpenAI model must be configured.")
+        if not normalized_embedding_model:
+            raise ValueError("An OpenAI embedding model must be configured.")
         self._client = client
         self.model = normalized_model
+        self.embedding_model = normalized_embedding_model
 
     @classmethod
     def from_environment(
@@ -94,7 +119,46 @@ class OpenAIService:
         if not configuration.configured:
             raise AIConfigurationError(configuration.status_message)
         factory = client_factory or _create_official_client
-        return cls(factory(), configuration.model)
+        return cls(
+            factory(),
+            configuration.model,
+            configuration.embedding_model,
+        )
+
+    def create_embeddings(self, texts: list[str]) -> list[tuple[float, ...]]:
+        """Embed an ordered text batch through the injected official client."""
+
+        if not texts:
+            return []
+        normalized_texts = [text.strip() for text in texts]
+        if any(not text for text in normalized_texts):
+            raise ValueError("Embedding input cannot be empty.")
+
+        response = self._client.embeddings.create(
+            model=self.embedding_model,
+            input=normalized_texts,
+        )
+        data = getattr(response, "data", None)
+        if not isinstance(data, (list, tuple)) or len(data) != len(texts):
+            raise AIServiceError("OpenAI returned an invalid embedding response.")
+
+        ordered = sorted(data, key=lambda item: getattr(item, "index", -1))
+        if [getattr(item, "index", None) for item in ordered] != list(
+            range(len(texts))
+        ):
+            raise AIServiceError("OpenAI returned an invalid embedding response.")
+        vectors: list[tuple[float, ...]] = []
+        for item in ordered:
+            embedding = getattr(item, "embedding", None)
+            if not isinstance(embedding, (list, tuple)) or not embedding:
+                raise AIServiceError("OpenAI returned an invalid embedding response.")
+            try:
+                vectors.append(tuple(float(value) for value in embedding))
+            except (TypeError, ValueError) as error:
+                raise AIServiceError(
+                    "OpenAI returned an invalid embedding response."
+                ) from error
+        return vectors
 
     def create_text_response(
         self,

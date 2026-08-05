@@ -13,7 +13,7 @@ from src.database import (
     list_retrievable_document_sections,
 )
 from src.document_templates import document_template
-from src.models import DocumentType
+from src.models import DocumentStatus, DocumentType
 
 
 def complete_sections(document_type: DocumentType, prefix: str) -> dict[str, str]:
@@ -103,6 +103,7 @@ class ApprovedDocumentRetrievalTests(unittest.TestCase):
         self.assertEqual(overview.document_id, document.id)
         self.assertEqual(overview.document_title, "Atlas Launch PRD")
         self.assertIs(overview.document_type, DocumentType.PRD)
+        self.assertIs(overview.document_status, DocumentStatus.APPROVED)
         self.assertEqual(overview.section_title, "Product overview")
         self.assertEqual(
             overview.section_content,
