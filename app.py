@@ -42,6 +42,12 @@ from src.grounded_generation import (
     DatabaseGroundedGenerationService,
     GenerationRequestError,
 )
+from src.generated_content import (
+    GeneratedContentReview,
+    GeneratedContentReviewService,
+    ReviewDecision,
+    ReviewValidationError,
+)
 from src.models import (
     DEFAULT_PRODUCT_STATUS,
     DocumentStatus,
@@ -83,10 +89,114 @@ DOCUMENT_CHOOSE_MODE: Final[str] = "document_choose"
 DOCUMENT_CREATE_MODE: Final[str] = "document_create"
 DOCUMENT_PREVIEW_MODE: Final[str] = "document_preview"
 DOCUMENT_EDIT_MODE: Final[str] = "document_edit"
+GENERATED_REVIEW_STATE_KEY: Final[str] = "generated_content_review"
+
+
+def display_generation_citations(review: GeneratedContentReview) -> None:
+    """Render immutable supporting citations for a generated-content review."""
+
+    st.markdown("### Supporting source citations")
+    for citation in review.citations:
+        st.markdown(
+            f"**[Source {citation.source_number}]** "
+            f"{citation.product} (product ID {citation.product_id}) · "
+            f"{citation.document_title} (document ID {citation.document_id}) · "
+            f"{citation.document_type.value} · {citation.section}"
+        )
+
+
+def render_generated_content_review(review: GeneratedContentReview) -> None:
+    """Render pending, rejected, or accepted human-review state."""
+
+    service = GeneratedContentReviewService(APP_DATABASE_FILE)
+    st.subheader("Original AI output")
+    st.warning(
+        "AI-generated content — review carefully. It is separate from every "
+        "original BRD and PRD."
+    )
+    st.markdown(review.original_content)
+    display_generation_citations(review)
+
+    if review.was_revised:
+        st.markdown("### Human-revised content")
+        st.markdown(review.content_for_acceptance)
+
+    if review.decision is ReviewDecision.REJECTED:
+        st.warning(
+            "Generated content was rejected. It was not saved as an approved "
+            "product artifact, and no source document was changed."
+        )
+        return
+    if review.decision is ReviewDecision.ACCEPTED:
+        st.success(
+            "Generated content was explicitly accepted and saved separately "
+            f"as artifact ID {review.saved_artifact_id}."
+        )
+        return
+
+    st.info(
+        "This review is pending. Applying a revision does not save it; you must "
+        "still choose Accept and save."
+    )
+    with st.form("generated_content_revision_form"):
+        revised_content = st.text_area(
+            "Revise generated content before acceptance",
+            value=review.content_for_acceptance,
+            max_chars=50_000,
+            key=f"generated_content_revision_{review.review_key}",
+        )
+        apply_revision = st.form_submit_button("Apply revision")
+    if apply_revision:
+        try:
+            st.session_state[GENERATED_REVIEW_STATE_KEY] = service.revise(
+                review,
+                revised_content,
+            )
+        except ReviewValidationError as error:
+            st.error(str(error))
+            return
+        st.success(
+            "Revision applied for review. It is still unaccepted and unsaved."
+        )
+        st.rerun()
+
+    accept_column, reject_column = st.columns(2)
+    accept = accept_column.button(
+        "Accept and save",
+        type="primary",
+        width="stretch",
+        key=f"accept_generated_content_{review.review_key}",
+    )
+    reject = reject_column.button(
+        "Reject",
+        width="stretch",
+        key=f"reject_generated_content_{review.review_key}",
+    )
+    if reject:
+        try:
+            st.session_state[GENERATED_REVIEW_STATE_KEY] = service.reject(review)
+        except ReviewValidationError as error:
+            st.error(str(error))
+            return
+        st.rerun()
+    if not accept:
+        return
+    try:
+        accepted = service.accept(review)
+    except ReviewValidationError as error:
+        st.error(str(error))
+        return
+    except (DatabaseSchemaError, sqlite3.Error):
+        st.error(
+            "Accepted content could not be saved safely. Please try again."
+        )
+        return
+    st.session_state[GENERATED_REVIEW_STATE_KEY] = accepted.review
+    st.rerun()
 
 
 def render_ai_assistant() -> None:
-    """Render temporary grounded draft generation without any save workflow."""
+    """Render grounded generation followed by explicit human acceptance."""
 
     st.header("AI Assistant")
     st.caption(
@@ -99,7 +209,33 @@ def render_ai_assistant() -> None:
     else:
         st.warning(configuration.status_message)
 
+    try:
+        products = list_products(APP_DATABASE_FILE)
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error()
+        return
+
+    if not products:
+        st.info(
+            "No products are available. Create a product before generating and "
+            "reviewing content."
+        )
+        return
+
+    products_by_id = {
+        product.id: product for product in products if product.id is not None
+    }
     with st.form("grounded_generation_form"):
+        product_id = st.selectbox(
+            "Product for the generated artifact",
+            options=[None, *products_by_id],
+            format_func=lambda selected: (
+                "Select a product"
+                if selected is None
+                else product_option_label(products_by_id[selected])
+            ),
+            key="grounded_generation_product_id",
+        )
         request = st.text_area(
             "What would you like to draft?",
             placeholder=(
@@ -112,15 +248,21 @@ def render_ai_assistant() -> None:
         generate = st.form_submit_button("Generate draft", type="primary")
 
     if not generate:
-        st.info(
-            "Generated content is not an original BRD or PRD. Human review and "
-            "explicit acceptance are required before saving; saving is not "
-            "available in this checkpoint."
-        )
+        review = st.session_state.get(GENERATED_REVIEW_STATE_KEY)
+        if isinstance(review, GeneratedContentReview):
+            render_generated_content_review(review)
+        else:
+            st.info(
+                "Nothing is saved automatically. Generate content, review its "
+                "citations, then explicitly accept or reject it."
+            )
         return
 
     try:
         ai_service = OpenAIService.from_environment()
+        if product_id is None:
+            st.error("Select a product before generating content for review.")
+            return
         result = DatabaseGroundedGenerationService(
             ai_service,
             APP_DATABASE_FILE,
@@ -144,22 +286,17 @@ def render_ai_assistant() -> None:
     if not result.grounded:
         st.warning(result.message)
         return
-
-    st.subheader("Generated draft content")
-    st.warning(
-        "AI-generated draft — review carefully. It has not been accepted or saved, "
-        "and no source document was changed."
-    )
-    st.markdown(result.content or "")
-    st.markdown("### Citations")
-    for citation in result.citations:
-        st.markdown(
-            f"**[Source {citation.source_number}]** "
-            f"{citation.product} (product ID {citation.product_id}) · "
-            f"{citation.document_title} (document ID {citation.document_id}) · "
-            f"{citation.document_type.value} · {citation.section}"
+    try:
+        review = GeneratedContentReviewService(APP_DATABASE_FILE).begin_review(
+            product_id=product_id,
+            request=request,
+            generation=result,
         )
-    st.info(result.message)
+    except ReviewValidationError as error:
+        st.error(str(error))
+        return
+    st.session_state[GENERATED_REVIEW_STATE_KEY] = review
+    render_generated_content_review(review)
 
 
 def status_label(status: ProductStatus) -> str:

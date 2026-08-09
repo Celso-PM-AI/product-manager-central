@@ -2,7 +2,7 @@
 
 import os
 import sqlite3
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -15,6 +15,8 @@ from src.models import (
     DEFAULT_PRODUCT_STATUS,
     DocumentStatus,
     DocumentType,
+    GeneratedArtifact,
+    GeneratedArtifactCitation,
     Product,
     ProductDocument,
     ProductStatus,
@@ -33,6 +35,7 @@ DATABASE_FILE = "data/pmc.db"
 SCHEMA_MISSING: Final[str] = "missing"
 SCHEMA_LEGACY: Final[str] = "legacy"
 SCHEMA_PRODUCT_ONLY: Final[str] = "canonical_product_only"
+SCHEMA_DOCUMENT_ONLY: Final[str] = "canonical_documents"
 SCHEMA_CANONICAL: Final[str] = "canonical"
 SCHEMA_UNKNOWN: Final[str] = "unknown"
 
@@ -76,6 +79,30 @@ DOCUMENT_SECTION_COLUMNS: Final[tuple[str, ...]] = (
     "content",
 )
 
+GENERATED_ARTIFACT_COLUMNS: Final[tuple[str, ...]] = (
+    "id",
+    "acceptance_key",
+    "product_id",
+    "request",
+    "original_content",
+    "accepted_content",
+    "was_revised",
+    "created_at",
+    "accepted_at",
+)
+
+GENERATED_CITATION_COLUMNS: Final[tuple[str, ...]] = (
+    "artifact_id",
+    "source_number",
+    "source_product_id",
+    "source_product_name",
+    "document_id",
+    "document_title",
+    "document_type",
+    "section_key",
+    "section_title",
+)
+
 LEGACY_COLUMN_SIGNATURE: Final[tuple[tuple[object, ...], ...]] = (
     ("id", "INTEGER", 0, None, 1),
     ("product_name", "TEXT", 1, None, 0),
@@ -115,6 +142,10 @@ class DocumentValidationError(ValueError):
 
 class DocumentAssociationError(ValueError):
     """Raised when a document references a missing product."""
+
+
+class GeneratedArtifactValidationError(ValueError):
+    """Raised when accepted generated content is unsafe to persist."""
 
 
 def _database_path(database_path: str | os.PathLike[str]) -> Path:
@@ -205,6 +236,8 @@ def _table_info(
         "products",
         "documents",
         "document_sections",
+        "generated_artifacts",
+        "generated_artifact_citations",
         MIGRATION_TABLE_NAME,
         LEGACY_TABLE_NAME,
     }:
@@ -251,6 +284,35 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
             product_columns == CANONICAL_COLUMNS
             and document_columns == DOCUMENT_COLUMNS
             and section_columns == DOCUMENT_SECTION_COLUMNS
+        ):
+            return SCHEMA_DOCUMENT_ONLY
+    if tables == (
+        "document_sections",
+        "documents",
+        "generated_artifact_citations",
+        "generated_artifacts",
+        "products",
+    ):
+        product_columns = tuple(row["name"] for row in _table_info(connection))
+        document_columns = tuple(
+            row["name"] for row in _table_info(connection, "documents")
+        )
+        section_columns = tuple(
+            row["name"] for row in _table_info(connection, "document_sections")
+        )
+        artifact_columns = tuple(
+            row["name"] for row in _table_info(connection, "generated_artifacts")
+        )
+        citation_columns = tuple(
+            row["name"]
+            for row in _table_info(connection, "generated_artifact_citations")
+        )
+        if (
+            product_columns == CANONICAL_COLUMNS
+            and document_columns == DOCUMENT_COLUMNS
+            and section_columns == DOCUMENT_SECTION_COLUMNS
+            and artifact_columns == GENERATED_ARTIFACT_COLUMNS
+            and citation_columns == GENERATED_CITATION_COLUMNS
         ):
             return SCHEMA_CANONICAL
     return SCHEMA_UNKNOWN
@@ -364,6 +426,57 @@ def _create_document_tables(connection: sqlite3.Connection) -> None:
     )
 
 
+def _create_generated_artifact_tables(connection: sqlite3.Connection) -> None:
+    """Add separate storage for explicitly accepted generated content."""
+
+    connection.execute(
+        """
+        CREATE TABLE generated_artifacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            acceptance_key TEXT NOT NULL UNIQUE
+                CHECK (length(trim(acceptance_key)) > 0),
+            product_id INTEGER NOT NULL,
+            request TEXT NOT NULL
+                CHECK (length(trim(request)) BETWEEN 1 AND 10000),
+            original_content TEXT NOT NULL
+                CHECK (length(trim(original_content)) BETWEEN 1 AND 50000),
+            accepted_content TEXT NOT NULL
+                CHECK (length(trim(accepted_content)) BETWEEN 1 AND 50000),
+            was_revised INTEGER NOT NULL CHECK (was_revised IN (0, 1)),
+            created_at TEXT NOT NULL CHECK (length(trim(created_at)) > 0),
+            accepted_at TEXT NOT NULL CHECK (length(trim(accepted_at)) > 0),
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE generated_artifact_citations (
+            artifact_id INTEGER NOT NULL,
+            source_number INTEGER NOT NULL CHECK (source_number > 0),
+            source_product_id INTEGER NOT NULL,
+            source_product_name TEXT NOT NULL
+                CHECK (length(trim(source_product_name)) > 0),
+            document_id INTEGER NOT NULL,
+            document_title TEXT NOT NULL
+                CHECK (length(trim(document_title)) > 0),
+            document_type TEXT NOT NULL CHECK (document_type IN ('BRD', 'PRD')),
+            section_key TEXT NOT NULL CHECK (length(trim(section_key)) > 0),
+            section_title TEXT NOT NULL CHECK (length(trim(section_title)) > 0),
+            PRIMARY KEY (artifact_id, source_number),
+            FOREIGN KEY (artifact_id)
+                REFERENCES generated_artifacts(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX idx_generated_artifacts_product_id
+        ON generated_artifacts (product_id, id DESC)
+        """
+    )
+
+
 def _add_document_schema(connection: sqlite3.Connection) -> None:
     """Transactionally add document tables while verifying product rows."""
 
@@ -384,7 +497,7 @@ def _add_document_schema(connection: sqlite3.Connection) -> None:
         raise MigrationVerificationError(
             "Document migration changed existing product data."
         )
-    if _detect_schema(connection) != SCHEMA_CANONICAL:
+    if _detect_schema(connection) != SCHEMA_DOCUMENT_ONLY:
         raise MigrationVerificationError(
             "Document schema verification failed."
         )
@@ -404,6 +517,7 @@ def initialize_database(
             try:
                 _create_canonical_table(connection)
                 _create_document_tables(connection)
+                _create_generated_artifact_tables(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -412,6 +526,15 @@ def initialize_database(
             connection.execute("BEGIN IMMEDIATE")
             try:
                 _add_document_schema(connection)
+                _create_generated_artifact_tables(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_DOCUMENT_ONLY:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _create_generated_artifact_tables(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -427,7 +550,11 @@ def initialize_database(
 
 def _require_canonical_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema not in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
+    if schema not in {
+        SCHEMA_PRODUCT_ONLY,
+        SCHEMA_DOCUMENT_ONLY,
+        SCHEMA_CANONICAL,
+    }:
         raise DatabaseSchemaError(
             f"Canonical database schema required; found {schema}."
         )
@@ -435,9 +562,17 @@ def _require_canonical_schema(connection: sqlite3.Connection) -> None:
 
 def _require_document_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema != SCHEMA_CANONICAL:
+    if schema not in {SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
         raise DatabaseSchemaError(
             f"Phase 8 document schema required; found {schema}."
+        )
+
+
+def _require_generated_artifact_schema(connection: sqlite3.Connection) -> None:
+    schema = _detect_schema(connection)
+    if schema != SCHEMA_CANONICAL:
+        raise DatabaseSchemaError(
+            f"Generated artifact schema required; found {schema}."
         )
 
 
@@ -1075,6 +1210,259 @@ def update_document(
         return _select_document_by_id(connection, document_id)
 
 
+def _select_generated_artifact_by_id(
+    connection: sqlite3.Connection,
+    artifact_id: int,
+) -> GeneratedArtifact | None:
+    row = connection.execute(
+        """
+        SELECT id, acceptance_key, product_id, request, original_content,
+               accepted_content, was_revised, created_at, accepted_at
+        FROM generated_artifacts
+        WHERE id = ?
+        """,
+        (artifact_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    citation_rows = connection.execute(
+        """
+        SELECT source_number, source_product_id, source_product_name,
+               document_id, document_title, document_type, section_key,
+               section_title
+        FROM generated_artifact_citations
+        WHERE artifact_id = ?
+        ORDER BY source_number
+        """,
+        (artifact_id,),
+    ).fetchall()
+    citations = tuple(
+        GeneratedArtifactCitation(
+            source_number=citation["source_number"],
+            source_product_id=citation["source_product_id"],
+            source_product_name=citation["source_product_name"],
+            document_id=citation["document_id"],
+            document_title=citation["document_title"],
+            document_type=DocumentType(citation["document_type"]),
+            section_key=citation["section_key"],
+            section_title=citation["section_title"],
+        )
+        for citation in citation_rows
+    )
+    return GeneratedArtifact(
+        id=row["id"],
+        acceptance_key=row["acceptance_key"],
+        product_id=row["product_id"],
+        request=row["request"],
+        original_content=row["original_content"],
+        accepted_content=row["accepted_content"],
+        was_revised=bool(row["was_revised"]),
+        citations=citations,
+        created_at=row["created_at"],
+        accepted_at=row["accepted_at"],
+    )
+
+
+def get_generated_artifact(
+    artifact_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> GeneratedArtifact | None:
+    """Return one separately stored accepted generated artifact."""
+
+    with _open_connection(database_path) as connection:
+        _require_generated_artifact_schema(connection)
+        return _select_generated_artifact_by_id(connection, artifact_id)
+
+
+def list_generated_artifacts_for_product(
+    product_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> list[GeneratedArtifact]:
+    """List only explicitly accepted generated artifacts for one product."""
+
+    with _open_connection(database_path) as connection:
+        _require_generated_artifact_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT id FROM generated_artifacts
+            WHERE product_id = ?
+            ORDER BY id DESC
+            """,
+            (product_id,),
+        ).fetchall()
+        return [
+            artifact
+            for row in rows
+            if (
+                artifact := _select_generated_artifact_by_id(connection, row["id"])
+            )
+            is not None
+        ]
+
+
+def save_accepted_generated_artifact(
+    *,
+    acceptance_key: str,
+    product_id: int,
+    request: str,
+    original_content: str,
+    accepted_content: str,
+    citations: Sequence[Mapping[str, object]],
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> tuple[GeneratedArtifact, bool]:
+    """Persist one explicit acceptance, idempotently, after source revalidation."""
+
+    key = acceptance_key.strip() if isinstance(acceptance_key, str) else ""
+    normalized_request = request.strip() if isinstance(request, str) else ""
+    original = original_content.strip() if isinstance(original_content, str) else ""
+    accepted = accepted_content.strip() if isinstance(accepted_content, str) else ""
+    if not key:
+        raise GeneratedArtifactValidationError("A valid review is required.")
+    if not normalized_request or len(normalized_request) > 10_000:
+        raise GeneratedArtifactValidationError("The generation request is invalid.")
+    if not original or len(original) > 50_000:
+        raise GeneratedArtifactValidationError("The original AI output is invalid.")
+    if not accepted or len(accepted) > 50_000:
+        raise GeneratedArtifactValidationError(
+            "Accepted content must contain 1 to 50,000 characters."
+        )
+    if not citations:
+        raise GeneratedArtifactValidationError(
+            "Accepted generated content must retain at least one citation."
+        )
+
+    with _open_connection(database_path) as connection:
+        _require_generated_artifact_schema(connection)
+        duplicate = connection.execute(
+            "SELECT id FROM generated_artifacts WHERE acceptance_key = ?",
+            (key,),
+        ).fetchone()
+        if duplicate is not None:
+            artifact = _select_generated_artifact_by_id(connection, duplicate["id"])
+            if artifact is None:
+                raise RuntimeError("Saved generated artifact could not be retrieved.")
+            return artifact, False
+
+        if connection.execute(
+            "SELECT 1 FROM products WHERE id = ?", (product_id,)
+        ).fetchone() is None:
+            raise GeneratedArtifactValidationError(
+                "The selected product no longer exists. Nothing was saved."
+            )
+
+        normalized_citations: list[dict[str, object]] = []
+        seen_numbers: set[int] = set()
+        for supplied in citations:
+            try:
+                source_number = int(supplied["source_number"])
+                source_product_id = int(supplied["source_product_id"])
+                document_id = int(supplied["document_id"])
+                document_type = DocumentType(supplied["document_type"])
+                source_product_name = str(supplied["source_product_name"]).strip()
+                document_title = str(supplied["document_title"]).strip()
+                section_key = str(supplied["section_key"]).strip()
+                section_title = str(supplied["section_title"]).strip()
+            except (KeyError, TypeError, ValueError) as error:
+                raise GeneratedArtifactValidationError(
+                    "Citation metadata is incomplete. Nothing was saved."
+                ) from error
+            if source_number <= 0 or source_number in seen_numbers:
+                raise GeneratedArtifactValidationError(
+                    "Citation source numbers must be unique and positive."
+                )
+            seen_numbers.add(source_number)
+            current = connection.execute(
+                """
+                SELECT products.id AS product_id, products.name AS product_name,
+                       documents.title, documents.document_type,
+                       documents.document_status, document_sections.content
+                FROM documents
+                INNER JOIN products ON products.id = documents.product_id
+                INNER JOIN document_sections
+                    ON document_sections.document_id = documents.id
+                WHERE documents.id = ? AND document_sections.section_key = ?
+                """,
+                (document_id, section_key),
+            ).fetchone()
+            if (
+                current is None
+                or current["document_status"] != DocumentStatus.APPROVED.value
+                or current["document_type"] not in {
+                    DocumentType.BRD.value,
+                    DocumentType.PRD.value,
+                }
+                or not str(current["content"]).strip()
+                or current["product_id"] != source_product_id
+                or current["product_name"] != source_product_name
+                or current["title"] != document_title
+                or current["document_type"] != document_type.value
+            ):
+                raise GeneratedArtifactValidationError(
+                    "A cited source is no longer an eligible Approved BRD or PRD. "
+                    "Nothing was saved; generate a new draft and review it again."
+                )
+            normalized_citations.append(
+                {
+                    "source_number": source_number,
+                    "source_product_id": source_product_id,
+                    "source_product_name": source_product_name,
+                    "document_id": document_id,
+                    "document_title": document_title,
+                    "document_type": document_type,
+                    "section_key": section_key,
+                    "section_title": section_title,
+                }
+            )
+
+        timestamp = _utc_now()
+        cursor = connection.execute(
+            """
+            INSERT INTO generated_artifacts (
+                acceptance_key, product_id, request, original_content,
+                accepted_content, was_revised, created_at, accepted_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                key,
+                product_id,
+                normalized_request,
+                original,
+                accepted,
+                int(accepted != original),
+                timestamp,
+                timestamp,
+            ),
+        )
+        artifact_id = int(cursor.lastrowid)
+        connection.executemany(
+            """
+            INSERT INTO generated_artifact_citations (
+                artifact_id, source_number, source_product_id,
+                source_product_name, document_id, document_title,
+                document_type, section_key, section_title
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                (
+                    artifact_id,
+                    citation["source_number"],
+                    citation["source_product_id"],
+                    citation["source_product_name"],
+                    citation["document_id"],
+                    citation["document_title"],
+                    citation["document_type"].value,
+                    citation["section_key"],
+                    citation["section_title"],
+                )
+                for citation in normalized_citations
+            ),
+        )
+        artifact = _select_generated_artifact_by_id(connection, artifact_id)
+        if artifact is None:
+            raise RuntimeError("Saved generated artifact could not be retrieved.")
+        return artifact, True
+
+
 def migrate_document_database(
     database_path: str | os.PathLike[str] = DATABASE_FILE,
 ) -> bool:
@@ -1088,13 +1476,15 @@ def migrate_document_database(
         schema = _detect_schema(connection)
         if schema == SCHEMA_CANONICAL:
             return False
-        if schema != SCHEMA_PRODUCT_ONLY:
+        if schema not in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY}:
             raise DatabaseSchemaError(
                 "Document migration requires the product-only canonical schema."
             )
         connection.execute("BEGIN IMMEDIATE")
         try:
-            _add_document_schema(connection)
+            if schema == SCHEMA_PRODUCT_ONLY:
+                _add_document_schema(connection)
+            _create_generated_artifact_tables(connection)
             connection.commit()
         except Exception:
             connection.rollback()
@@ -1236,6 +1626,7 @@ def migrate_legacy_database(
             connection.execute(f'DROP TABLE "{LEGACY_TABLE_NAME}"')
 
             _create_document_tables(connection)
+            _create_generated_artifact_tables(connection)
 
             if _detect_schema(connection) != SCHEMA_CANONICAL:
                 raise MigrationVerificationError(
@@ -1293,7 +1684,7 @@ def save_product(
             )
         return
 
-    if schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
+    if schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
         create_product(
             {
                 "name": product_name,
@@ -1332,7 +1723,7 @@ def load_products(
                 FROM products
                 ORDER BY id DESC
             """
-        elif schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_CANONICAL}:
+        elif schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
             query = """
                 SELECT
                     id AS "ID",

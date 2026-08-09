@@ -5,9 +5,10 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 9 Checkpoints 1 through 3 add an optional OpenAI
+single local data source. Phase 9 Checkpoints 1 through 4 add an optional OpenAI
 configuration/client boundary, embedding-based semantic retrieval of Approved
-BRD/PRD chunks, and temporary grounded draft generation with citations.
+BRD/PRD chunks, grounded draft generation with citations, and explicit human
+review with separate accepted-artifact persistence.
 
 The MVP provides:
 
@@ -124,7 +125,7 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
-### Phase 9 Checkpoints 1 through 3 AI Assistant
+### Phase 9 Checkpoints 1 through 4 AI Assistant
 
 - AI configuration is optional and reads only `OPENAI_API_KEY` from the process
   environment. Status reporting never returns or logs the key.
@@ -154,14 +155,23 @@ storage and appear as Draft and Approved in the interface.
 - A clean generation service validates a Product Manager's request, retrieves
   relevant Approved sources, constructs a source-numbered prompt, and sends it
   through the existing injectable OpenAI Responses API boundary.
-- Generated output is clearly labeled as an AI-generated draft and is returned
+- Generated output is clearly labeled as AI-generated and is returned
   separately from structured citations containing product name/ID, document
   title/ID/type, and section title/key.
 - No approved retrieval context means no generation call and no claim that a
   response is grounded.
 - Original BRDs and PRDs are never modified by AI. Generated content remains
-  temporary, unaccepted, and unsavable in Checkpoint 3; human review and
-  explicit acceptance are required before future saving.
+  pending and unsaved until a Product Manager explicitly accepts it.
+- Review displays the original AI output and supporting citations. The reviewer
+  may accept unchanged, apply a human revision that remains pending until a
+  separate acceptance, or reject without saving an approved artifact.
+- Explicit acceptance stores a separate generated artifact associated with its
+  product. It preserves the request, original AI output, accepted content,
+  revision status, source document relationships, and citation snapshots.
+- Acceptance revalidates cited documents as current Approved BRDs or PRDs and
+  uses an idempotency key to prevent duplicate saves during reruns.
+- Generated artifacts never update, overwrite, append to, or otherwise modify
+  an original BRD, PRD, or document section.
 
 ## Dashboard metrics
 
@@ -192,6 +202,8 @@ Charts and advanced analytics are not part of the MVP.
   limits, live eligibility revalidation, and semantic-retrieval empty states.
 - `src/grounded_generation.py` owns request validation, grounded prompt
   construction, temporary generated-draft results, and structured citations.
+- `src/generated_content.py` owns pending review, revision, rejection, and
+  explicit acceptance orchestration.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
@@ -200,7 +212,9 @@ Charts and advanced analytics are not part of the MVP.
 The application accepts `PMC_DATABASE_FILE` for isolated automated or manual
 verification. Without it, the only live data source is `data/pmc.db`.
 
-Documents use normalized `documents` and `document_sections` tables. Foreign
+Documents use normalized `documents` and `document_sections` tables. Accepted
+generated content uses separate `generated_artifacts` and
+`generated_artifact_citations` tables. Foreign
 keys are enforced, product deletion cascades to associated documents, and an
 index supports product document listings. The application deliberately has no
 ORM, general service/view framework, general schema framework, multipage
@@ -227,8 +241,6 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Deferred features
 
-- Generated-content persistence plus human review and explicit acceptance
-  workflow
 - Prompt management and RAG evaluation
 - AI-generated document updates and automatic modification of source BRDs/PRDs
 - Word/PDF document export
@@ -239,8 +251,8 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Current development status
 
-Phases 0 through 8 and Phase 9 Checkpoints 1 through 3 are complete. Secure
+Phases 0 through 8 and Phase 9 Checkpoints 1 through 4 are complete. Secure
 OpenAI boundaries, stable approved-source retrieval, and temporary grounded
-draft generation with citations are implemented. Checkpoints 4, 5, and 6 are
-not started; there is no generated-content persistence or acceptance workflow,
-prompt management, or RAG evaluation.
+draft generation with citations, explicit human review, and separate accepted
+artifact persistence are implemented. Checkpoints 5 and 6 are not started;
+there is no prompt management, workflow hardening, or RAG evaluation.

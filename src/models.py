@@ -123,3 +123,33 @@ class RetrievableDocumentSection:
     section_key: str
     section_title: str
     section_content: str
+
+
+@dataclass(frozen=True)
+class GeneratedArtifactCitation:
+    """Stored citation snapshot for one accepted generated artifact."""
+
+    source_number: int
+    source_product_id: int
+    source_product_name: str
+    document_id: int
+    document_title: str
+    document_type: DocumentType
+    section_key: str
+    section_title: str
+
+
+@dataclass(frozen=True)
+class GeneratedArtifact:
+    """Human-accepted AI content stored separately from source documents."""
+
+    id: int
+    acceptance_key: str
+    product_id: int
+    request: str
+    original_content: str
+    accepted_content: str
+    was_revised: bool
+    citations: tuple[GeneratedArtifactCitation, ...]
+    created_at: str
+    accepted_at: str

@@ -71,6 +71,8 @@ class TemporaryDocumentDatabaseTestCase(unittest.TestCase):
 class DocumentMigrationTests(TemporaryDocumentDatabaseTestCase):
     def _remove_document_schema(self) -> None:
         with closing(sqlite3.connect(self.database_path)) as connection, connection:
+            connection.execute("DROP TABLE generated_artifact_citations")
+            connection.execute("DROP TABLE generated_artifacts")
             connection.execute("DROP TABLE document_sections")
             connection.execute("DROP TABLE documents")
 

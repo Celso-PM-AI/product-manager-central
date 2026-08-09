@@ -8,6 +8,7 @@
 - DEC-006 Isolated OpenAI and Approved-Source Boundaries
 - DEC-007 Revalidated Semantic Retrieval
 - DEC-008 Cited Generated Drafts Without Persistence
+- DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -23,6 +24,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-006 Isolated OpenAI and Approved-Source Boundaries
 - DEC-007 Revalidated Semantic Retrieval
 - DEC-008 Cited Generated Drafts Without Persistence
+- DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 
 ## Decision 001
 
@@ -240,6 +242,52 @@ The AI Assistant can produce temporary cited drafts. Provider and malformed
 response failures are reported with safe messages, tests remain fully mocked,
 and the database schema and source documents remain unchanged. Generated-draft
 review, explicit acceptance, and saving remain Checkpoint 4 work.
+
+**Status:**
+Approved
+
+## Decision 009
+
+**Date:** August 9, 2026
+
+**Category:** Generated-content review and persistence
+
+**Title:** Checkpoint 4 stores only explicitly accepted generated artifacts
+
+**Decision:**
+PMC will keep grounded generation, human review, and persistence as separate
+steps. A generated draft enters an in-memory pending review that displays its
+original AI output and immutable structured citations. A Product Manager may
+reject it, revise it while it remains pending, or explicitly choose **Accept and
+save**. No pending or rejected review creates a saved artifact.
+
+Explicitly accepted content is stored in separate `generated_artifacts` and
+`generated_artifact_citations` tables rather than in `documents` or
+`document_sections`. The artifact retains its target product, request, original
+AI output, accepted text, revision indicator, timestamps, and citation snapshots
+with source product, document, type, and section IDs/metadata. Acceptance
+revalidates every cited source as a current Approved BRD or PRD. A unique review
+key makes repeated submissions and Streamlit reruns idempotent.
+
+**Reason:**
+- Explicit acceptance keeps the Product Manager in control of persistence.
+- Separate tables prevent generated content from overwriting or being confused
+  with original BRDs and PRDs.
+- Preserving original and accepted text makes human revision auditable.
+- Source revalidation maintains the Approved-only trust boundary through save.
+- Idempotent acceptance prevents duplicate artifacts during UI reruns.
+
+**Alternatives Considered:**
+- Automatically saving generated drafts before review.
+- Updating a cited BRD or PRD with accepted generated text.
+- Persisting rejected and pending reviews as approved product artifacts.
+- Replacing the original AI output after a human revision.
+
+**Impact:**
+Checkpoint 4 adds a narrow additive schema migration and a review service that
+can be tested with deterministic generated results. Original source documents
+remain unchanged. Prompt management, workflow hardening, and RAG evaluation
+remain deferred to Checkpoints 5 and 6.
 
 **Status:**
 Approved

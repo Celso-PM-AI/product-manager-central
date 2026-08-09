@@ -14,11 +14,11 @@
 
 **Updated:** August 5, 2026
 
-- Phases 0 through 8 and Phase 9 Checkpoints 1 through 3 are complete.
+- Phases 0 through 8 and Phase 9 Checkpoints 1 through 4 are complete.
 - The Product Manager Central MVP acceptance criteria passed.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
-  saving and acceptance remain deferred.
+  human-reviewed acceptance and separate generated-artifact saving are complete.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
 during Phase 4. Phase 6 completed its required coverage and interface-polish
@@ -1240,6 +1240,17 @@ live database.
 
 ## Remaining Phase 9 checkpoints
 
-- Checkpoint 4: Generated-content review, acceptance, and saving — Not started
+- Checkpoint 4: Generated-content review, acceptance, and saving — Completed
+  August 9, 2026
+  - Display the original generated output and structured supporting citations.
+  - Keep revisions pending until a separate explicit acceptance action.
+  - Reject without creating a saved or approved artifact.
+  - Store accepted content separately with its product, original AI output,
+    accepted revision, and citation/source snapshots.
+  - Revalidate cited sources as current Approved BRDs or PRDs at acceptance.
+  - Use a unique review key to prevent duplicate saves across repeated submits
+    and Streamlit reruns.
+  - Verify the workflow with deterministic generation and temporary databases;
+    no live OpenAI request or production-database write is required.
 - Checkpoint 5: Prompt management and assistant workflow hardening — Not started
 - Checkpoint 6: RAG evaluation and release verification — Not started
