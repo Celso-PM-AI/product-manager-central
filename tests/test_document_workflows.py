@@ -17,6 +17,7 @@ from src.database import (
 )
 from src.document_templates import document_template
 from src.models import DocumentStatus, DocumentType
+from src.prompt_catalog import GROUNDED_DRAFT_PROMPT_ID, AssistantTask
 
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
@@ -317,6 +318,15 @@ class PrimaryDocumentNavigationTests(PrimaryDocumentNavigationTestCase):
             "src.ai_service._create_official_client"
         ) as client_factory:
             self.open_navigation("AI Assistant")
+            self.app.selectbox(key="grounded_generation_product_id").set_value(
+                self.first_product.id
+            ).run()
+            self.app.selectbox(key="grounded_generation_task").set_value(
+                AssistantTask.GROUNDED_DRAFT
+            ).run()
+            self.app.selectbox(key="grounded_generation_prompt_id").set_value(
+                GROUNDED_DRAFT_PROMPT_ID
+            ).run()
             self.app.text_area(key="grounded_generation_request").set_value(
                 "Draft a product summary."
             )

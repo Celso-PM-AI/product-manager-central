@@ -14,7 +14,6 @@ from src.database import (
 )
 from src.document_templates import document_template
 from src.grounded_generation import (
-    GROUNDING_INSTRUCTIONS,
     DatabaseGroundedGenerationService,
     GenerationRequestError,
     GroundedGenerationService,
@@ -22,6 +21,12 @@ from src.grounded_generation import (
     build_grounded_prompt,
 )
 from src.models import DocumentStatus, DocumentType
+from src.prompt_catalog import (
+    GROUNDED_DRAFT_PROMPT_ID,
+    AssistantTask,
+    PromptCatalogError,
+    get_approved_prompt,
+)
 from src.semantic_retrieval import (
     RetrievalChunk,
     SemanticRetrievalResponse,
@@ -72,6 +77,10 @@ class GroundedPromptTests(unittest.TestCase):
         prompt, citations = build_grounded_prompt(
             " Draft a launch summary. ",
             retrieval_result(),
+            get_approved_prompt(
+                AssistantTask.GROUNDED_DRAFT,
+                GROUNDED_DRAFT_PROMPT_ID,
+            ),
         )
 
         self.assertIn("Draft a launch summary.", prompt)
@@ -81,7 +90,7 @@ class GroundedPromptTests(unittest.TestCase):
         self.assertIn("Atlas Launch PRD (ID 12, PRD)", prompt)
         self.assertIn("Section: Launch plan (launch_plan)", prompt)
         self.assertIn("Approved launch requirements.", prompt)
-        self.assertIn("Use only the approved source context", GROUNDING_INSTRUCTIONS)
+        self.assertNotIn("Use only the approved source context", prompt)
         self.assertEqual(len(citations), 1)
         citation = citations[0]
         self.assertEqual(citation.product, "Atlas")
@@ -100,7 +109,11 @@ class GroundedGenerationServiceTests(unittest.TestCase):
         generator.create_text_response.return_value = "  Launch summary [Source 1]  "
         service = GroundedGenerationService(retriever, generator)
 
-        result = service.generate("Summarize launch readiness.")
+        result = service.generate(
+            "Summarize launch readiness.",
+            task=AssistantTask.GROUNDED_DRAFT,
+            prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+        )
 
         self.assertIs(result.state, GroundedGenerationState.GENERATED_DRAFT)
         self.assertEqual(result.content, "Launch summary [Source 1]")
@@ -109,6 +122,9 @@ class GroundedGenerationServiceTests(unittest.TestCase):
         self.assertTrue(result.requires_human_review)
         self.assertFalse(result.explicitly_accepted)
         self.assertFalse(result.can_save)
+        self.assertIs(result.assistant_task, AssistantTask.GROUNDED_DRAFT)
+        self.assertEqual(result.prompt_id, GROUNDED_DRAFT_PROMPT_ID)
+        self.assertEqual(result.prompt_version, "1.0.0")
         self.assertEqual(result.citations[0].document_id, 12)
         retriever.retrieve.assert_called_once_with(
             "Summarize launch readiness.", limit=5
@@ -123,7 +139,11 @@ class GroundedGenerationServiceTests(unittest.TestCase):
         for invalid in ("", "   ", None, 42):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(GenerationRequestError):
-                    service.generate(invalid)
+                    service.generate(
+                        invalid,
+                        task=AssistantTask.GROUNDED_DRAFT,
+                        prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+                    )
 
         retriever.retrieve.assert_not_called()
         generator.create_text_response.assert_not_called()
@@ -135,7 +155,11 @@ class GroundedGenerationServiceTests(unittest.TestCase):
         )
         generator = Mock()
 
-        result = GroundedGenerationService(retriever, generator).generate("Draft it")
+        result = GroundedGenerationService(retriever, generator).generate(
+            "Draft it",
+            task=AssistantTask.GROUNDED_DRAFT,
+            prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+        )
 
         self.assertIs(result.state, GroundedGenerationState.NO_APPROVED_SOURCES)
         self.assertIsNone(result.content)
@@ -151,11 +175,33 @@ class GroundedGenerationServiceTests(unittest.TestCase):
         )
         generator = Mock()
 
-        result = GroundedGenerationService(retriever, generator).generate("Draft it")
+        result = GroundedGenerationService(retriever, generator).generate(
+            "Draft it",
+            task=AssistantTask.GROUNDED_DRAFT,
+            prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+        )
 
         self.assertIs(result.state, GroundedGenerationState.NO_RELEVANT_RESULTS)
         self.assertFalse(result.grounded)
         self.assertNotIn("grounded draft content is ready", result.message.lower())
+        generator.create_text_response.assert_not_called()
+
+    def test_missing_unsupported_or_mismatched_prompt_stops_before_retrieval(self):
+        retriever = Mock()
+        generator = Mock()
+        service = GroundedGenerationService(retriever, generator)
+
+        for task, prompt_id in (
+            (None, GROUNDED_DRAFT_PROMPT_ID),
+            (AssistantTask.GROUNDED_DRAFT, None),
+            (AssistantTask.GROUNDED_DRAFT, "unsupported-prompt"),
+        ):
+            with self.subTest(task=task, prompt_id=prompt_id), self.assertRaises(
+                PromptCatalogError
+            ):
+                service.generate("Draft it", task=task, prompt_id=prompt_id)
+
+        retriever.retrieve.assert_not_called()
         generator.create_text_response.assert_not_called()
 
     def test_missing_configuration_stops_before_retrieval_and_network(self):
@@ -220,7 +266,12 @@ class ApprovedSourceGenerationIntegrationTests(unittest.TestCase):
         result = DatabaseGroundedGenerationService(
             fake_ai,
             self.database_path,
-        ).generate("Draft a product review", limit=50)
+        ).generate(
+            "Draft a product review",
+            task=AssistantTask.GROUNDED_DRAFT,
+            prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+            limit=50,
+        )
 
         self.assertTrue(result.grounded)
         self.assertEqual(
@@ -246,7 +297,11 @@ class ApprovedSourceGenerationIntegrationTests(unittest.TestCase):
             DatabaseGroundedGenerationService(
                 fake_ai,
                 self.database_path,
-            ).generate("Draft a summary")
+            ).generate(
+                "Draft a summary",
+                task=AssistantTask.GROUNDED_DRAFT,
+                prompt_id=GROUNDED_DRAFT_PROMPT_ID,
+            )
 
         self.assertEqual(retrieve.call_args.args[2], self.database_path)
         self.assertNotEqual(self.database_path, Path("data/pmc.db"))

@@ -4,7 +4,7 @@ Product Manager Central (PMC) is a focused Streamlit workspace for capturing,
 finding, reviewing, editing, and safely deleting structured product information.
 It also provides a template-guided builder for product-associated Business
 Requirements Documents (BRDs) and Product Requirements Documents (PRDs). Data
-is stored locally in SQLite. Phase 9 Checkpoints 1 through 4 add an optional,
+is stored locally in SQLite. Phase 9 Checkpoints 1 through 5 add an optional,
 inactive-by-default OpenAI connection, semantic retrieval from Approved BRDs
 and PRDs, grounded draft generation with citations, and explicit human review
 with separate accepted-artifact persistence.
@@ -165,9 +165,10 @@ Never use the live Product Manager Central record for destructive testing.
 ## Activate the AI Assistant
 
 AI capability is optional. PMC continues to run without an OpenAI API key.
-Phase 9 Checkpoints 1 through 4 provide the secure connection, approved-source
-retrieval, grounded generation, and human acceptance workflow. Generation is
-only when the optional API configuration is active.
+Phase 9 Checkpoints 1 through 5 provide the secure connection, approved-source
+retrieval, grounded generation, human acceptance, code-controlled prompt
+catalog, and hardened assistant workflow. Generation is available only when the
+optional API configuration is active.
 
 ChatGPT Plus and OpenAI API billing are separate. A ChatGPT Plus subscription
 does not include API usage, and OpenAI API usage can incur charges. Review the
@@ -261,6 +262,13 @@ associated with its target product, original AI output, accepted revision, and
 citation/source snapshots. The assistant never modifies, overwrites, or appends
 to a source document. Repeated acceptance submissions and Streamlit reruns use
 the same review key and cannot create duplicate artifacts.
+
+Checkpoint 5 adds a source-controlled catalog for the existing grounded-draft
+task. Product Managers explicitly select the task and one mapped approved
+built-in prompt. The interface shows the prompt's public name, description, and
+version; hidden instructions remain internal. Product, task, prompt, request,
+and approved evidence are validated before generation. Prompts are not editable
+in the UI or stored in SQLite.
 
 ## Keyword search and semantic retrieval
 
@@ -364,7 +372,9 @@ backups and `archive/products.csv` must remain unchanged.
 
 ## Deferred features
 
-- Prompt management and RAG evaluation
+- RAG evaluation, scoring, benchmarking, and dashboards
+- User-authored/editable prompts, database prompt storage, prompt history,
+  product-specific prompts, sharing, import/export, experiments, and optimization
 - Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
@@ -372,9 +382,9 @@ backups and `archive/products.csv` must remain unchanged.
 
 ## Development status
 
-Phases 0 through 8 and Phase 9 Checkpoints 1 through 4 are complete. Secure
+Phases 0 through 8 and Phase 9 Checkpoints 1 through 5 are complete. Secure
 optional OpenAI configuration, approved-source semantic retrieval, and
 grounded generation with citations, explicit human review, and separate
-accepted-artifact persistence are implemented. Checkpoints 5 and 6 are not
-started. Prompt management, workflow hardening, and RAG evaluation are not
-included yet.
+accepted-artifact persistence, the code-controlled prompt catalog, and hardened
+assistant workflow are implemented. Checkpoint 6 is not started, and RAG
+evaluation is not included.

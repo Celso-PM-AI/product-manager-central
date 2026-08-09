@@ -41,6 +41,7 @@ from src.document_templates import (
 from src.grounded_generation import (
     DatabaseGroundedGenerationService,
     GenerationRequestError,
+    normalize_generation_request,
 )
 from src.generated_content import (
     GeneratedContentReview,
@@ -55,6 +56,13 @@ from src.models import (
     Product,
     ProductDocument,
     ProductStatus,
+)
+from src.prompt_catalog import (
+    AssistantTask,
+    PromptCatalogError,
+    approved_prompts_for_task,
+    assistant_task_label,
+    get_approved_prompt,
 )
 from src.validation import (
     DOCUMENT_SECTION_MAX_LENGTH,
@@ -90,6 +98,7 @@ DOCUMENT_CREATE_MODE: Final[str] = "document_create"
 DOCUMENT_PREVIEW_MODE: Final[str] = "document_preview"
 DOCUMENT_EDIT_MODE: Final[str] = "document_edit"
 GENERATED_REVIEW_STATE_KEY: Final[str] = "generated_content_review"
+GENERATION_SUBMISSION_STATE_KEY: Final[str] = "grounded_generation_submission"
 
 
 def display_generation_citations(review: GeneratedContentReview) -> None:
@@ -225,17 +234,45 @@ def render_ai_assistant() -> None:
     products_by_id = {
         product.id: product for product in products if product.id is not None
     }
+    product_id = st.selectbox(
+        "Product for the generated artifact",
+        options=[None, *products_by_id],
+        format_func=lambda selected: (
+            "Select a product"
+            if selected is None
+            else product_option_label(products_by_id[selected])
+        ),
+        key="grounded_generation_product_id",
+    )
+    task = st.selectbox(
+        "Assistant task",
+        options=[None, *AssistantTask],
+        format_func=lambda selected: (
+            "Select an assistant task"
+            if selected is None
+            else assistant_task_label(selected)
+        ),
+        key="grounded_generation_task",
+    )
+    available_prompts = approved_prompts_for_task(task) if task is not None else ()
+    prompts_by_id = {prompt.prompt_id: prompt for prompt in available_prompts}
+    prompt_id = st.selectbox(
+        "Approved prompt",
+        options=[None, *prompts_by_id],
+        format_func=lambda selected: (
+            "Select an approved prompt"
+            if selected is None
+            else prompts_by_id[selected].name
+        ),
+        key="grounded_generation_prompt_id",
+    )
+    if prompt_id is not None:
+        selected_prompt = prompts_by_id[prompt_id]
+        st.markdown(f"**{selected_prompt.name}**")
+        st.caption(selected_prompt.description)
+        st.caption(f"Prompt version {selected_prompt.version}")
+
     with st.form("grounded_generation_form"):
-        product_id = st.selectbox(
-            "Product for the generated artifact",
-            options=[None, *products_by_id],
-            format_func=lambda selected: (
-                "Select a product"
-                if selected is None
-                else product_option_label(products_by_id[selected])
-            ),
-            key="grounded_generation_product_id",
-        )
         request = st.text_area(
             "What would you like to draft?",
             placeholder=(
@@ -259,24 +296,60 @@ def render_ai_assistant() -> None:
         return
 
     try:
-        ai_service = OpenAIService.from_environment()
         if product_id is None:
             st.error("Select a product before generating content for review.")
             return
+        normalized_request = normalize_generation_request(request)
+        selected_prompt = get_approved_prompt(task, prompt_id)
+    except (GenerationRequestError, PromptCatalogError) as error:
+        st.error(str(error))
+        return
+
+    submission_signature = (
+        product_id,
+        selected_prompt.task.value,
+        selected_prompt.prompt_id,
+        normalized_request,
+    )
+    previous_submission = st.session_state.get(GENERATION_SUBMISSION_STATE_KEY)
+    existing_review = st.session_state.get(GENERATED_REVIEW_STATE_KEY)
+    if (
+        isinstance(previous_submission, dict)
+        and previous_submission.get("signature") == submission_signature
+        and previous_submission.get("status") in {"processing", "completed"}
+        and isinstance(existing_review, GeneratedContentReview)
+    ):
+        st.info(
+            "This assistant submission was already processed. The existing "
+            "review is shown below; no duplicate generation was started."
+        )
+        render_generated_content_review(existing_review)
+        return
+
+    st.session_state[GENERATION_SUBMISSION_STATE_KEY] = {
+        "signature": submission_signature,
+        "status": "processing",
+    }
+    try:
+        ai_service = OpenAIService.from_environment()
         result = DatabaseGroundedGenerationService(
             ai_service,
             APP_DATABASE_FILE,
-        ).generate(request)
-    except GenerationRequestError as error:
-        st.error(str(error))
-        return
+        ).generate(
+            normalized_request,
+            task=selected_prompt.task,
+            prompt_id=selected_prompt.prompt_id,
+        )
     except AIConfigurationError as error:
+        st.session_state.pop(GENERATION_SUBMISSION_STATE_KEY, None)
         st.error(str(error))
         return
     except AIServiceError as error:
+        st.session_state.pop(GENERATION_SUBMISSION_STATE_KEY, None)
         st.error(str(error))
         return
     except (ValueError, DatabaseSchemaError, sqlite3.Error):
+        st.session_state.pop(GENERATION_SUBMISSION_STATE_KEY, None)
         st.error(
             "A grounded draft could not be generated safely. Please check the "
             "request and try again."
@@ -284,6 +357,7 @@ def render_ai_assistant() -> None:
         return
 
     if not result.grounded:
+        st.session_state.pop(GENERATION_SUBMISSION_STATE_KEY, None)
         st.warning(result.message)
         return
     try:
@@ -296,6 +370,10 @@ def render_ai_assistant() -> None:
         st.error(str(error))
         return
     st.session_state[GENERATED_REVIEW_STATE_KEY] = review
+    st.session_state[GENERATION_SUBMISSION_STATE_KEY] = {
+        "signature": submission_signature,
+        "status": "completed",
+    }
     render_generated_content_review(review)
 
 

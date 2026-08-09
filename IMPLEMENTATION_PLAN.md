@@ -12,9 +12,9 @@
 
 ## Current phase status
 
-**Updated:** August 5, 2026
+**Updated:** August 9, 2026
 
-- Phases 0 through 8 and Phase 9 Checkpoints 1 through 4 are complete.
+- Phases 0 through 8 and Phase 9 Checkpoints 1 through 5 are complete.
 - The Product Manager Central MVP acceptance criteria passed.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
@@ -1252,5 +1252,19 @@ live database.
     and Streamlit reruns.
   - Verify the workflow with deterministic generation and temporary databases;
     no live OpenAI request or production-database write is required.
-- Checkpoint 5: Prompt management and assistant workflow hardening — Not started
+- Checkpoint 5: Prompt management and assistant workflow hardening — Completed
+  August 9, 2026
+  - Define immutable, version-controlled prompt metadata and templates in source.
+  - Move the existing grounded-draft prompt into the catalog without changing
+    the Approved-only evidence, citation, or source-document safety rules.
+  - Require explicit product, assistant-task, approved-prompt, and request input
+    before retrieval or generation.
+  - Display only the selected prompt's public name, description, and version.
+  - Reject missing inputs, unsupported prompt IDs, and task/prompt mismatches.
+  - Prevent generation without approved BRD/PRD evidence or available optional
+    API configuration, using non-sensitive messages.
+  - Harden Streamlit reruns against duplicate generation and preserve the
+    existing idempotent explicit-acceptance workflow.
+  - Keep prompts out of SQLite; do not add user editing, product-specific
+    prompts, experiments, optimization, or evaluation features.
 - Checkpoint 6: RAG evaluation and release verification — Not started

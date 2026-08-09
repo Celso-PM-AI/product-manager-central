@@ -9,6 +9,7 @@
 - DEC-007 Revalidated Semantic Retrieval
 - DEC-008 Cited Generated Drafts Without Persistence
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
+- DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -25,6 +26,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-007 Revalidated Semantic Retrieval
 - DEC-008 Cited Generated Drafts Without Persistence
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
+- DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 
 ## Decision 001
 
@@ -288,6 +290,56 @@ Checkpoint 4 adds a narrow additive schema migration and a review service that
 can be tested with deterministic generated results. Original source documents
 remain unchanged. Prompt management, workflow hardening, and RAG evaluation
 remain deferred to Checkpoints 5 and 6.
+
+**Status:**
+Approved
+
+## Decision 010
+
+**Date:** August 9, 2026
+
+**Category:** Prompt management and assistant workflow safety
+
+**Title:** Checkpoint 5 uses a code-controlled prompt catalog
+
+**Decision:**
+PMC will define approved assistant prompts as immutable source-controlled
+definitions. Each prompt has a stable ID, public name and description,
+supported assistant task, explicit semantic version, hidden system
+instructions, deterministic user-prompt template, and required input fields.
+The existing grounded-draft rules move into the initial catalog entry without
+changing their approved-only evidence boundary or citation requirements.
+
+The AI Assistant requires explicit product, task, prompt, and request selection
+before retrieval or generation. Only built-in prompts mapped to the selected
+task are eligible. The interface displays public prompt metadata but never
+system instructions, API credentials, or provider exception details. Streamlit
+session state distinguishes a completed submission from a rerun so generation
+is not repeated accidentally; Checkpoint 4 acceptance remains idempotent.
+
+Prompts are not editable in the UI, stored in SQLite, product-specific, shared,
+imported, exported, optimized, or experimentally varied. No schema change is
+authorized.
+
+**Reason:**
+- Version-controlled prompts are reviewable and reproducible.
+- Explicit task/prompt selection prevents unsupported prompt execution.
+- Deterministic validation stops incomplete requests before retrieval or API use.
+- Public metadata explains the selected behavior without exposing hidden
+  instructions.
+- Rerun hardening avoids duplicate provider actions while preserving explicit
+  human review and acceptance.
+
+**Alternatives Considered:**
+- User-authored or user-editable prompts.
+- Database-backed prompt storage and version history.
+- Product-specific prompts, prompt sharing, and import/export.
+- Prompt experimentation, automated optimization, and evaluation scoring.
+
+**Impact:**
+Checkpoint 5 adds a source-only catalog and hardens the existing assistant
+workflow without modifying the database or original BRDs/PRDs. RAG evaluation,
+benchmarking, dashboards, and LLM-as-a-judge remain Checkpoint 6 work.
 
 **Status:**
 Approved

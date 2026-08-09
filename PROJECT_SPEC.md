@@ -5,7 +5,7 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 9 Checkpoints 1 through 4 add an optional OpenAI
+single local data source. Phase 9 Checkpoints 1 through 5 add an optional OpenAI
 configuration/client boundary, embedding-based semantic retrieval of Approved
 BRD/PRD chunks, grounded draft generation with citations, and explicit human
 review with separate accepted-artifact persistence.
@@ -125,7 +125,7 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
-### Phase 9 Checkpoints 1 through 4 AI Assistant
+### Phase 9 Checkpoints 1 through 5 AI Assistant
 
 - AI configuration is optional and reads only `OPENAI_API_KEY` from the process
   environment. Status reporting never returns or logs the key.
@@ -172,6 +172,18 @@ storage and appear as Draft and Approved in the interface.
   uses an idempotency key to prevent duplicate saves during reruns.
 - Generated artifacts never update, overwrite, append to, or otherwise modify
   an original BRD, PRD, or document section.
+- Approved prompts are immutable source-controlled definitions with stable IDs,
+  public names/descriptions, supported tasks, semantic versions, hidden system
+  instructions, deterministic user templates, and required input fields.
+- The existing grounded-draft behavior is the only supported assistant task and
+  uses only its mapped approved built-in prompt.
+- Product, task, prompt, and required request input are validated before
+  retrieval or generation. Approved evidence is required before prompt
+  rendering and text generation.
+- The interface displays prompt name, description, and version but never hidden
+  instructions, credentials, or provider exception details.
+- Streamlit reruns reuse the completed submission state rather than repeating
+  generation, while accepted-content persistence remains idempotent.
 
 ## Dashboard metrics
 
@@ -204,6 +216,8 @@ Charts and advanced analytics are not part of the MVP.
   construction, temporary generated-draft results, and structured citations.
 - `src/generated_content.py` owns pending review, revision, rejection, and
   explicit acceptance orchestration.
+- `src/prompt_catalog.py` owns approved task/prompt definitions, mappings,
+  validation, lookup, and deterministic rendering.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
@@ -241,7 +255,9 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Deferred features
 
-- Prompt management and RAG evaluation
+- RAG evaluation, scoring, benchmarking, and dashboards
+- User-authored/editable prompts, database prompt storage, prompt history,
+  product-specific prompts, sharing, import/export, experiments, and optimization
 - AI-generated document updates and automatic modification of source BRDs/PRDs
 - Word/PDF document export
 - Authentication, multi-user permissions, and cloud deployment
@@ -251,8 +267,9 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Current development status
 
-Phases 0 through 8 and Phase 9 Checkpoints 1 through 4 are complete. Secure
+Phases 0 through 8 and Phase 9 Checkpoints 1 through 5 are complete. Secure
 OpenAI boundaries, stable approved-source retrieval, and temporary grounded
 draft generation with citations, explicit human review, and separate accepted
-artifact persistence are implemented. Checkpoints 5 and 6 are not started;
-there is no prompt management, workflow hardening, or RAG evaluation.
+artifact persistence, the code-controlled prompt catalog, and hardened assistant
+workflow are implemented. Checkpoint 6 is not started; there is no RAG
+evaluation.

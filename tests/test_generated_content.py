@@ -36,6 +36,7 @@ from src.grounded_generation import (
     GroundedGenerationState,
 )
 from src.models import DocumentStatus, DocumentType
+from src.prompt_catalog import GROUNDED_DRAFT_PROMPT_ID, AssistantTask
 
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
@@ -266,7 +267,13 @@ class GeneratedContentWorkflowTests(GeneratedContentTestCase):
         app.radio[0].set_value("AI Assistant").run()
         app.selectbox(key="grounded_generation_product_id").set_value(
             self.product.id
-        )
+        ).run()
+        app.selectbox(key="grounded_generation_task").set_value(
+            AssistantTask.GROUNDED_DRAFT
+        ).run()
+        app.selectbox(key="grounded_generation_prompt_id").set_value(
+            GROUNDED_DRAFT_PROMPT_ID
+        ).run()
         app.text_area(key="grounded_generation_request").set_value(
             "Draft a product summary."
         )
@@ -282,9 +289,11 @@ class GeneratedContentWorkflowTests(GeneratedContentTestCase):
         ), patch(
             "src.grounded_generation.DatabaseGroundedGenerationService.generate",
             return_value=self.generation,
-        ):
+        ) as generate:
             app = self.generate_review(AppTest.from_file(APP_FILE).run())
             self.assertEqual(list(app.exception), [])
+            app.run()
+            generate.assert_called_once()
             rendered = "\n".join(item.value for item in app.markdown)
             self.assertIn("Original AI output", rendered)
             self.assertIn("Approved Atlas PRD", rendered)
