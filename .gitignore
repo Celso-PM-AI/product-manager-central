@@ -17,6 +17,9 @@ htmlcov/
 # Operating-system files
 .DS_Store
 
+# Protected local portfolio asset (never commit)
+/Screenshot 2026-08-01 at 10.54.51.png
+
 # Local application data and SQLite sidecar files
 /data/*.db
 /data/*.db-wal

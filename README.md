@@ -10,6 +10,9 @@ and PRDs, grounded draft generation with citations, and explicit human review
 with separate accepted-artifact persistence. Deterministic offline evaluation
 scores the completed workflow for release without calling a live model.
 
+PMC is preparing a source-based local v1.0.0 portfolio release under the
+[MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
+
 ## MVP scope
 
 The MVP provides dependable local product-information management for a single
@@ -141,6 +144,19 @@ general schema framework is used; the AI integration has one narrow service
 boundary for configuration, SDK isolation, and testing.
 
 ## Setup
+
+### Environment support status
+
+PMC targets local Mac and Windows use, but no Python or operating-system version
+is yet claimed as supported for v1.0.0. A combination becomes supported only
+after a clean virtual environment installs every direct runtime dependency and
+passes the complete automated suite and isolated application smoke test without
+an API key. The compatibility matrix will be established in a later Phase 10
+checkpoint.
+
+`requirements.txt` contains direct runtime dependencies. Their versions will be
+pinned only after clean-install compatibility testing provides evidence; this
+checkpoint intentionally makes no dependency change.
 
 Create and activate a virtual environment, then install the runtime
 dependencies:
@@ -411,3 +427,22 @@ grounded generation with citations, explicit human review, and separate
 accepted-artifact persistence, the code-controlled prompt catalog, and hardened
 assistant workflow are implemented. Deterministic offline evaluation and
 end-to-end release verification cover the complete Phase 9 workflow.
+
+Phase 10 is preparing a local source release. Checkpoint 1 is complete and
+establishes the MIT License, planned v1.0.0 metadata, changelog, contribution
+and security policies, and evidence-based environment/dependency rules. It does
+not create a package, tag, or GitHub Release, and Checkpoints 2 through 6 are
+not started.
+
+## Governance and release policy
+
+- [License](LICENSE)
+- [Changelog](CHANGELOG.md)
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+
+PMC uses Semantic Versioning. Source versions use `MAJOR.MINOR.PATCH`; release
+tags use `vMAJOR.MINOR.PATCH`. Release publication requires explicit approval
+after the applicable tests, UAT, archive audit, secret scan, and checksum
+verification pass. The planned first public tag is `v1.0.0`, but it does not yet
+exist.

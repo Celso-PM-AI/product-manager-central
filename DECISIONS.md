@@ -11,6 +11,7 @@
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
+- DEC-012 Local Portfolio Release Governance and Distribution
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -29,6 +30,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
+- DEC-012 Local Portfolio Release Governance and Distribution
 
 ## Decision 001
 
@@ -390,6 +392,69 @@ Checkpoint 6 completes Phase 9 with deterministic scoring and end-to-end release
 verification. It changes no application workflow, source document, database
 schema, or production data. Future live-quality studies and evaluation
 dashboards remain outside the approved scope.
+
+**Status:**
+Approved
+
+## Decision 012
+
+**Date:** August 9, 2026
+
+**Category:** Portfolio release and distribution
+
+**Title:** Phase 10 prepares a governed local v1.0.0 source release
+
+**Decision:**
+Product Manager Central will prepare v1.0.0 as its first public portfolio
+release under the MIT License. Distribution will be a source-based GitHub
+Release ZIP with Mac and Windows setup and launch helpers. It will remain a
+single-user local Streamlit and SQLite application; native signed installers,
+cloud hosting, authentication, hosted databases, billing, and enterprise
+operations are excluded.
+
+The release package will never contain the existing production database, a
+prebuilt sample database, secrets, environment files, backups, archives,
+caches, or personal data. Clean startup remains the default. Fictional sample
+data will be optional and user-triggered. The repository-local `data/pmc.db`
+location remains the v1.0 approach, with launchers required to use the correct
+application directory and documentation required to protect data during updates
+and uninstalling.
+
+Python and operating-system support will be claimed only after a clean virtual
+environment can install every direct runtime dependency, pass the complete
+automated suite, and pass an isolated application smoke test on that exact
+combination. Direct dependencies will be pinned only after this evidence exists;
+Phase 10 will not add an unnecessary transitive lock or packaging framework.
+
+Phase 10 also authorizes no-secret CI, a four-to-six-PM beta plan, a read-only
+accepted-artifact history, sanitized fictional screenshots, recruiter-facing
+materials, and an exact `.gitignore` rule for the protected local screenshot.
+None of those later-checkpoint deliverables is started by Checkpoint 1.
+
+**Reason:**
+- Clear licensing and versioning make the portfolio release usable and
+  reviewable by others.
+- Evidence-based compatibility claims avoid misleading Mac and Windows users.
+- A source ZIP is transparent and maintainable without installer signing or
+  notarization complexity.
+- Clean and fictional-only data boundaries prevent production or personal data
+  from entering a public artifact.
+- Separate publication approval prevents planning metadata from being mistaken
+  for an actual release.
+
+**Alternatives Considered:**
+- Native Mac and Windows installers.
+- Cloud or hosted distribution.
+- Bundling the production or a prebuilt sample database.
+- Automatically loading sample data.
+- Claiming Python support from the existing development environment alone.
+- Pinning dependencies before clean-install evidence is available.
+
+**Impact:**
+Checkpoint 1 adds governance and planned v1.0.0 metadata without changing the
+application, dependency set, database schema, or Phase 9 safeguards. Later
+Phase 10 checkpoints remain subject to separate implementation and verification.
+Checkpoint 1 verification passed with 214 tests and no production-data change.
 
 **Status:**
 Approved

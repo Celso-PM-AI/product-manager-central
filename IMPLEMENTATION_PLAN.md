@@ -1292,3 +1292,59 @@ live database.
 Phase 9 is complete. The Checkpoint 6 deterministic release cases scored 100
 for every criterion and passed the approved release gates. The complete suite
 passed 205 tests without a live OpenAI call or production-database access.
+
+# Phase 10: Portfolio Release and Distribution
+
+## Goal and approved boundaries
+
+Prepare Product Manager Central as a polished local portfolio application that
+Product Managers can download and run on Mac or Windows and recruiters can
+review as evidence of practical generative-AI product management. Phase 10 does
+not turn PMC into a publicly hosted enterprise service.
+
+The planned first release is v1.0.0 under the MIT License. Distribution will be
+a source-based GitHub Release ZIP with cross-platform setup and launch helpers,
+not a native signed or notarized installer. The package must start clean or
+offer separately invoked fictional sample data; it must never contain the
+existing production database or a prebuilt SQLite sample.
+
+Python and operating-system support remain unclaimed until an exact combination
+passes clean-environment dependency installation, the complete automated suite,
+and an isolated no-key application smoke test. Direct runtime dependencies will
+be pinned only after that evidence exists. The current requirements remain
+unchanged in Checkpoint 1.
+
+## Checkpoint 1: Release definition, governance, and versioning
+
+**Completed:** August 9, 2026
+
+- Add the MIT License using Celso Guerra as the copyright holder.
+- Establish `1.0.0` source metadata and the planned `v1.0.0` Git tag convention
+  without creating a tag or publishing a release.
+- Add changelog, contribution, and security-reporting policies.
+- Define Semantic Versioning, release approval, archive safety, and checksum
+  conventions.
+- Define evidence-based environment support and direct-dependency policies
+  without making speculative dependency changes or support claims.
+- Add deterministic governance and metadata consistency tests.
+- Ignore the exact protected screenshot filename without modifying the file.
+- Preserve the production database, all Phase 9 safeguards, and the existing
+  205-test baseline.
+
+Checkpoint 1 verification passed 214 tests, Python compilation, the isolated
+no-key application smoke test, `git diff --check`, version consistency, secret
+and artifact review, and protected-file comparisons. No dependency, application,
+database, package, tag, or publication change was made.
+
+## Remaining Phase 10 checkpoints
+
+- Checkpoint 2: First-run onboarding, optional fictional sample workspace, and
+  read-only accepted-artifact history — Not started
+- Checkpoint 3: Mac/Windows setup, launch helpers, dependency validation, and
+  safe release-package construction — Not started
+- Checkpoint 4: UAT, beta preparation, troubleshooting, known limitations, and
+  responsible-use guidance — Not started
+- Checkpoint 5: Recruiter case study, architecture diagram, sanitized
+  screenshots, demo plan, and launch materials — Not started
+- Checkpoint 6: Release-candidate verification and GitHub release preparation —
+  Not started

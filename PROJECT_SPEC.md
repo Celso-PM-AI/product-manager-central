@@ -288,3 +288,38 @@ artifact persistence, the code-controlled prompt catalog, and hardened assistant
 workflow are implemented. Deterministic offline scoring and end-to-end release
 evaluation validate the complete Phase 9 workflow without live API calls or
 production-database access.
+
+## Phase 10 portfolio release policy
+
+Phase 10 prepares a local, source-based Product Manager Central portfolio
+release. The planned first public version is v1.0.0 under the MIT License. It is
+not yet tagged, packaged, or published. The product name and current working
+visual identity remain unchanged.
+
+The approved distribution target is a GitHub Release ZIP with Mac and Windows
+setup and launch helpers. Native installers, cloud deployment, authentication,
+multi-user infrastructure, hosted databases, billing, telemetry, and enterprise
+operations are outside Phase 10.
+
+Environment support is evidence-based. An operating-system and Python-version
+combination is supported only after a clean virtual environment installs all
+direct runtime dependencies and passes the complete test suite and isolated
+application smoke test without an API key. No Python or OS version is currently
+claimed as v1.0-supported; the compatibility matrix is pending later Phase 10
+clean-install validation. The existing environment's test result alone is not a
+support claim.
+
+`requirements.txt` continues to list direct runtime dependencies. Direct
+versions will be pinned only after compatibility evidence exists. Phase 10 does
+not require a general dependency-management framework or a platform-specific
+transitive lock unless validation demonstrates a release-blocking need.
+
+The release must omit all production databases, prebuilt sample databases,
+backups, archives, SQLite sidecars, secrets, environment files, caches, virtual
+environments, personal data, and proprietary data. Clean startup is the default;
+fictional sample data will be optional and user-triggered in a later checkpoint.
+The repository-local `data/pmc.db` approach remains approved for v1.0.
+
+Checkpoint 1 is complete. It establishes license, planned version metadata,
+governance, release/version conventions, environment and dependency policies,
+and deterministic metadata tests. Checkpoints 2 through 6 are not started.
