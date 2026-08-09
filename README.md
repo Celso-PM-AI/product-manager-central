@@ -158,6 +158,33 @@ checkpoint.
 pinned only after clean-install compatibility testing provides evidence; this
 checkpoint intentionally makes no dependency change.
 
+### Getting started in PMC
+
+The default Dashboard explains the complete first-time workflow in plain
+language: create a product, create a BRD or PRD, keep unfinished documents in
+Draft, approve documents only after human review, and use only Approved BRDs and
+PRDs as trusted AI sources. It also explains citation review, explicit human
+acceptance, revision and rejection, and the separation between accepted AI
+artifacts and original source documents.
+
+PMC runs locally. Product and document management do not require an API key. AI
+features require the user's own OpenAI API key supplied through a secure local
+environment setting; never place a key in source code or commit it to Git.
+
+The Dashboard offers an optional **Load fictional sample data** button. It adds
+`[Fictional Sample] Trailwise`, an Approved fictional PRD, and a Draft fictional
+BRD. Nothing is loaded automatically, no prebuilt database is distributed, and
+repeated clicks do not create duplicate sample records. Existing user products
+and documents are not replaced. To remove the sample, select the clearly named
+product under View Products and use the existing Delete action; its associated
+sample documents are removed with it.
+
+Product detail also shows a read-only history of explicitly accepted
+AI-generated artifacts. History includes the purpose, accepted content,
+revision context, dates, product association, and complete source citations. It
+does not provide artifact editing, deletion, regeneration, or any action that
+changes an original BRD or PRD.
+
 Create and activate a virtual environment, then install the runtime
 dependencies:
 
@@ -430,9 +457,12 @@ end-to-end release verification cover the complete Phase 9 workflow.
 
 Phase 10 is preparing a local source release. Checkpoint 1 is complete and
 establishes the MIT License, planned v1.0.0 metadata, changelog, contribution
-and security policies, and evidence-based environment/dependency rules. It does
-not create a package, tag, or GitHub Release, and Checkpoints 2 through 6 are
-not started.
+and security policies, and evidence-based environment/dependency rules.
+Checkpoint 2 is complete with first-time guidance, optional deterministic
+fictional data, and read-only accepted-artifact history. Its complete suite
+passes 225 tests without production-data access or live OpenAI calls. Neither
+checkpoint creates a package, tag, or GitHub Release, and Checkpoints 3 through
+6 are not started.
 
 ## Governance and release policy
 

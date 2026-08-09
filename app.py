@@ -28,6 +28,7 @@ from src.database import (
     get_product,
     initialize_database,
     list_documents_for_product,
+    list_generated_artifacts_for_product,
     list_products,
     search_products,
     update_document,
@@ -63,6 +64,11 @@ from src.prompt_catalog import (
     approved_prompts_for_task,
     assistant_task_label,
     get_approved_prompt,
+)
+from src.sample_data import (
+    SAMPLE_PRODUCT_NAME,
+    SampleDataLoadStatus,
+    load_fictional_sample_data,
 )
 from src.validation import (
     DOCUMENT_SECTION_MAX_LENGTH,
@@ -779,6 +785,69 @@ def display_document_preview(document: ProductDocument, product: Product) -> Non
     )
 
 
+def render_accepted_artifact_history(product: Product) -> None:
+    """Display a product's separately stored accepted AI artifacts read-only."""
+
+    if product.id is None:
+        return
+    st.divider()
+    st.subheader("Accepted AI-generated artifacts")
+    st.caption(
+        "Read-only history. These accepted artifacts are stored separately from "
+        "the original BRDs and PRDs and cannot change source documents."
+    )
+    try:
+        artifacts = list_generated_artifacts_for_product(
+            product.id,
+            APP_DATABASE_FILE,
+        )
+    except (DatabaseSchemaError, sqlite3.Error):
+        st.error(
+            "Accepted-artifact history could not be loaded safely. Please try "
+            "again."
+        )
+        return
+
+    if not artifacts:
+        st.info(
+            "No accepted AI-generated artifacts for this product yet. Generated "
+            "content appears here only after explicit human acceptance."
+        )
+        return
+
+    for artifact in artifacts:
+        with st.expander(
+            f"Accepted artifact {artifact.id} · {artifact.accepted_at}",
+        ):
+            st.markdown(
+                f"**Associated product:** {product.name} (ID {product.id})"
+            )
+            st.markdown("**Purpose / original request**")
+            st.write(artifact.request)
+            st.markdown("**Accepted content**")
+            st.write(artifact.accepted_content)
+            if artifact.was_revised:
+                st.caption(
+                    "A human revised this content before explicitly accepting it."
+                )
+                st.markdown("**Original AI output retained for comparison**")
+                st.write(artifact.original_content)
+            else:
+                st.caption("Accepted without a human text revision.")
+            st.markdown("**Supporting source citations**")
+            for citation in artifact.citations:
+                st.markdown(
+                    f"**[Source {citation.source_number}]** "
+                    f"{citation.source_product_name} "
+                    f"(product ID {citation.source_product_id}) · "
+                    f"{citation.document_title} (document ID {citation.document_id}) "
+                    f"· {citation.document_type.value} · {citation.section_title}"
+                )
+            st.caption(
+                f"Created: {artifact.created_at} · Accepted: {artifact.accepted_at}"
+            )
+
+
 def render_document_editor(
     product: Product,
     document_type: DocumentType,
@@ -1177,11 +1246,100 @@ def render_primary_document_creation(document_type: DocumentType) -> None:
     )
 
 
+def render_getting_started() -> None:
+    """Explain the safe local workflow and offer optional fictional data."""
+
+    st.subheader("Getting Started")
+    st.write(
+        "Product Manager Central (PMC) is a local workspace for organizing "
+        "products, writing BRDs and PRDs, and reviewing AI-assisted drafts. It "
+        "runs on your computer and keeps generated artifacts separate from your "
+        "original product documents."
+    )
+    st.markdown(
+        """
+1. **Create a product** with the context your team needs.
+2. **Create a BRD or PRD** for that product.
+3. Keep unfinished documents in **Draft** while they are still being reviewed.
+4. Change a document to **Approved** only after a person has reviewed it.
+5. Use the AI Assistant, which treats only Approved BRDs and PRDs as trusted sources.
+6. Review the generated content and every citation back to its product, document, and section.
+7. **Accept, revise, or reject** the generated draft. Revised content still requires an explicit acceptance.
+"""
+    )
+    st.markdown("#### Draft, Approved, and trusted sources")
+    st.write(
+        "Draft means work is unfinished and may still be incorrect. Approved "
+        "means a person has reviewed the document and considers it ready to use "
+        "as evidence. Draft documents are excluded from AI retrieval so unfinished "
+        "ideas do not silently become trusted context. Citations make the evidence "
+        "visible and help you identify unsupported output, but they do not replace "
+        "human judgment."
+    )
+    st.markdown("#### Human control and source protection")
+    st.write(
+        "AI-generated content is temporary until you explicitly accept it. You "
+        "remain responsible for checking the result and its citations. Accepting "
+        "content saves a separate artifact; it never edits or overwrites an "
+        "original BRD or PRD."
+    )
+    st.markdown("#### Optional OpenAI setup")
+    st.write(
+        "AI features require your own OpenAI API key supplied through a secure "
+        "local environment setting. Never type an API key into PMC source code or "
+        "commit one to Git. Product and document management work without an API key."
+    )
+
+    st.markdown("#### Explore with fictional sample data")
+    st.write(
+        f"Optionally load {SAMPLE_PRODUCT_NAME}, one Approved fictional PRD, and "
+        "one Draft fictional BRD. Nothing is loaded automatically, and your "
+        "existing products and documents are never replaced."
+    )
+    st.caption(
+        "To remove the sample later, open View Products, select the product whose "
+        "name begins [Fictional Sample], and use Delete. Product deletion also "
+        "removes that sample product's associated documents."
+    )
+    if not st.button(
+        "Load fictional sample data",
+        key="load_fictional_sample_data",
+    ):
+        return
+    try:
+        result = load_fictional_sample_data(APP_DATABASE_FILE)
+    except (
+        DatabaseSchemaError,
+        ProductValidationError,
+        DocumentValidationError,
+        DocumentAssociationError,
+        sqlite3.Error,
+        RuntimeError,
+    ):
+        st.error(
+            "Fictional sample data could not be loaded safely. Existing products "
+            "and documents were not replaced. Please try again."
+        )
+        return
+    if result.status is SampleDataLoadStatus.ALREADY_LOADED:
+        st.info(
+            f"{SAMPLE_PRODUCT_NAME} is already loaded. No duplicate sample was "
+            "created."
+        )
+    else:
+        st.success(
+            f"{SAMPLE_PRODUCT_NAME} was loaded with one Approved PRD and one "
+            "Draft BRD. Open View Products to explore it."
+        )
+
+
 def render_dashboard() -> None:
     """Render the approved product metrics."""
 
     st.header("Dashboard")
     st.write("A quick overview of your saved product portfolio.")
+    render_getting_started()
+    st.divider()
 
     try:
         metrics = get_dashboard_metrics(APP_DATABASE_FILE)
@@ -1426,6 +1584,7 @@ def render_product_actions(product: Product, *, selector_key: str) -> None:
         st.rerun()
 
     render_product_documents(product, selector_key=selector_key)
+    render_accepted_artifact_history(product)
 
 
 def render_product_list(

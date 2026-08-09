@@ -12,6 +12,7 @@
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 - DEC-012 Local Portfolio Release Governance and Distribution
+- DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -31,6 +32,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 - DEC-012 Local Portfolio Release Governance and Distribution
+- DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
 
 ## Decision 001
 
@@ -455,6 +457,60 @@ Checkpoint 1 adds governance and planned v1.0.0 metadata without changing the
 application, dependency set, database schema, or Phase 9 safeguards. Later
 Phase 10 checkpoints remain subject to separate implementation and verification.
 Checkpoint 1 verification passed with 214 tests and no production-data change.
+
+**Status:**
+Approved
+
+## Decision 013
+
+**Date:** August 9, 2026
+
+**Category:** First-time experience and artifact visibility
+
+**Title:** Fictional onboarding data is explicit and accepted-artifact history is read-only
+
+**Decision:**
+The default Dashboard provides plain-language Getting Started guidance covering
+the local product/document workflow, Draft versus Approved status, Approved-only
+AI sources, citations, human review, explicit acceptance, source-document
+separation, and secure local API-key configuration.
+
+A user may explicitly load one deterministic fictional Trailwise workspace. PMC
+never loads it automatically and never distributes a prebuilt database. A
+source-controlled marker identifies the sample without relying on a product name
+that a user might also choose. Repeated activation returns the existing marked
+sample instead of creating another. If an interrupted first load left the marked
+sample incomplete, a retry creates only a missing sample document and then marks
+the sample ready. Existing user products and documents are never updated or
+replaced.
+
+Normal product detail displays separately persisted, explicitly accepted AI
+artifacts. The history is read-only and includes purpose, accepted content,
+revision context, acceptance timestamps, product association, and complete
+citation metadata. It provides no artifact edit, delete, regenerate, or
+source-update action. Original BRDs and PRDs remain unchanged.
+
+**Reason:**
+- New Product Managers need the safety model before trying AI-assisted work.
+- Optional fictional data makes the workflow explorable without exposing or
+  copying production information.
+- A deterministic marker makes repeat loading safe while avoiding changes to
+  user-authored records.
+- Read-only history makes accepted work discoverable without weakening human
+  control or source separation.
+
+**Alternatives Considered:**
+- Automatically loading sample data into every new database.
+- Shipping a prebuilt SQLite sample database.
+- Matching sample data by product name alone.
+- Adding artifact editing, deletion, or regeneration controls.
+- Mixing accepted artifacts into the BRD/PRD document list.
+
+**Impact:**
+Checkpoint 2 adds application guidance, an optional source-controlled fictional
+dataset, and a read-only view over the existing generated-artifact tables. It
+does not change the schema, dependencies, AI provider behavior, or Phase 9
+safeguards.
 
 **Status:**
 Approved

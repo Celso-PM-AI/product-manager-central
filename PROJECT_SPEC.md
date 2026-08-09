@@ -322,4 +322,37 @@ The repository-local `data/pmc.db` approach remains approved for v1.0.
 
 Checkpoint 1 is complete. It establishes license, planned version metadata,
 governance, release/version conventions, environment and dependency policies,
-and deterministic metadata tests. Checkpoints 2 through 6 are not started.
+and deterministic metadata tests.
+
+### Checkpoint 2 first-time experience
+
+Checkpoint 2 adds Getting Started guidance to the default Dashboard. It explains
+PMC's local operation and the safe sequence from product creation through BRD or
+PRD drafting, human document approval, Approved-only retrieval, citation review,
+and explicit acceptance, revision, or rejection of generated content. It also
+explains that source documents are never changed by accepting generated content
+and that users provide their own OpenAI API key only through a secure local
+environment setting.
+
+The optional fictional workspace is `[Fictional Sample] Trailwise`. It is loaded
+only after the user chooses **Load fictional sample data**. It contains one
+Approved fictional PRD for trusted-source and citation exploration and one Draft
+fictional BRD that remains excluded from retrieval. A source-controlled marker
+makes repeat activation idempotent and supports retrying an interrupted initial
+load. PMC does not match or replace user data by name, load samples
+automatically, or distribute a sample database. The user can identify the
+`[Fictional Sample]` product in View Products and remove it through the existing
+manual product-deletion workflow.
+
+Normal product detail includes a read-only accepted-artifact history. Accepted
+content remains in the separate generated-artifact store and is not mixed with
+or written into BRDs and PRDs. The history shows the request, accepted content,
+whether a human revision occurred, the retained original output when relevant,
+dates, product association, and citations with product, document title and ID,
+document type, and section. It offers no artifact edit, delete, regeneration,
+or source-update action.
+
+Checkpoint 2 is complete. Verification passed 11 focused tests and the complete
+225-test suite without production-database access or live OpenAI calls. It adds
+no schema, dependency, packaged data, or live-AI-test requirement. Checkpoints
+3 through 6 are not started.

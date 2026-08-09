@@ -1336,10 +1336,37 @@ no-key application smoke test, `git diff --check`, version consistency, secret
 and artifact review, and protected-file comparisons. No dependency, application,
 database, package, tag, or publication change was made.
 
+## Checkpoint 2: First-time onboarding, fictional sample data, and accepted-artifact history
+
+**Completed:** August 9, 2026
+
+- Add plain-language Getting Started guidance to the default Dashboard.
+- Explain the local workflow, Draft versus Approved status, Approved-only AI
+  sources, citations, human review, explicit acceptance, source separation, and
+  secure environment-based API-key setup.
+- Add one explicitly triggered, deterministic fictional Trailwise product with
+  an Approved PRD and a Draft BRD; never load it automatically or ship a
+  prebuilt database.
+- Use a source-controlled sample marker and recovery state so repeat activation
+  does not create uncontrolled duplicates or overwrite user records.
+- Explain how to identify and manually delete the fictional product through the
+  existing product workflow.
+- Show separately stored accepted AI artifacts in normal product detail with
+  purpose, content, revision context, dates, product association, and complete
+  citations.
+- Keep artifact history read-only; do not add edit, delete, regenerate, or
+  source-document update actions.
+- Add deterministic temporary-database and Streamlit coverage without live
+  OpenAI calls.
+
+Checkpoint 2 makes no schema, dependency, production-database, packaging,
+version, or release-status change. Verification passed 11 focused tests and the
+complete 225-test suite, Python compilation, an isolated no-key startup smoke
+test, `git diff --check`, secret and artifact review, and protected-file
+comparisons.
+
 ## Remaining Phase 10 checkpoints
 
-- Checkpoint 2: First-run onboarding, optional fictional sample workspace, and
-  read-only accepted-artifact history — Not started
 - Checkpoint 3: Mac/Windows setup, launch helpers, dependency validation, and
   safe release-package construction — Not started
 - Checkpoint 4: UAT, beta preparation, troubleshooting, known limitations, and
