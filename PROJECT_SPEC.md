@@ -5,10 +5,11 @@
 Product Manager Central (PMC) is a local Streamlit workspace for product
 managers to capture, find, review, update, and safely delete structured product
 information and to author template-guided product documents. SQLite remains the
-single local data source. Phase 9 Checkpoints 1 through 5 add an optional OpenAI
+single local data source. Phase 9 adds an optional OpenAI
 configuration/client boundary, embedding-based semantic retrieval of Approved
 BRD/PRD chunks, grounded draft generation with citations, and explicit human
-review with separate accepted-artifact persistence.
+review with separate accepted-artifact persistence. Its final checkpoint adds
+deterministic, developer-facing evaluation and release scoring.
 
 The MVP provides:
 
@@ -125,7 +126,7 @@ each long-form section to 10,000 characters. Version is nonblank free text.
 Document types are `BRD` and `PRD`; statuses are `draft` and `approved` in
 storage and appear as Draft and Approved in the interface.
 
-### Phase 9 Checkpoints 1 through 5 AI Assistant
+### Phase 9 AI Assistant
 
 - AI configuration is optional and reads only `OPENAI_API_KEY` from the process
   environment. Status reporting never returns or logs the key.
@@ -184,6 +185,16 @@ storage and appear as Draft and Approved in the interface.
   instructions, credentials, or provider exception details.
 - Streamlit reruns reuse the completed submission state rather than repeating
   generation, while accepted-content persistence remains idempotent.
+- Offline Phase 9 evaluation uses deterministic cases, fake providers, and
+  temporary databases. It never requires a live API call or real API key.
+- Evaluation scores retrieval precision, retrieval recall, source trust,
+  citation completeness, citation/source correspondence, grounded generation,
+  human control, and source separation. Criteria are averaged without weights
+  and reported from 0 through 100.
+- Release requires an overall score of at least 80 plus perfect source-trust,
+  citation-completeness, human-control, and source-separation scores.
+- Evaluation has no Streamlit dashboard, LLM-as-a-judge, persistent results,
+  database migration, or schema change.
 
 ## Dashboard metrics
 
@@ -218,6 +229,8 @@ Charts and advanced analytics are not part of the MVP.
   explicit acceptance orchestration.
 - `src/prompt_catalog.py` owns approved task/prompt definitions, mappings,
   validation, lookup, and deterministic rendering.
+- `src/rag_evaluation.py` owns offline criterion scoring, suite aggregation,
+  and the Phase 9 release decision.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
 - `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
@@ -255,7 +268,8 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Deferred features
 
-- RAG evaluation, scoring, benchmarking, and dashboards
+- Evaluation dashboards, LLM-as-a-judge, live benchmark services, and
+  persisted evaluation history
 - User-authored/editable prompts, database prompt storage, prompt history,
   product-specific prompts, sharing, import/export, experiments, and optimization
 - AI-generated document updates and automatic modification of source BRDs/PRDs
@@ -267,9 +281,10 @@ chunks, then ranks conceptual similarity even when the wording differs.
 
 ## Current development status
 
-Phases 0 through 8 and Phase 9 Checkpoints 1 through 5 are complete. Secure
+Phases 0 through 8 and all six Phase 9 checkpoints are complete. Secure
 OpenAI boundaries, stable approved-source retrieval, and temporary grounded
 draft generation with citations, explicit human review, and separate accepted
 artifact persistence, the code-controlled prompt catalog, and hardened assistant
-workflow are implemented. Checkpoint 6 is not started; there is no RAG
-evaluation.
+workflow are implemented. Deterministic offline scoring and end-to-end release
+evaluation validate the complete Phase 9 workflow without live API calls or
+production-database access.

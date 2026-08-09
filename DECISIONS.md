@@ -10,6 +10,7 @@
 - DEC-008 Cited Generated Drafts Without Persistence
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
+- DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -27,6 +28,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-008 Cited Generated Drafts Without Persistence
 - DEC-009 Separate, Idempotent Human-Accepted Generated Artifacts
 - DEC-010 Code-Controlled Prompt Catalog and Explicit Assistant Selection
+- DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 
 ## Decision 001
 
@@ -340,6 +342,54 @@ authorized.
 Checkpoint 5 adds a source-only catalog and hardens the existing assistant
 workflow without modifying the database or original BRDs/PRDs. RAG evaluation,
 benchmarking, dashboards, and LLM-as-a-judge remain Checkpoint 6 work.
+
+**Status:**
+Approved
+
+## Decision 011
+
+**Date:** August 9, 2026
+
+**Category:** RAG evaluation and release verification
+
+**Title:** Checkpoint 6 uses deterministic offline scoring with mandatory safety gates
+
+**Decision:**
+PMC will evaluate the completed Phase 9 workflow through developer-facing,
+code-controlled cases. Retrieval precision and recall compare expected and
+returned stable chunk IDs. Source trust, grounded generation, human control,
+and source separation are binary scores. Citation completeness and
+citation/source correspondence are fractional scores across citations.
+
+The eight criteria are averaged without weights and reported on a 0–100 scale.
+A release passes only with at least 80 overall and perfect source-trust,
+citation-completeness, human-control, and source-separation scores. Suites
+average each criterion across their cases before applying the same gates.
+
+Evaluation uses deterministic fake providers and temporary databases. It does
+not use a live OpenAI request, real API key, LLM-as-a-judge, Streamlit dashboard,
+database persistence, or schema change.
+
+**Reason:**
+- Stable chunk IDs make retrieval precision and recall reproducible.
+- Separate citation scores expose missing metadata and incorrect source links.
+- Mandatory safety gates prevent a high average from masking a trusted-source,
+  citation, human-control, or source-separation failure.
+- Offline cases validate success, failure, empty, stale-source, and boundary
+  behavior without cost, network variability, or production-data risk.
+
+**Alternatives Considered:**
+- LLM-as-a-judge scoring.
+- A Streamlit evaluation dashboard.
+- Persisted evaluation history or a database-backed benchmark catalog.
+- Weighted criteria or allowing aggregate scores to override safety failures.
+- Live-provider calls during automated evaluation.
+
+**Impact:**
+Checkpoint 6 completes Phase 9 with deterministic scoring and end-to-end release
+verification. It changes no application workflow, source document, database
+schema, or production data. Future live-quality studies and evaluation
+dashboards remain outside the approved scope.
 
 **Status:**
 Approved

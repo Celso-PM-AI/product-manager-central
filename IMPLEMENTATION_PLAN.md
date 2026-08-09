@@ -14,11 +14,12 @@
 
 **Updated:** August 9, 2026
 
-- Phases 0 through 8 and Phase 9 Checkpoints 1 through 5 are complete.
+- Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
-  human-reviewed acceptance and separate generated-artifact saving are complete.
+  human-reviewed acceptance, separate generated-artifact saving, and
+  deterministic offline release evaluation are complete.
 
 The dashboard originally listed under the planned Phase 6 scope was delivered
 during Phase 4. Phase 6 completed its required coverage and interface-polish
@@ -1267,4 +1268,27 @@ live database.
     existing idempotent explicit-acceptance workflow.
   - Keep prompts out of SQLite; do not add user editing, product-specific
     prompts, experiments, optimization, or evaluation features.
-- Checkpoint 6: RAG evaluation and release verification — Not started
+- Checkpoint 6: RAG evaluation and release verification — Completed August 9,
+  2026
+  - Add a developer-facing, offline evaluator with no Streamlit dashboard,
+    LLM-as-a-judge, result persistence, database migration, or schema change.
+  - Score retrieval precision and recall from expected and returned stable
+    chunk IDs; score citation completeness and source correspondence across
+    citations.
+  - Score source trust, grounded generation, human control, and source
+    separation as binary criteria.
+  - Average all eight criteria without weights and report the result from 0 to
+    100. Require at least 80 overall and perfect source-trust,
+    citation-completeness, human-control, and source-separation scores.
+  - Exercise successful, empty, stale-source, rejected, fractional, and
+    boundary outcomes with deterministic fake providers and temporary
+    databases.
+  - Validate Approved BRD/PRD-only retrieval, citation metadata, explicit
+    acceptance, separate persistence, rerun idempotency, and safe user-facing
+    failures across the complete Phase 9 test suite.
+  - Preserve the production database, source documents, backups, archive,
+    environment, secrets, and existing untracked screenshot unchanged.
+
+Phase 9 is complete. The Checkpoint 6 deterministic release cases scored 100
+for every criterion and passed the approved release gates. The complete suite
+passed 205 tests without a live OpenAI call or production-database access.
