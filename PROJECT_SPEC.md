@@ -355,4 +355,45 @@ or source-update action.
 Checkpoint 2 is complete. Verification passed 11 focused tests and the complete
 225-test suite without production-database access or live OpenAI calls. It adds
 no schema, dependency, packaged data, or live-AI-test requirement. Checkpoints
-3 through 6 are not started.
+3 through 6 were not started by Checkpoint 2.
+
+### Checkpoint 3 installation and source packaging
+
+Checkpoint 3 provides location-relative Mac and Windows setup and run helpers.
+Setup creates or reuses `.venv`, validates Python prerequisites, installs only
+the three pinned direct dependencies, and fails visibly on missing Python,
+unsupported Python, virtual-environment failure, or dependency failure. Run
+helpers validate the virtual environment and launch `app.py`. Optional OpenAI
+keys are entered through masked prompts, inherited only by the launcher and PMC
+process, never echoed or persisted, and unnecessary for non-AI workflows.
+
+The validated native environment is macOS 26.5.2 arm64 with Python 3.14.6,
+Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0. Python 3.11 is the practical
+dependency floor. Python 3.11–3.13 and Windows have automated structural
+coverage only and are not claimed as natively validated.
+
+The source-release builder reads the explicit `release_manifest.txt` allowlist
+and rejects unsafe, missing, duplicate, or forbidden entries. Archive membership
+must exactly equal that manifest. It includes the runtime, launchers, license,
+governance, installation guidance, and existing portfolio image; it excludes
+tests, production and sample databases, sidecars, backups, CSV archives,
+environment files, secrets, Git metadata, caches, virtual environments, build
+output, the protected screenshot, and unrelated files.
+
+The planned filename is `product-manager-central-v1.0.0.zip`, with a neighboring
+`.sha256` file. Fixed member order, timestamps, compression, and permissions make
+identical source inputs byte-for-byte reproducible. The builder refuses an
+existing named output unless `--force` is explicitly supplied. Archives built
+during tests remain isolated temporary artifacts.
+
+The package starts without a database; existing initialization creates a clean
+local `data/pmc.db` at first run. Fictional sample loading remains an explicit
+Dashboard action. `docs/INSTALLATION.md` documents installation, security
+prompts, API-key handling, startup, shutdown, backup, restore, update, uninstall,
+data location, optional samples, and checksum verification.
+
+Checkpoint 3 is complete. Verification passed 241 tests in both the development
+and fresh pinned environments, native Mac setup and launch, deterministic
+archive and checksum validation, and extracted no-key clean-database startup.
+It does not create an official release candidate, tag, GitHub Release,
+installer, or publication. Checkpoints 4 through 6 are not started.

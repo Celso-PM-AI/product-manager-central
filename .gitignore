@@ -41,3 +41,9 @@ pasted-text.txt
 .envrc
 .direnv/
 .streamlit/secrets.toml
+
+# Local release-builder output (official releases are published separately)
+/dist/
+/build/
+/product-manager-central-v*.zip
+/product-manager-central-v*.zip.sha256

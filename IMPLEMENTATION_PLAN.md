@@ -1365,10 +1365,41 @@ complete 225-test suite, Python compilation, an isolated no-key startup smoke
 test, `git diff --check`, secret and artifact review, and protected-file
 comparisons.
 
+## Checkpoint 3: Cross-platform installation, launch, and packaging
+
+**Completed:** August 9, 2026
+
+- Validate a clean macOS 26.5.2 arm64 installation on Python 3.14.6; document
+  that Windows and Python 3.11–3.13 have structural rather than native coverage.
+- Establish Python 3.11 as the dependency-imposed prerequisite floor and allow
+  launchers through Python 3.14 without overstating native validation.
+- Pin only the three direct runtime dependencies to clean-tested versions:
+  Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0.
+- Add Mac and Windows setup helpers that locate the application directory,
+  create or reuse `.venv`, install declared dependencies, and fail with
+  actionable prerequisite messages.
+- Add Mac and Windows run helpers that validate the environment, optionally
+  accept a masked session-only API key, launch `app.py`, and explain shutdown.
+- Document install, start, stop, backup, restoration, update, uninstall,
+  clean-database, optional-sample, security-prompt, and checksum workflows.
+- Build local test ZIPs only from the explicit human-readable
+  `release_manifest.txt` allowlist.
+- Validate exact archive membership, normalize ZIP metadata, generate SHA-256,
+  refuse accidental overwrite, and exclude databases, secrets, sidecars,
+  archives, Git metadata, caches, tests, and the protected screenshot.
+- Test Mac helpers executably and Windows helpers structurally without claiming
+  native Windows validation.
+
+Checkpoint 3 creates build capability only. It does not create an official
+release candidate, Git tag, GitHub Release, installer, or publication.
+Verification passed 6 launcher tests, 10 package tests, 20 affected workflow and
+metadata tests, the complete 241-test suite in both the development and fresh
+pinned environments, Python and shell syntax checks, `git diff --check`, secret
+and artifact review, deterministic archive comparison, checksum and exact-member
+validation, and extracted no-key clean-database startup.
+
 ## Remaining Phase 10 checkpoints
 
-- Checkpoint 3: Mac/Windows setup, launch helpers, dependency validation, and
-  safe release-package construction — Not started
 - Checkpoint 4: UAT, beta preparation, troubleshooting, known limitations, and
   responsible-use guidance — Not started
 - Checkpoint 5: Recruiter case study, architecture diagram, sanitized

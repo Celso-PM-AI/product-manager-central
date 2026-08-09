@@ -25,6 +25,7 @@ class ReleaseVersionTests(unittest.TestCase):
         for filename in (
             "CHANGELOG.md",
             "CONTRIBUTING.md",
+            "docs/INSTALLATION.md",
             "IMPLEMENTATION_PLAN.md",
             "PROJECT_SPEC.md",
             "README.md",
@@ -70,11 +71,15 @@ class GovernanceFileTests(unittest.TestCase):
         ):
             self.assertIn(required, normalized_security)
 
-    def test_direct_dependency_policy_preserves_the_checkpoint_1_baseline(self):
+    def test_direct_dependencies_match_clean_install_validation(self):
         requirements = repository_text("requirements.txt").splitlines()
         self.assertEqual(
             requirements,
-            ["streamlit", "pandas", "openai>=2.45.0,<3.0.0"],
+            [
+                "streamlit==1.61.1",
+                "pandas==3.0.5",
+                "openai==2.53.0",
+            ],
         )
         contributing = repository_text("CONTRIBUTING.md")
         self.assertIn("direct runtime dependencies", contributing)

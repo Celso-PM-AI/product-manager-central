@@ -13,6 +13,7 @@
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 - DEC-012 Local Portfolio Release Governance and Distribution
 - DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
+- DEC-014 Allowlisted Cross-Platform Source Packaging
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -33,6 +34,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-011 Deterministic Offline RAG Evaluation and Mandatory Release Gates
 - DEC-012 Local Portfolio Release Governance and Distribution
 - DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
+- DEC-014 Allowlisted Cross-Platform Source Packaging
 
 ## Decision 001
 
@@ -511,6 +513,62 @@ Checkpoint 2 adds application guidance, an optional source-controlled fictional
 dataset, and a read-only view over the existing generated-artifact tables. It
 does not change the schema, dependencies, AI provider behavior, or Phase 9
 safeguards.
+
+**Status:**
+Approved
+
+## Decision 014
+
+**Date:** August 9, 2026
+
+**Category:** Local installation and release packaging
+
+**Title:** PMC uses pinned direct dependencies and an explicit source-release allowlist
+
+**Decision:**
+PMC's direct runtime dependencies are pinned to the versions that passed a
+clean installation, full suite, and no-key smoke test: Streamlit 1.61.1, pandas
+3.0.5, and OpenAI 2.53.0. Python 3.11 is the dependency-imposed prerequisite
+floor, and launchers accept Python 3.11 through 3.14. Native support is claimed
+only for the validated macOS 26.5.2 arm64 and Python 3.14.6 combination.
+Windows and Python 3.11–3.13 remain structurally tested but not natively
+validated.
+
+Mac and Windows setup helpers resolve the application directory from their own
+location, create or reuse `.venv`, install only `requirements.txt`, and stop on
+failed prerequisites. Separate run helpers use the virtual environment and
+launch `app.py`. Optional API keys use masked, process-only prompts and are
+never echoed, persisted, or passed as command arguments.
+
+The release builder reads only `release_manifest.txt`; it never discovers files
+through broad directory inclusion. Manifest entries are validated as safe,
+relative, existing regular files. The ZIP's exact member list is checked against
+the manifest, forbidden data and secret classes are rejected, timestamps and
+permissions are normalized, and a SHA-256 checksum is produced. Existing named
+outputs require an explicit `--force`. This capability creates local test
+archives only; it does not authorize a tag, GitHub Release, or publication.
+
+**Reason:**
+- Direct-version pins make clean installation reproducible without introducing
+  a transitive lock or packaging framework.
+- Location-relative launchers reduce first-run errors on Mac and Windows.
+- Session-only masked key entry avoids committed or persistent credentials.
+- An allowlist fails closed and prevents the production database or unrelated
+  local files from entering a release by omission rules alone.
+- Deterministic ZIP metadata makes identical inputs byte-for-byte reproducible.
+
+**Alternatives Considered:**
+- Native signed or notarized installers.
+- Broad repository zipping with exclusion patterns.
+- Shipping a database or automatically loading fictional data.
+- Persisting API keys in `.env` or launcher configuration.
+- Claiming Windows and older Python support from simulated tests alone.
+- Adding a transitive dependency lock before evidence requires one.
+
+**Impact:**
+Checkpoint 3 adds source-controlled installation, launch, packaging, checksum,
+and operating guidance. It changes no schema or product workflow and preserves
+clean database startup, optional sample loading, and all Phase 9 safeguards.
 
 **Status:**
 Approved

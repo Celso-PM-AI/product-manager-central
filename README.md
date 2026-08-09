@@ -147,16 +147,17 @@ boundary for configuration, SDK isolation, and testing.
 
 ### Environment support status
 
-PMC targets local Mac and Windows use, but no Python or operating-system version
-is yet claimed as supported for v1.0.0. A combination becomes supported only
-after a clean virtual environment installs every direct runtime dependency and
-passes the complete automated suite and isolated application smoke test without
-an API key. The compatibility matrix will be established in a later Phase 10
-checkpoint.
+PMC's clean installation, complete suite, and isolated no-key smoke test were
+natively validated on macOS 26.5.2 arm64 with Python 3.14.6. Python 3.11 is the
+minimum practical version imposed by the pinned dependencies. Windows and
+Python 3.11–3.13 have automated structural coverage only and are not yet claimed
+as natively validated.
 
-`requirements.txt` contains direct runtime dependencies. Their versions will be
-pinned only after clean-install compatibility testing provides evidence; this
-checkpoint intentionally makes no dependency change.
+`requirements.txt` pins only the clean-tested direct runtime dependencies:
+Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0. See the
+[installation and local-data guide](docs/INSTALLATION.md) for Mac and Windows
+setup, launch, security prompts, backup, restore, update, uninstall, and checksum
+instructions.
 
 ### Getting started in PMC
 
@@ -185,23 +186,28 @@ revision context, dates, product association, and complete source citations. It
 does not provide artifact editing, deletion, regeneration, or any action that
 changes an original BRD or PRD.
 
-Create and activate a virtual environment, then install the runtime
-dependencies:
+For macOS first-time setup and startup from any Terminal directory:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+./scripts/setup_macos.command
+./scripts/run_macos.command
 ```
 
-Run the application:
+For Windows PowerShell:
 
-```bash
-streamlit run app.py
+```powershell
+& .\scripts\setup_windows.ps1
+& .\scripts\run_windows.ps1
 ```
 
-The application uses `data/pmc.db` by default. For isolated development or
-manual testing, point the application at a disposable database:
+The helpers resolve the application directory from their own paths, create or
+reuse `.venv`, install only declared dependencies, and stop on prerequisite or
+installation failures. Press Control-C in the launcher's terminal to stop PMC.
+
+PMC uses `data/pmc.db` inside the application directory. A source release
+contains no database; first startup creates a clean one. Back up this file while
+PMC is stopped before updating or removing an installation. For isolated
+development or manual testing, select a disposable database:
 
 ```bash
 PMC_DATABASE_FILE=/tmp/pmc-test.db streamlit run app.py
@@ -233,29 +239,11 @@ and set an appropriate budget before activation.
 4. Approve at least one complete BRD or PRD in PMC. Semantic retrieval uses
    only Approved BRDs and PRDs; Draft documents are excluded.
 
-On macOS, open Terminal in the PMC folder, activate the virtual environment,
-and enter the key through a hidden prompt for the current terminal session:
-
-```bash
-source .venv/bin/activate
-read -s "OPENAI_API_KEY?OpenAI API key: "
-export OPENAI_API_KEY
-echo
-python -m pip install -r requirements.txt
-streamlit run app.py
-```
-
-On Windows, open PowerShell in the PMC folder, activate the virtual environment,
-and enter the key through a masked prompt for the current PowerShell session:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-$SecureOpenAIKey = Read-Host "OpenAI API key" -AsSecureString
-$env:OPENAI_API_KEY = [System.Net.NetworkCredential]::new("", $SecureOpenAIKey).Password
-Remove-Variable SecureOpenAIKey
-python -m pip install -r requirements.txt
-streamlit run app.py
-```
+The Mac and Windows run helpers offer masked, optional API-key entry when no key
+is already configured. The key is not echoed, written to a file, or added to a
+command argument. It exists only for the launcher and PMC process and is removed
+when that session ends. Declining the prompt preserves PMC's existing no-key
+behavior.
 
 PMC uses the balanced `gpt-5.6-terra` model by default. Product Managers do not
 need to change it. Developers evaluating another supported model can set the
@@ -263,11 +251,9 @@ optional `OPENAI_MODEL` environment variable before launching PMC. The default
 embedding model is `text-embedding-3-small`; developers can override it with
 `OPENAI_EMBEDDING_MODEL` through the same environment configuration approach.
 
-To deactivate AI for the current macOS terminal, run `unset OPENAI_API_KEY`. In
-Windows PowerShell, run `Remove-Item Env:OPENAI_API_KEY`. If a key may have been
-exposed, immediately revoke it from the project's API Keys page, create a
-replacement, update the current environment using the steps above, and review
-project usage. Do not reuse the compromised key.
+If a key may have been exposed, immediately revoke it from the project's API
+Keys page, create a replacement, and review project usage. Do not reuse the
+compromised key.
 
 ## Tests
 
@@ -435,6 +421,28 @@ Disposable manual testing must set `PMC_DATABASE_FILE` to a temporary database.
 Disposable products must never be created in `data/pmc.db`, and permanent
 backups and `archive/products.csv` must remain unchanged.
 
+## Local release-package builder
+
+`release_manifest.txt` is the complete source-release allowlist. The builder
+does not glob the repository or copy a staging tree, so databases, sidecars,
+backups, CSV archives, environment files, secrets, Git metadata, caches, tests,
+virtual environments, build output, the protected screenshot, and unrelated
+files cannot enter by default.
+
+Developers can build a local verification archive only into an explicit output
+directory:
+
+```bash
+python scripts/build_release.py --output-dir /path/to/empty/output
+```
+
+The builder creates `product-manager-central-v1.0.0.zip` and its `.sha256`
+file, validates every ZIP member against the manifest, normalizes member order,
+timestamps, permissions, and compression for reproducibility, and refuses to
+replace an existing named output unless `--force` is explicitly supplied. This
+source-controlled capability is not an official release, tag, installer, or
+publication.
+
 ## Deferred features
 
 - Evaluation dashboards, LLM-as-a-judge, live benchmark services, and
@@ -460,8 +468,13 @@ establishes the MIT License, planned v1.0.0 metadata, changelog, contribution
 and security policies, and evidence-based environment/dependency rules.
 Checkpoint 2 is complete with first-time guidance, optional deterministic
 fictional data, and read-only accepted-artifact history. Its complete suite
-passes 225 tests without production-data access or live OpenAI calls. Neither
-checkpoint creates a package, tag, or GitHub Release, and Checkpoints 3 through
+passes 225 tests without production-data access or live OpenAI calls.
+Checkpoint 3 implementation adds pinned direct dependencies, Mac and Windows
+setup/run helpers, local-data operations guidance, and a deterministic
+explicit-allowlist source-package builder. Checkpoint 3 is complete with 241
+tests passing in development and fresh pinned environments, native Mac setup
+and launch validation, and clean extracted-package startup. No checkpoint
+creates an official package, tag, or GitHub Release, and Checkpoints 4 through
 6 are not started.
 
 ## Governance and release policy

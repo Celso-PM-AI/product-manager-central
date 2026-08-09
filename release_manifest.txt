@@ -1,0 +1,34 @@
+# Product Manager Central v1.0.0 source-release allowlist.
+# One repository-relative POSIX path per line. No globbing is permitted.
+
+app.py
+requirements.txt
+LICENSE
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+README.md
+PROJECT_SPEC.md
+IMPLEMENTATION_PLAN.md
+DECISIONS.md
+release_manifest.txt
+docs/INSTALLATION.md
+docs/images/pmc-phase8-application.png
+scripts/build_release.py
+scripts/setup_macos.command
+scripts/run_macos.command
+scripts/setup_windows.ps1
+scripts/run_windows.ps1
+src/__init__.py
+src/ai_service.py
+src/database.py
+src/document_templates.py
+src/generated_content.py
+src/grounded_generation.py
+src/models.py
+src/prompt_catalog.py
+src/rag_evaluation.py
+src/sample_data.py
+src/semantic_retrieval.py
+src/validation.py
+src/version.py
