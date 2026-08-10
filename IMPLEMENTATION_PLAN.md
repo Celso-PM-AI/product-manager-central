@@ -1318,7 +1318,7 @@ unchanged in Checkpoint 1.
 
 **Completed:** August 9, 2026
 
-- Add the MIT License using Celso Guerra as the copyright holder.
+- Add the MIT License using Celso Gonçalves Guerra as the copyright holder.
 - Establish `1.0.0` source metadata and the planned `v1.0.0` Git tag convention
   without creating a tag or publishing a release.
 - Add changelog, contribution, and security-reporting policies.

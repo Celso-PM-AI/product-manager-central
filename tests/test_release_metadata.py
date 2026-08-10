@@ -49,11 +49,11 @@ class GovernanceFileTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 self.assertTrue(path.read_text(encoding="utf-8").strip())
 
-    def test_license_is_mit_for_celso_guerra(self):
+    def test_license_is_mit_for_celso_goncalves_guerra(self):
         license_text = repository_text("LICENSE")
         self.assertTrue(license_text.startswith("MIT License"))
         self.assertIn(
-            "Copyright (c) 2026 Celso Guerra",
+            "Copyright (c) 2026 Celso Gonçalves Guerra",
             license_text,
         )
         self.assertIn("Permission is hereby granted, free of charge", license_text)
