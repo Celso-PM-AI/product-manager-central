@@ -105,5 +105,91 @@ class GovernanceFileTests(unittest.TestCase):
                 self.assertIsNone(key_pattern.search(repository_text(filename)))
 
 
+class Checkpoint4DocumentationTests(unittest.TestCase):
+    def test_checkpoint4_guide_has_complete_scenarios_and_evidence_boundaries(self):
+        guide = repository_text("docs/UAT_BETA_GUIDE.md")
+        normalized_guide = " ".join(guide.split())
+        for number in range(1, 18):
+            scenario = f"UAT-{number:02d}"
+            with self.subTest(scenario=scenario):
+                self.assertEqual(guide.count(f"### {scenario} —"), 1)
+        for required_field in (
+            "**Preconditions:**",
+            "**Steps:**",
+            "**Expected result:**",
+            "**Pass/fail:**",
+            "**Evidence:**",
+            "**Status:**",
+        ):
+            with self.subTest(required_field=required_field):
+                self.assertEqual(guide.count(required_field), 17)
+        for required_statement in (
+            "four to six Product Managers",
+            "no participant was contacted",
+            "have **not** been natively validated",
+            "does not use a real API key or make a live OpenAI API call",
+            "Approved-only",
+            "explicit acceptance",
+            "source-document mutation",
+        ):
+            with self.subTest(required_statement=required_statement):
+                self.assertIn(required_statement, normalized_guide)
+
+    def test_checkpoint4_guide_is_linked_and_allowlisted(self):
+        guide_path = "docs/UAT_BETA_GUIDE.md"
+        self.assertIn(guide_path, repository_text("release_manifest.txt").splitlines())
+        self.assertIn(guide_path, repository_text("README.md"))
+        self.assertIn("UAT_BETA_GUIDE.md", repository_text("docs/INSTALLATION.md"))
+
+    def test_checkpoint4_preserves_later_checkpoint_boundaries(self):
+        plan = repository_text("IMPLEMENTATION_PLAN.md")
+        self.assertIn(
+            "## Checkpoint 4: UAT, beta preparation, and responsible use",
+            plan,
+        )
+        self.assertIn("the complete 246-test suite", plan)
+        self.assertIn(
+            "Checkpoint 5: Recruiter case study, architecture diagram, sanitized",
+            plan,
+        )
+        self.assertIn(
+            "Checkpoint 6: Release-candidate verification and GitHub release preparation",
+            plan,
+        )
+        self.assertNotIn("## Checkpoint 5:", plan)
+        self.assertNotIn("## Checkpoint 6:", plan)
+
+    def test_checkpoint4_operational_guidance_preserves_local_data_safeguards(self):
+        installation = repository_text("docs/INSTALLATION.md")
+        normalized_installation = " ".join(installation.split())
+        for heading in (
+            "## Back up and restore data",
+            "## Update to a future approved release",
+            "## Remove PMC",
+            "## Verify the release checksum",
+        ):
+            with self.subTest(heading=heading):
+                self.assertIn(heading, installation)
+        for safeguard in (
+            "Always stop PMC before copying or replacing its database.",
+            "do not extract it over the existing installation",
+            "PMC provides no automated uninstall or database deletion command.",
+            "The two hexadecimal SHA-256 values must match exactly.",
+        ):
+            with self.subTest(safeguard=safeguard):
+                self.assertIn(safeguard, normalized_installation)
+
+    def test_checkpoint4_keeps_existing_preview_and_defers_screenshot_work(self):
+        readme = repository_text("README.md")
+        guide = repository_text("docs/UAT_BETA_GUIDE.md")
+        manifest = repository_text("release_manifest.txt").splitlines()
+        self.assertIn(
+            "![Product Manager Central application](docs/images/pmc-phase8-application.png)",
+            readme,
+        )
+        self.assertIn("deferred to Phase 10 Checkpoint 5", guide)
+        self.assertNotIn("Screenshot 2026-08-01 at 10.54.51.png", manifest)
+
+
 if __name__ == "__main__":
     unittest.main()

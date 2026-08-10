@@ -396,4 +396,36 @@ Checkpoint 3 is complete. Verification passed 241 tests in both the development
 and fresh pinned environments, native Mac setup and launch, deterministic
 archive and checksum validation, and extracted no-key clean-database startup.
 It does not create an official release candidate, tag, GitHub Release,
-installer, or publication. Checkpoints 4 through 6 are not started.
+installer, or publication. At Checkpoint 3 completion, Checkpoints 4 through 6
+were not started.
+
+### Checkpoint 4 UAT and beta preparation
+
+Checkpoint 4 consolidates internal user acceptance testing, a planned
+four-to-six-Product-Manager beta, troubleshooting, known limitations, and
+responsible-use guidance in `docs/UAT_BETA_GUIDE.md`. Every UAT scenario records
+an ID, preconditions, steps, expected result, pass/fail criteria, evidence, and
+status. Internal validation uses temporary databases, deterministic fake or
+mocked providers, and no real API key or live OpenAI call.
+
+The guide distinguishes automated checks and internal UAT from external beta
+work. It does not claim that participants were contacted or that the beta was
+conducted. Native validation remains limited to macOS 26.5.2 arm64 with Python
+3.14.6; Windows and Python 3.11–3.13 remain structurally tested but not natively
+validated.
+
+Checkpoint 4 does not change application code, the database schema,
+dependencies, launchers, or packaging logic. It preserves Approved-only
+retrieval, visible citations, human review, explicit acceptance,
+acceptance-time source revalidation, generated/source-content separation,
+clean startup, and explicit fictional sample loading. Recruiter materials and
+sanitized screenshots remain Checkpoint 5 work; release-candidate and GitHub
+Release preparation remain Checkpoint 6 work.
+
+Checkpoint 4 is complete. Seventeen documented UAT scenarios passed at their
+approved internal or structural evidence level, supported by 126 focused tests
+and the complete 246-test suite. Python and shell syntax, deterministic archive
+and checksum validation, extracted no-key clean startup, secret and prohibited-
+artifact review, and protected-file comparisons passed. The external beta was
+not conducted, no native Windows or additional Python-version claim was made,
+and Checkpoints 5 and 6 remain not started.

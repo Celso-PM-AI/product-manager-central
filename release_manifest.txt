@@ -13,6 +13,7 @@ IMPLEMENTATION_PLAN.md
 DECISIONS.md
 release_manifest.txt
 docs/INSTALLATION.md
+docs/UAT_BETA_GUIDE.md
 docs/images/pmc-phase8-application.png
 scripts/build_release.py
 scripts/setup_macos.command

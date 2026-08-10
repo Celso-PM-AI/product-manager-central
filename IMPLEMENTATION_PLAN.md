@@ -1398,10 +1398,45 @@ pinned environments, Python and shell syntax checks, `git diff --check`, secret
 and artifact review, deterministic archive comparison, checksum and exact-member
 validation, and extracted no-key clean-database startup.
 
+## Checkpoint 4: UAT, beta preparation, and responsible use
+
+**Completed:** August 9, 2026
+
+- Add one consolidated guide with 17 traceable UAT scenarios, each containing
+  preconditions, steps, expected results, pass/fail criteria, evidence, and
+  status.
+- Cover clean startup, product and document workflows, approval validation,
+  Approved-only retrieval, ineligible-source exclusion, citations, no-key
+  behavior, human review, explicit acceptance, acceptance-time revalidation,
+  generated/source separation, explicit samples, local-data operations, and
+  cross-platform launcher guidance.
+- Define a future four-to-six-Product-Manager beta with participant selection,
+  objectives, onboarding, feedback boundaries, severity, exit criteria, and
+  stop/rollback conditions without conducting participant outreach or claiming
+  beta results.
+- Consolidate setup and workflow troubleshooting, known product and validation
+  limitations, and responsible-use guidance for AI-generated content.
+- Distinguish automated validation, internal UAT, structural Windows evidence,
+  native macOS evidence, and future external validation.
+- Preserve application code, dependencies, launchers, packaging logic, schema,
+  Approved-only retrieval, citations, human control, explicit acceptance,
+  source revalidation, source separation, clean startup, and optional samples.
+- Include the guide in the explicit future source-release allowlist without
+  creating an official release artifact.
+
+Checkpoint 4 verification passed 126 focused internal UAT and regression tests,
+the complete 246-test suite, compilation of all 35 tracked Python files, Bash
+and Zsh syntax checks, and the existing Windows structural tests. Two isolated
+32-member archives matched byte-for-byte and passed manifest, exclusion,
+SHA-256, extracted no-key clean-start, and temporary-cleanup checks.
+`git diff --check`, secret and prohibited-artifact review, and production
+database, protected screenshot, and existing README image comparisons passed.
+The external beta was not conducted, native Windows and Python 3.11–3.13 remain
+unvalidated, and no application, database, official package, tag, release, or
+publication change was made.
+
 ## Remaining Phase 10 checkpoints
 
-- Checkpoint 4: UAT, beta preparation, troubleshooting, known limitations, and
-  responsible-use guidance — Not started
 - Checkpoint 5: Recruiter case study, architecture diagram, sanitized
   screenshots, demo plan, and launch materials — Not started
 - Checkpoint 6: Release-candidate verification and GitHub release preparation —

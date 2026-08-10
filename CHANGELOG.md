@@ -11,6 +11,9 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prepare a source-based GitHub Release ZIP for local Mac and Windows use.
 - Add optional fictional sample data, first-run guidance, cross-platform launch
   helpers, UAT and beta materials, and recruiter-facing portfolio assets.
+- Add a consolidated internal UAT, Product Manager beta, troubleshooting, known
+  limitations, and AI responsible-use guide without claiming an external beta
+  or native Windows validation has occurred.
 - Preserve all Phase 9 trusted-source, citation, review, acceptance, and
   source-separation safeguards.
 

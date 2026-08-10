@@ -4,6 +4,11 @@ Product Manager Central (PMC) is a local Streamlit application. Application
 files, the `.venv` Python environment, and the SQLite data file all remain on
 your computer. PMC is not a hosted service.
 
+For acceptance scenarios, beta preparation, expanded troubleshooting, known
+limitations, and AI responsible-use guidance, see
+[`UAT_BETA_GUIDE.md`](UAT_BETA_GUIDE.md). The external beta described there is
+planned only and has not been conducted.
+
 ## Validated environment and prerequisites
 
 The clean-install release workflow was natively validated on:

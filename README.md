@@ -159,6 +159,12 @@ Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0. See the
 setup, launch, security prompts, backup, restore, update, uninstall, and checksum
 instructions.
 
+The [UAT, beta, and responsible-use guide](docs/UAT_BETA_GUIDE.md) defines the
+internal acceptance scenarios, the planned four-to-six-Product-Manager beta,
+troubleshooting, known limitations, and safe use of AI-generated content. The
+external beta has not been conducted. Windows and Python 3.11–3.13 have
+structural coverage only and have not been natively validated.
+
 ### Getting started in PMC
 
 The default Dashboard explains the complete first-time workflow in plain
@@ -473,9 +479,12 @@ Checkpoint 3 implementation adds pinned direct dependencies, Mac and Windows
 setup/run helpers, local-data operations guidance, and a deterministic
 explicit-allowlist source-package builder. Checkpoint 3 is complete with 241
 tests passing in development and fresh pinned environments, native Mac setup
-and launch validation, and clean extracted-package startup. No checkpoint
-creates an official package, tag, or GitHub Release, and Checkpoints 4 through
-6 are not started.
+and launch validation, and clean extracted-package startup. Checkpoint 4 is
+complete with a 17-scenario internal UAT guide, four-to-six-Product-Manager beta
+plan, troubleshooting, known limitations, responsible-use guidance, and 246
+passing tests. The external beta has not been conducted. No checkpoint creates
+an official package, tag, or GitHub Release, and Checkpoints 5 and 6 are not
+started.
 
 ## Governance and release policy
 
