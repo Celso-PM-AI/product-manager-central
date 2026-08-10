@@ -14,6 +14,7 @@
 - DEC-012 Local Portfolio Release Governance and Distribution
 - DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
 - DEC-014 Allowlisted Cross-Platform Source Packaging
+- DEC-015 Evidence-Qualified Portfolio Materials and Fictional Visuals
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -569,6 +570,59 @@ archives only; it does not authorize a tag, GitHub Release, or publication.
 Checkpoint 3 adds source-controlled installation, launch, packaging, checksum,
 and operating guidance. It changes no schema or product workflow and preserves
 clean database startup, optional sample loading, and all Phase 9 safeguards.
+
+**Status:**
+Approved
+
+## Decision 015
+
+**Date:** August 10, 2026
+
+**Category:** Portfolio evidence and privacy
+
+**Title:** Recruiter materials use evidence-qualified claims and isolated fictional visuals
+
+**Decision:**
+Checkpoint 5 presents PMC through a concise case study, source-controlled
+Mermaid architecture diagrams, three sanitized fictional screenshots, a
+2–4 minute demo storyboard, and clearly labeled draft launch materials. These
+assets describe implemented and verified behavior without claiming an external
+beta, native Windows or Python 3.11–3.13 validation, production use, measured
+customer outcomes, a recorded video, or publication.
+
+Every screenshot is created from an isolated temporary database containing only
+the deterministic fictional Trailwise workspace. The AI-review image uses a
+deterministic fake provider or safe prepared review state, never a live OpenAI
+call or real API key. Images include only the application viewport and are
+reviewed at full resolution for browser chrome, names, paths, credentials,
+notifications, private data, and identifying metadata.
+
+The README uses the new fictional dashboard screenshot. The outdated Phase 8
+image is removed from source and the explicit release manifest. The protected
+local screenshot remains ignored and untouched.
+
+**Reason:**
+- Recruiters need a short, navigable account of the product problem, decisions,
+  safeguards, architecture, evidence, and limitations.
+- Source-controlled diagrams and documents are reviewable and remain aligned
+  with implementation evidence.
+- Isolated fictional capture prevents production or personal data from entering
+  public-facing assets.
+- Qualified claims distinguish completed engineering work from planned external
+  validation and publication.
+
+**Alternatives Considered:**
+- Reusing the Phase 8 browser screenshot.
+- Capturing screenshots from the production database.
+- Using a live provider or real API key to prepare portfolio visuals.
+- Publishing launch copy or recording a demo during Checkpoint 5.
+- Presenting structural platform tests as native validation.
+
+**Impact:**
+Checkpoint 5 changes documentation, portfolio images, the release allowlist,
+and metadata tests only. It changes no application behavior, schema,
+dependency, launcher, or packaging logic and preserves every Phase 9 trust and
+human-control safeguard.
 
 **Status:**
 Approved

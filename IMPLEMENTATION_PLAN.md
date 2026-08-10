@@ -12,10 +12,11 @@
 
 ## Current phase status
 
-**Updated:** August 9, 2026
+**Updated:** August 10, 2026
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
+- Phase 10 Checkpoints 1 through 5 are complete; Checkpoint 6 is not started.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1435,9 +1436,44 @@ The external beta was not conducted, native Windows and Python 3.11–3.13 remai
 unvalidated, and no application, database, official package, tag, release, or
 publication change was made.
 
+## Checkpoint 5: Recruiter case study, architecture diagram, sanitized screenshots, demo plan, and launch materials
+
+**Completed:** August 10, 2026
+
+- Add a concise recruiter-facing case study covering the user problem, local
+  single-user workflow, product and document capabilities, trusted-source AI
+  controls, architecture, verification evidence, limitations, and responsible
+  next steps.
+- Add compact Mermaid diagrams for the application/local-data flow,
+  Approved-only retrieval through explicit acceptance, and explicit-manifest
+  source packaging.
+- Replace the outdated Phase 8 preview with three 1600×1200 sanitized
+  screenshots created from an isolated temporary database containing only the
+  deterministic fictional Trailwise workspace.
+- Prepare the AI-review screenshot through a deterministic temporary harness
+  without an API key or live provider call; show citations, pending review, and
+  the explicit acceptance control.
+- Add a 3-minute-20-second demo storyboard and privacy checklist while clearly
+  recording that no demo video has been recorded.
+- Add clearly labeled draft LinkedIn, résumé, interview, and portfolio copy
+  without posting, publishing, sending, or uploading it.
+- Update the README, changelog, decision record, specification, UAT status,
+  release manifest, and deterministic metadata tests.
+- Preserve application behavior, schema, dependencies, launchers, packaging
+  logic, the production database, the protected local screenshot, and all
+  Phase 9 safeguards.
+
+Checkpoint 5 verification passed 6 focused portfolio tests, all 20 release-
+metadata tests, and the complete 252-test suite. All 35 tracked Python files
+compiled, Bash and Zsh checks passed, and Windows launchers passed structural
+tests. Two isolated 38-member archives matched byte-for-byte and passed exact
+manifest, exclusion, SHA-256, extracted no-key clean-start, and temporary-
+cleanup checks. Full-resolution image/privacy inspection, metadata inspection,
+`git diff --check`, secret and prohibited-artifact scans, copyright verification,
+and protected-file comparisons passed. No official archive, tag, release,
+external post, or outreach was created.
+
 ## Remaining Phase 10 checkpoints
 
-- Checkpoint 5: Recruiter case study, architecture diagram, sanitized
-  screenshots, demo plan, and launch materials — Not started
 - Checkpoint 6: Release-candidate verification and GitHub release preparation —
   Not started

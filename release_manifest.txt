@@ -14,7 +14,13 @@ DECISIONS.md
 release_manifest.txt
 docs/INSTALLATION.md
 docs/UAT_BETA_GUIDE.md
-docs/images/pmc-phase8-application.png
+docs/PORTFOLIO_CASE_STUDY.md
+docs/ARCHITECTURE.md
+docs/DEMO_STORYBOARD.md
+docs/LAUNCH_MATERIALS.md
+docs/images/pmc-v1-dashboard-fictional.png
+docs/images/pmc-v1-product-documents-fictional.png
+docs/images/pmc-v1-ai-review-fictional.png
 scripts/build_release.py
 scripts/setup_macos.command
 scripts/run_macos.command

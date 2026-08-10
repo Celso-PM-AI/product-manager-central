@@ -467,8 +467,9 @@ approved source. Continue only when the independently computed SHA-256 matches.
 - PMC does not export BRDs/PRDs to Word or PDF and has no analytics integration.
 - The external beta has not been conducted. No beta outcome or general user
   suitability is claimed.
-- The current README image is the Phase 8 application preview. Its sanitized
-  replacement is deferred to Phase 10 Checkpoint 5.
+- Portfolio screenshots use deterministic fictional Trailwise data. They do not
+  provide external-beta, native-Windows, production-use, or customer-outcome
+  evidence.
 
 ## Responsible use of AI-generated content
 
@@ -505,4 +506,25 @@ also passed.
 
 External beta execution, native Windows testing, additional native Python
 version testing, recruiter assets, release-candidate work, tags, publication,
-and GitHub Release creation remain outside this checkpoint.
+and GitHub Release creation remained outside Checkpoint 4.
+
+## Checkpoint 5 completion record
+
+Checkpoint 5 added the recruiter-facing case study, Mermaid architecture guide,
+three sanitized fictional screenshots, demo storyboard, and draft launch
+materials. Screenshot preparation used an isolated temporary database and a
+deterministic fictional review harness with no API key or live provider call.
+Full-resolution visual, visible-text, and metadata reviews found no browser
+chrome, local paths, credentials, personal information, private data, or
+identifying metadata.
+
+Six focused portfolio tests, all 20 release-metadata tests, and the complete
+252-test suite passed. Compilation, Bash/Zsh syntax, Windows structural tests,
+two deterministic 38-member archive builds, checksum and exact-member checks,
+extracted no-key clean startup, secret/prohibited-artifact review, and protected-
+file comparisons also passed.
+
+The demo has not been recorded, the external beta has not been conducted, and
+no material was posted, published, sent, or uploaded. Native Windows and Python
+3.11–3.13 validation, an official release candidate, tagging, publication, and
+GitHub Release creation remain future work. Checkpoint 6 is not started.

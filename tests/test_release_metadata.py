@@ -141,7 +141,7 @@ class Checkpoint4DocumentationTests(unittest.TestCase):
         self.assertIn(guide_path, repository_text("README.md"))
         self.assertIn("UAT_BETA_GUIDE.md", repository_text("docs/INSTALLATION.md"))
 
-    def test_checkpoint4_preserves_later_checkpoint_boundaries(self):
+    def test_checkpoint4_preserves_checkpoint5_and_checkpoint6_boundaries(self):
         plan = repository_text("IMPLEMENTATION_PLAN.md")
         self.assertIn(
             "## Checkpoint 4: UAT, beta preparation, and responsible use",
@@ -156,7 +156,7 @@ class Checkpoint4DocumentationTests(unittest.TestCase):
             "Checkpoint 6: Release-candidate verification and GitHub release preparation",
             plan,
         )
-        self.assertNotIn("## Checkpoint 5:", plan)
+        self.assertIn("## Checkpoint 5:", plan)
         self.assertNotIn("## Checkpoint 6:", plan)
 
     def test_checkpoint4_operational_guidance_preserves_local_data_safeguards(self):
@@ -179,16 +179,137 @@ class Checkpoint4DocumentationTests(unittest.TestCase):
             with self.subTest(safeguard=safeguard):
                 self.assertIn(safeguard, normalized_installation)
 
-    def test_checkpoint4_keeps_existing_preview_and_defers_screenshot_work(self):
+    def test_checkpoint4_record_preserves_protected_screenshot_boundary(self):
         readme = repository_text("README.md")
         guide = repository_text("docs/UAT_BETA_GUIDE.md")
         manifest = repository_text("release_manifest.txt").splitlines()
         self.assertIn(
-            "![Product Manager Central application](docs/images/pmc-phase8-application.png)",
+            "![Product Manager Central fictional dashboard](docs/images/pmc-v1-dashboard-fictional.png)",
             readme,
         )
-        self.assertIn("deferred to Phase 10 Checkpoint 5", guide)
+        self.assertIn("Checkpoint 5", guide)
         self.assertNotIn("Screenshot 2026-08-01 at 10.54.51.png", manifest)
+
+
+class Checkpoint5PortfolioTests(unittest.TestCase):
+    portfolio_documents = (
+        "docs/PORTFOLIO_CASE_STUDY.md",
+        "docs/ARCHITECTURE.md",
+        "docs/DEMO_STORYBOARD.md",
+        "docs/LAUNCH_MATERIALS.md",
+    )
+    screenshot_paths = (
+        "docs/images/pmc-v1-dashboard-fictional.png",
+        "docs/images/pmc-v1-product-documents-fictional.png",
+        "docs/images/pmc-v1-ai-review-fictional.png",
+    )
+
+    def test_portfolio_documents_are_complete_allowlisted_and_linked(self):
+        manifest = repository_text("release_manifest.txt").splitlines()
+        readme = repository_text("README.md")
+        for path in (*self.portfolio_documents, *self.screenshot_paths):
+            with self.subTest(path=path):
+                self.assertTrue((REPOSITORY_ROOT / path).is_file())
+                self.assertIn(path, manifest)
+        for path in self.portfolio_documents[:3]:
+            with self.subTest(readme_link=path):
+                self.assertIn(path, readme)
+
+    def test_case_study_preserves_trust_controls_and_evidence_boundaries(self):
+        case_study = " ".join(
+            repository_text("docs/PORTFOLIO_CASE_STUDY.md").split()
+        )
+        for required in (
+            "Approved BRDs and PRDs",
+            "visible citations",
+            "explicit acceptance",
+            "Eligibility is checked again at acceptance",
+            "Generated artifacts remain separate",
+            "never appends to, overwrites, or otherwise modifies a source BRD or PRD",
+            "Windows launchers and Python 3.11 through 3.13 have structural automated coverage",
+            "does not claim an external beta",
+            "Checkpoint 6 release-candidate verification",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, case_study)
+
+    def test_architecture_documents_data_ai_and_package_boundaries(self):
+        architecture = repository_text("docs/ARCHITECTURE.md")
+        self.assertEqual(architecture.count("```mermaid"), 3)
+        for required in (
+            "Streamlit interface",
+            "SQLite persistence",
+            "Approved BRD and PRD sections",
+            "Optional OpenAI boundary",
+            "Revalidate cited sources again",
+            "Original BRDs and PRDs",
+            "Separate generated-artifact store",
+            "release_manifest.txt",
+            "Exact member and checksum validation",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, architecture)
+
+    def test_storyboard_and_launch_materials_remain_drafts(self):
+        storyboard = " ".join(repository_text("docs/DEMO_STORYBOARD.md").split())
+        launch = " ".join(repository_text("docs/LAUNCH_MATERIALS.md").split())
+        for required in (
+            "**Target duration:** 3 minutes 20 seconds",
+            "The demo video has not been recorded",
+            "deterministic fake provider",
+            "Accept and save",
+            "stores an artifact separately",
+        ):
+            with self.subTest(storyboard=required):
+                self.assertIn(required, storyboard)
+        for required in (
+            "Draft LinkedIn post",
+            "Résumé bullets",
+            "Interview talking points",
+            "Concise portfolio summary",
+            "have not been posted, published, sent, or uploaded",
+            "external beta and public release are still future work",
+        ):
+            with self.subTest(launch=required):
+                self.assertIn(required, launch)
+
+    def test_screenshots_are_exact_sanitized_png_set_without_metadata(self):
+        image_directory = REPOSITORY_ROOT / "docs/images"
+        self.assertEqual(
+            sorted(path.name for path in image_directory.iterdir() if path.is_file()),
+            sorted(Path(path).name for path in self.screenshot_paths),
+        )
+        forbidden_chunks = {b"tEXt", b"zTXt", b"iTXt", b"eXIf"}
+        for relative_path in self.screenshot_paths:
+            with self.subTest(relative_path=relative_path):
+                content = (REPOSITORY_ROOT / relative_path).read_bytes()
+                self.assertEqual(content[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(int.from_bytes(content[16:20], "big"), 1600)
+                self.assertEqual(int.from_bytes(content[20:24], "big"), 1200)
+                chunk_types = set()
+                offset = 8
+                while offset < len(content):
+                    length = int.from_bytes(content[offset : offset + 4], "big")
+                    chunk_type = content[offset + 4 : offset + 8]
+                    chunk_types.add(chunk_type)
+                    offset += 12 + length
+                    if chunk_type == b"IEND":
+                        break
+                self.assertTrue(forbidden_chunks.isdisjoint(chunk_types))
+                self.assertIn(b"IEND", chunk_types)
+
+    def test_old_preview_is_removed_and_checkpoint6_is_not_started(self):
+        old_path = REPOSITORY_ROOT / "docs/images/pmc-phase8-application.png"
+        self.assertFalse(old_path.exists())
+        manifest = repository_text("release_manifest.txt")
+        readme = repository_text("README.md")
+        plan = " ".join(repository_text("IMPLEMENTATION_PLAN.md").split())
+        self.assertNotIn("pmc-phase8-application.png", manifest)
+        self.assertNotIn("pmc-phase8-application.png", readme)
+        self.assertIn(
+            "Checkpoint 6: Release-candidate verification and GitHub release preparation — Not started",
+            plan,
+        )
 
 
 if __name__ == "__main__":

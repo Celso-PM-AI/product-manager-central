@@ -428,4 +428,37 @@ and the complete 246-test suite. Python and shell syntax, deterministic archive
 and checksum validation, extracted no-key clean startup, secret and prohibited-
 artifact review, and protected-file comparisons passed. The external beta was
 not conducted, no native Windows or additional Python-version claim was made,
-and Checkpoints 5 and 6 remain not started.
+and Checkpoint 5 had not started at Checkpoint 4 completion.
+
+### Checkpoint 5 recruiter portfolio materials
+
+Checkpoint 5 adds a concise recruiter-facing case study, compact Mermaid
+architecture diagrams, a 3-minute-20-second demo storyboard and privacy
+checklist, and clearly labeled draft LinkedIn, résumé, interview, and portfolio
+copy. The demo video has not been recorded, and no material has been posted,
+published, sent, or uploaded.
+
+Three 1600×1200 portfolio screenshots show the Dashboard and product overview,
+the product-document workflow with an Approved fictional PRD and Draft
+fictional BRD, and a pending AI-generated-content review with traceable
+citations and an explicit acceptance control. They contain only deterministic
+fictional Trailwise data created in an isolated temporary database. The review
+image uses a deterministic temporary harness without an API key or live OpenAI
+call. The old Phase 8 browser screenshot is removed.
+
+Portfolio claims remain evidence-qualified. PMC has not completed an external
+beta, native Windows validation, or native Python 3.11–3.13 validation and does
+not claim real users, adoption, revenue, customer outcomes, production usage,
+measured performance improvement, a recorded demo, or a published release.
+Native validation remains limited to macOS 26.5.2 arm64 with Python 3.14.6.
+
+Checkpoint 5 changes documentation, images, the release allowlist, and metadata
+tests only. Approved-only retrieval, visible citations, human review, explicit
+acceptance, acceptance-time source revalidation, generated/source separation,
+clean startup, and explicit sample loading remain unchanged.
+
+Checkpoint 5 is complete after 6 focused portfolio tests, all 20 release-
+metadata tests, and the complete 252-test suite passed with compilation, script
+checks, deterministic 38-member archive verification, extracted no-key startup,
+secret and prohibited-artifact review, image/privacy inspection, and protected-
+file comparisons. Checkpoint 6 remains not started.

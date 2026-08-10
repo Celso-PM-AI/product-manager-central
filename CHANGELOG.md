@@ -14,6 +14,9 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add a consolidated internal UAT, Product Manager beta, troubleshooting, known
   limitations, and AI responsible-use guide without claiming an external beta
   or native Windows validation has occurred.
+- Add a recruiter-facing case study, Mermaid architecture guide, sanitized
+  fictional screenshots, a 2–4 minute demo storyboard, and draft LinkedIn,
+  résumé, interview, and portfolio materials without publishing them.
 - Preserve all Phase 9 trusted-source, citation, review, acceptance, and
   source-separation safeguards.
 
