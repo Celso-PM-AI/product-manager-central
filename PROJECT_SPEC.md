@@ -266,14 +266,14 @@ chunks, then ranks conceptual similarity even when the wording differs.
   tool caches, operating-system files, `pasted-text.txt`, and secret-bearing
   `.env` files are excluded from Git.
 
-## Deferred features
+## Deferred beyond the revised Phase 10 scope
 
 - Evaluation dashboards, LLM-as-a-judge, live benchmark services, and
   persisted evaluation history
 - User-authored/editable prompts, database prompt storage, prompt history,
   product-specific prompts, sharing, import/export, experiments, and optimization
 - AI-generated document updates and automatic modification of source BRDs/PRDs
-- Word/PDF document export
+- Native Google Docs export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
 - ORM, service-layer, separate view-layer, or general migration frameworks
@@ -292,7 +292,8 @@ production-database access.
 ## Phase 10 portfolio release policy
 
 Phase 10 prepares a local, source-based Product Manager Central portfolio
-release. The planned first public version is v1.0.0 under the MIT License. It is
+release and, before release, adds governed Agile-artifact generation and BRD/PRD
+export. The planned first public version is v1.0.0 under the MIT License. It is
 not yet tagged, packaged, or published. The product name and current working
 visual identity remain unchanged.
 
@@ -461,4 +462,131 @@ Checkpoint 5 is complete after 6 focused portfolio tests, all 20 release-
 metadata tests, and the complete 252-test suite passed with compilation, script
 checks, deterministic 38-member archive verification, extracted no-key startup,
 secret and prohibited-artifact review, image/privacy inspection, and protected-
-file comparisons. Checkpoint 6 remains not started.
+file comparisons. At Checkpoint 5 completion, Checkpoint 6 had not started.
+
+### Checkpoint 6 requirements reconciliation and impact assessment
+
+Checkpoint 6 expands Phase 10 without reopening or invalidating Checkpoints 1
+through 5. Those checkpoints remain completed at recovery reference
+`674ee62e3dd68e4174a1c1fd16e2c72eafd5b41b`; their release governance,
+onboarding, packaging, UAT, privacy, and portfolio evidence remain the baseline.
+Checkpoint 6 changes planning and requirements only. It adds no application
+feature, schema migration, dependency, production-data change, package, tag,
+release, external post, or provider call.
+
+#### Governed Agile-artifact generation requirements
+
+- PMC must generate Epics, Capabilities, Features, and User Stories only from
+  one or more Product-Manager-selected Approved BRDs or PRDs. Source selection
+  is constrained to the selected product so evidence from another product
+  cannot enter the generation context accidentally.
+- Each generated item is a typed Agile artifact with its own title,
+  description, acceptance criteria, artifact-level source links, and an
+  optional parent relationship that supports the order Epic → Capability →
+  Feature → User Story. Every artifact type requires at least one nonblank,
+  testable acceptance criterion; a batch is invalid if any item lacks one.
+- Every artifact and acceptance criterion must retain traceability to the
+  source product ID and name, source document ID and title, document type, and
+  relevant section key and title. The review view must expose that traceability
+  before acceptance, and accepted records must retain immutable provenance
+  snapshots sufficient for later audit.
+- Generation produces a temporary review batch. No generated artifact is saved
+  merely because a model returned it or because a reviewer edited it. The
+  Product Manager must review the artifacts, acceptance criteria, traceability,
+  unsupported-claim findings, and missing-source findings, then perform a
+  separate explicit acceptance action.
+- Existing generic accepted generated artifacts remain readable and separate
+  from BRDs and PRDs. The new Agile-artifact schema and migration must be
+  additive, preserve every existing product, document, section, accepted
+  artifact, citation, timestamp, and relationship, and keep original BRDs/PRDs
+  unchanged.
+
+#### Grounding profiles and unsupported-content policy
+
+- The supported behavior profiles are **Strictly Grounded**, **Balanced**, and
+  **Exploratory**. Agile-artifact generation defaults to Strictly Grounded on
+  first load, rerun, and invalid or missing profile input.
+- Strictly Grounded may restate, decompose, and format only explicit source
+  requirements. Balanced may make conservative requirement-preserving
+  refinements but must label any source gap rather than fill it. Exploratory may
+  propose hypotheses, alternatives, or questions, but must label them as
+  unsupported proposals. Profiles change generation behavior, not source
+  eligibility, traceability, review, or save-time safety gates.
+- Retrieval Top-K is an independent retrieval control. It limits the number of
+  ranked source chunks supplied as evidence and must not select a behavior
+  profile or silently change model-generation settings. Profile and any later
+  model-generation controls are represented, validated, tested, and displayed
+  separately from Top-K.
+- An **unsupported claim** is a substantive statement in an artifact title,
+  description, relationship, or acceptance criterion that cannot be mapped to
+  cited text in a currently eligible Approved BRD/PRD section. New numeric
+  targets, dates, actors, scope, dependencies, constraints, outcomes, or
+  requirement relationships are unsupported unless the cited source supports
+  them. Merely attaching a citation does not make a claim supported.
+- Unsupported-claim detection must return claim-level findings with artifact
+  location, explanation, and available source references. Missing requirements
+  must be reported explicitly as source gaps or questions; the model must not
+  invent values or silently convert gaps into requirements.
+- Any unsupported claim, unlabeled proposal, missing acceptance criterion,
+  incomplete traceability, stale/ineligible source, malformed structured
+  output, or unresolved source gap blocks acceptance and persistence for the
+  affected review batch. This invariant is enforced again at the trusted
+  service/persistence boundary so a UI bypass cannot save unsafe content.
+- Human revision does not waive grounding. Revised content is rechecked before
+  acceptance. Exploratory proposals become saveable only after the missing
+  requirement is added to and approved in a source BRD/PRD, followed by fresh
+  generation or revalidation against that source.
+
+#### BRD and PRD export requirements
+
+- Any saved BRD or PRD may be exported on demand as a Word `.docx` file or PDF.
+  Export is a read-only operation and must preserve document title, product,
+  type, version, status, ordered section labels and content, and generated-at
+  metadata without changing the database or source document.
+- Export filenames must be deterministic and sanitized. User content is treated
+  as data, not markup or executable instructions. Export failures are
+  user-safe, create no partial database state, expose no local path or secret,
+  and do not require a network call.
+- Native Google Docs export is explicitly deferred until after the revised
+  Phase 10 sequence unless separately approved.
+
+#### Interface, security, and verification requirements
+
+- The interface must provide an intentional workflow for product and Approved
+  source selection, artifact-type selection, behavior profile, independent
+  Top-K, generation status, structured artifact review, acceptance criteria,
+  traceability, unsupported claims, missing requirements, revision, rejection,
+  explicit acceptance, accepted-artifact history, and Word/PDF export.
+- Prompt-injection-like text inside a source document remains untrusted data.
+  Provider errors, hidden instructions, credentials, local paths, and raw SQL
+  are never displayed or persisted. No source content is sent before the user
+  initiates generation, and only the selected eligible source material needed
+  for that request crosses the optional provider boundary.
+- Verification must use temporary databases, deterministic fake or mocked AI
+  providers, and fixture documents. It must cover additive migration and
+  rollback, artifact hierarchy and validation, profile defaults and boundaries,
+  Top-K independence, source scoping, structured-output failures, claim-level
+  support checks, missing-requirement reporting, revision revalidation,
+  persistence bypass attempts, stale-source rejection, traceability, exports,
+  UI reruns/idempotency, source separation, no-key behavior, and regression of
+  all completed Checkpoints 1 through 5.
+
+#### Implementation impact assessment
+
+| Area | Current baseline | Required later-checkpoint change |
+| --- | --- | --- |
+| Data model | Generic generated text and citation snapshots | Typed Agile artifacts, ordered criteria, hierarchy, batches, profiles, support findings, source gaps, and richer provenance |
+| Database | `generated_artifacts` plus section-level citations | Additive accepted-Agile tables, constraints, indexes, idempotent transactional save, preservation migration, and fail-closed write validation |
+| AI services | Unstructured Responses API text and embeddings | Versioned structured output, profile-aware prompt contracts, safe parsing, source scoping, and separate retrieval versus generation settings |
+| Grounded workflow | Query-wide Approved-source retrieval and citation display | Intentional document selection, claim-level support assessment, missing-requirement reporting, revision rechecks, and batch-level save blocking |
+| UI | One generic grounded-draft form and text review | Artifact/source/profile/Top-K controls, hierarchy and criteria review, traceability and finding panels, explicit batch acceptance, history, and exports |
+| Export | No document export | Local read-only Word and PDF renderers, downloads, safe filenames, layout/content verification, and dependency/package review |
+| Tests and evaluation | 252 deterministic tests and Phase 9 grounding scores | Migration, contracts, profiles, Top-K isolation, structured failures, unsupported claims, gaps, bypasses, UI, export, security, and full regression cases |
+| Security | Approved-only retrieval, secret isolation, source revalidation | Cross-product isolation, source prompt-injection defense, output/schema limits, claim/save gates, export/path safety, and stale-source race coverage |
+| Documentation | Checkpoints 1–5 release and portfolio records | Revised architecture, responsible use, UAT, install/dependencies, release manifest, case study, demo, changelog, and final release evidence after implementation |
+
+Checkpoint 6 is complete as a requirements-reconciliation checkpoint on August
+10, 2026. The existing 252-test suite passed before document changes. No new
+feature is represented as implemented; implementation begins only in the
+additional checkpoints defined in `IMPLEMENTATION_PLAN.md`, and the original
+release-candidate checkpoint moves to the end of that revised sequence.

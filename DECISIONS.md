@@ -626,3 +626,92 @@ human-control safeguard.
 
 **Status:**
 Approved
+
+## Decision 016
+
+**Date:** August 10, 2026
+
+**Category:** Governed Agile generation and document export
+
+**Title:** Phase 10 expands before release with typed, fail-closed Agile artifacts
+
+**Decision:**
+Phase 10 will add generation of Epics, Capabilities, Features, and User Stories
+from intentionally selected Approved BRDs or PRDs associated with the selected
+product. Each generated artifact will have at least one testable acceptance
+criterion and preserve traceability to the source product, document ID/title,
+BRD/PRD type, and relevant sections. Generation remains temporary until a
+Product Manager reviews it and performs a separate explicit acceptance action.
+
+The generation profiles are Strictly Grounded, Balanced, and Exploratory, with
+Strictly Grounded as the fail-closed default. Retrieval Top-K remains a distinct
+retrieval parameter and will not double as a model-generation or profile
+control. Profiles may change how the model presents source gaps and proposals,
+but they do not weaken Approved-source eligibility, traceability, review,
+source-freshness checks, or save-time safety.
+
+A substantive claim is unsupported when its cited Approved source text does not
+support the stated requirement, actor, value, date, metric, constraint, outcome,
+scope, dependency, relationship, or acceptance condition. Citation presence
+alone is insufficient. Unsupported and ambiguous claims, unlabeled exploratory
+proposals, missing acceptance criteria, incomplete traceability, stale sources,
+and unresolved missing requirements make a review batch non-saveable. Human
+revision triggers the same checks. The invariant is enforced at the trusted
+acceptance/persistence boundary, not only in Streamlit.
+
+The schema change will be additive. Existing products, BRDs, PRDs, generic
+accepted artifacts, citations, and portfolio history remain valid and readable.
+Typed accepted Agile artifacts, ordered criteria, hierarchy, generation
+metadata, and immutable provenance snapshots will use explicit validated
+contracts and transactional persistence. Pending output stays out of accepted
+storage, and generated content never modifies a source BRD or PRD.
+
+Saved BRDs and PRDs will gain read-only Word and PDF export. Export preserves
+metadata and ordered sections, sanitizes filenames, treats user text as data,
+requires no provider/network call, and never changes database state. Native
+Google Docs export remains deferred.
+
+The formerly planned Phase 10 final-release checkpoint moves behind the new
+implementation, integrated verification, security, documentation, and UAT work.
+Checkpoint 6 records requirements and impact only; Checkpoints 7–13 implement
+and verify the expansion, and Checkpoint 14 becomes release-candidate
+verification and GitHub release preparation.
+
+**Reason:**
+- Typed structures and per-item acceptance criteria make generated output useful
+  in an Agile planning workflow rather than as undifferentiated draft text.
+- Source-scoped provenance and claim-level support checks make grounding
+  auditable and prevent citations from becoming a cosmetic safety signal.
+- One invariant across all behavior profiles avoids an Exploratory-mode bypass
+  of the no-unsupported-content acceptance requirement.
+- Separating Top-K from generation behavior keeps retrieval breadth observable
+  and prevents one control from having hidden, unrelated effects.
+- Additive storage preserves completed Phase 9 and Phase 10 work while enabling
+  hierarchy and richer audit data.
+- Local read-only Word/PDF export meets the approved portability need without
+  adding cloud authorization or Google Docs complexity.
+
+**Alternatives Considered:**
+- Reusing the generic generated-artifact text field without typed artifacts,
+  hierarchy, or structured acceptance criteria.
+- Allowing the selected profile or Top-K value to weaken save-time validation.
+- Treating every model-supplied citation as proof that its claim is supported.
+- Saving exploratory proposals with warning labels.
+- Replacing or destructively migrating existing generated-artifact tables.
+- Exporting through a hosted conversion service or implementing Google Docs in
+  the same increment.
+- Keeping release-candidate preparation as Checkpoint 6 before the approved
+  product expansion is implemented and verified.
+
+**Impact:**
+Checkpoint 6 changes `PROJECT_SPEC.md`, `IMPLEMENTATION_PLAN.md`, and
+`DECISIONS.md` only. Later checkpoints require additive models and schema,
+source-scoped retrieval, profile and prompt contracts, structured generation,
+claim-support assessment, review and persistence gates, Streamlit workflows,
+Word/PDF services and likely minimal export dependencies, expanded offline
+evaluation and security tests, documentation updates, packaging review, and a
+new final release regression. The existing 252-test baseline and all completed
+Checkpoint 1–5 behavior remain mandatory regression gates.
+
+**Status:**
+Approved

@@ -1473,7 +1473,196 @@ cleanup checks. Full-resolution image/privacy inspection, metadata inspection,
 and protected-file comparisons passed. No official archive, tag, release,
 external post, or outreach was created.
 
-## Remaining Phase 10 checkpoints
+## Revised Phase 10 checkpoint sequence
 
-- Checkpoint 6: Release-candidate verification and GitHub release preparation —
-  Not started
+The August 10, 2026 scope expansion inserts governed Agile-artifact generation
+and BRD/PRD export before release. Checkpoints 1 through 5 remain complete and
+are not restarted. For historical test and planning traceability, the superseded
+line was: Checkpoint 6: Release-candidate verification and GitHub release preparation — Not started.
+That final-release work is now Checkpoint 14 and remains last.
+
+### Checkpoint 6 — Requirements reconciliation and impact assessment
+
+**Completed:** August 10, 2026
+
+- Audit the clean `main` recovery reference
+  `674ee62e3dd68e4174a1c1fd16e2c72eafd5b41b`, current implementation,
+  documentation, packaging boundaries, and complete test suite.
+- Confirm that Checkpoints 1–5 remain valid and preserve their functionality,
+  evidence, release assets, protected files, and data safeguards.
+- Define the Agile artifact, acceptance-criteria, traceability, profile,
+  unsupported-claim, missing-requirement, export, UI, security, and test
+  requirements in `PROJECT_SPEC.md`.
+- Record the architectural impact and immutable safety gates in `DECISIONS.md`.
+- Create the additional implementation sequence below and move the original
+  release-candidate checkpoint to the end.
+- Make planning/requirements changes only; do not change production code,
+  dependencies, databases, tests, release artifacts, environment files, or
+  credentials, and do not commit or push.
+
+Exit evidence: clean expected starting state, a passing 252-test baseline,
+documentation consistency checks, and an exact review of the three authorized
+planning/requirements files.
+
+### Checkpoint 7 — Agile domain contracts and additive persistence
+
+- Define enums and validated contracts for Epic, Capability, Feature, and User
+  Story, including per-artifact acceptance criteria, optional hierarchy, batch
+  identity, review state, behavior profile, and timestamps.
+- Add an additive SQLite migration for accepted Agile artifacts, ordered
+  acceptance criteria, parent links, generation-run metadata, and immutable
+  source-provenance snapshots. Keep pending reviews out of accepted storage.
+- Preserve legacy `generated_artifacts` and citation history without rewriting
+  or reclassifying it; keep the existing read-only history operational.
+- Add database constraints, foreign keys, indexes, idempotency, transactional
+  rollback, schema detection, and migration verification. Product deletion must
+  follow an explicitly tested cascade policy; source-document edits or deletion
+  must never rewrite accepted provenance snapshots.
+- Test clean initialization, upgrade from the current canonical schema, failure
+  rollback, exact row preservation, hierarchy integrity, validation boundaries,
+  and direct unsafe-write rejection using temporary databases only.
+
+Exit gate: all persistence tests and the complete regression suite pass; no
+production database or backup is opened or modified.
+
+### Checkpoint 8 — Profile catalog, structured prompts, and generation controls
+
+- Add immutable definitions for Strictly Grounded, Balanced, and Exploratory,
+  with Strictly Grounded as the fail-closed default.
+- Add approved prompt/task definitions for typed Agile artifacts and require a
+  versioned structured response contract containing artifacts, acceptance
+  criteria, claim-to-source references, missing requirements, and proposals.
+- Keep retrieval Top-K in the retrieval request/configuration contract and keep
+  behavior profile and any model-generation controls in a separate contract.
+- Treat source text as untrusted data, constrain selected sources to the chosen
+  product and document IDs, and preserve the existing optional provider and
+  user-safe error boundaries.
+- Test catalog immutability, defaulting, invalid selections, profile semantics,
+  Top-K independence, prompt-injection resistance, input limits, and malformed
+  structured provider output with deterministic providers.
+
+Exit gate: no prompt can execute without an approved task/profile mapping and
+eligible selected evidence; Top-K cannot alter profile or generation settings.
+
+### Checkpoint 9 — Grounded Agile generation and claim-support assessment
+
+- Implement source-scoped retrieval and typed generation for Epics,
+  Capabilities, Features, and User Stories, preserving deterministic artifact
+  order and valid parent relationships.
+- Require at least one testable acceptance criterion per generated artifact and
+  trace every artifact and criterion to product, BRD/PRD, document ID/type, and
+  relevant sections.
+- Implement a deterministic, testable support-assessment boundary that
+  decomposes output into substantive claims, verifies cited-source
+  correspondence, and returns supported, unsupported, ambiguous, and missing-
+  source findings. A citation marker alone is insufficient evidence.
+- Make Strictly Grounded omit unsupported proposals; make Balanced expose gaps
+  without filling them; make Exploratory label hypotheses/questions as
+  unsupported and non-saveable. All profiles share the same acceptance gate.
+- Short-circuit safely on absent eligible sources, irrelevant evidence,
+  incomplete criteria, malformed hierarchy, provider failure, or unresolved
+  support findings. Never modify or persist a BRD, PRD, or generated artifact.
+- Extend offline evaluation with source-scoping precision/recall, artifact and
+  criterion traceability, unsupported-claim recall, false-positive review,
+  missing-requirement reporting, and profile-conformance cases.
+
+Exit gate: deterministic adversarial fixtures demonstrate that invented dates,
+metrics, actors, scope, constraints, and relationships are flagged and cannot
+be represented as grounded.
+
+### Checkpoint 10 — Product Manager review and fail-closed acceptance
+
+- Add a pending in-memory review batch containing original structured output,
+  rendered artifacts, acceptance criteria, traceability, support findings,
+  missing requirements, profile, Top-K, prompt version, and selected sources.
+- Support Product Manager revision and rejection while keeping all content
+  unsaved. Re-run structural, traceability, support, source-eligibility, and
+  source-freshness checks after every revision and immediately before saving.
+- Require a distinct explicit acceptance action. Save the entire valid batch
+  transactionally and idempotently; any unsupported claim, unresolved gap,
+  missing criterion, incomplete citation, stale source, or invalid hierarchy
+  rejects the whole save.
+- Enforce the same invariant in the trusted service/database write path so
+  session-state manipulation or direct UI bypass cannot persist unsafe content.
+- Preserve original BRDs/PRDs and the existing generic acceptance workflow.
+
+Exit gate: bypass, race, rerun, partial-write, stale-source, revision, reject,
+and repeated-acceptance tests pass with zero unsafe or duplicate rows.
+
+### Checkpoint 11 — Agile generation, review, and traceability interface
+
+- Add clear navigation from a product to Agile artifact generation and accepted
+  Agile artifact history.
+- Require intentional source-document and artifact-type selection; show only
+  the selected product's Approved BRDs/PRDs and never auto-select a source.
+- Display Strictly Grounded by default, profile explanations, and a separate
+  labeled Top-K retrieval control without presenting it as model creativity.
+- Render the artifact hierarchy, acceptance criteria, claim/source mappings,
+  document and section traceability, unsupported findings, missing source
+  requirements, and non-saveable exploratory proposals before review actions.
+- Provide accessible revision, regenerate, reject, and explicit accept/save
+  states, with safe rerun recovery and no duplicate provider or database action.
+- Update accepted-artifact history to distinguish legacy generic artifacts from
+  typed Agile artifacts while retaining both read-only audit paths.
+
+Exit gate: Streamlit workflow tests cover empty, no-key, stale selection,
+success, unsafe output, revision, rejection, acceptance, and rerun states.
+
+### Checkpoint 12 — Word and PDF export for BRDs and PRDs
+
+- Add deterministic, read-only export services for saved BRDs and PRDs in
+  `.docx` and PDF formats, preserving product/document metadata and ordered
+  sections.
+- Add document-preview download controls with sanitized deterministic filenames,
+  explicit format labels, safe memory/temp-file handling, and user-safe errors.
+- Evaluate and pin only the minimum direct export dependencies after clean
+  installation evidence; update launch, package, license, and compatibility
+  records when required.
+- Test representative Unicode, multiline, long-content, blank Draft sections,
+  Approved documents, filename attacks, rendering/page overflow, deterministic
+  structure, database immutability, and absence of network/provider calls.
+- Keep native Google Docs export out of scope.
+
+Exit gate: generated Word and PDF files open, render correctly, contain the
+expected data, expose no secret/local path, and leave source records byte-for-
+byte unchanged.
+
+### Checkpoint 13 — Integrated security, UAT, documentation, and release regression
+
+- Extend security review for source prompt injection, cross-product leakage,
+  unsupported-claim bypass, stale-source races, structured-output abuse,
+  denial-of-service input limits, export injection, path traversal, temporary
+  files, logs, and provider-error redaction.
+- Expand deterministic end-to-end evaluation and UAT across all artifact types,
+  profiles, acceptance criteria, traceability, source gaps, review actions,
+  save gates, exports, clean startup, optional samples, and no-key behavior.
+- Update README, architecture, responsible-use, installation, case study, demo,
+  launch, changelog, security, manifest, and compatibility documentation to
+  distinguish implemented behavior from limitations and deferred Google Docs.
+- Refresh only fictional, sanitized portfolio evidence if the implemented UI
+  materially changes; preserve the protected screenshot and privacy checklist.
+- Re-run the complete suite, compilation, script checks, package reproducibility,
+  extracted-package smoke tests, secret/prohibited-artifact scans, and protected-
+  file comparisons.
+
+Exit gate: every mandatory groundedness, human-control, source-separation,
+traceability, unsupported-content, export-safety, and regression gate is perfect;
+no external beta, publication, tag, or release is claimed.
+
+### Checkpoint 14 — Release-candidate verification and GitHub release preparation
+
+- Perform the original final-release checkpoint only after Checkpoints 7–13
+  satisfy their exit gates and explicit approval is given.
+- Reconfirm clean-install support evidence, full automated and UAT results,
+  release notes, dependency/license inventory, manifest membership, exclusions,
+  deterministic archive/checksum behavior, clean extracted startup, and data/
+  secret/privacy controls.
+- Prepare the v1.0.0 release candidate and GitHub Release materials for final
+  human approval without silently publishing, tagging, pushing, posting, or
+  contacting beta participants.
+- Stop on any failing mandatory gate, unexpected repository state, unapproved
+  file, secret, database artifact, unsupported claim, documentation mismatch,
+  or compatibility overclaim.
+
+Exit gate: a separately approved final action may create the tag and GitHub
+Release; absent that approval, report readiness and stop without publication.
