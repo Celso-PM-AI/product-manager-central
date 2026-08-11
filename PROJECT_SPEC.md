@@ -607,3 +607,27 @@ workflow changes, UI, and export remain assigned to later checkpoints.
 Checkpoint 7 verification uses temporary databases only: 24 focused tests and
 the complete 276-test suite pass. The production database and backups were not
 opened or modified, and Checkpoint 8 was not started.
+
+#### Checkpoint 8 implementation record
+
+Checkpoint 8 is complete on August 11, 2026. PMC now has immutable definitions
+for Strictly Grounded, Balanced, and Exploratory behavior, with Strictly
+Grounded as the fail-closed default. Five versioned prompt/task definitions
+cover Epics, Capabilities, Features, User Stories, and structured acceptance
+criteria. Their envelopes separate trusted instructions and application
+selections from Product Manager request and untrusted Approved BRD/PRD source
+data, while strict response contracts require typed artifacts or criteria,
+claim/source references, missing requirements, and labeled proposals.
+
+Retrieval Top-K is represented only by `RetrievalControls`. Temperature and
+Top-P are separate optional `GenerationControls`, and an explicit provider/model
+capability contract deterministically includes, omits, or rejects them without
+substitution. Provider parameters remain implementation hints rather than a
+grounding guarantee. Existing Phase 9 prompts and AI service calls are
+unchanged, and Checkpoint 7 persistence requires no schema change.
+
+Checkpoint 8 verification uses mocks and local deterministic data only: 17
+focused tests and the complete 293-test suite pass. No API call or production
+database access occurred. Grounded Agile generation, claim-support assessment,
+save blocking, UI, and export remain assigned to later checkpoints; Checkpoint
+9 was not started.

@@ -1539,6 +1539,8 @@ was opened or modified. Checkpoint 8 remains not started.
 
 ### Checkpoint 8 — Profile catalog, structured prompts, and generation controls
 
+**Completed:** August 11, 2026
+
 - Add immutable definitions for Strictly Grounded, Balanced, and Exploratory,
   with Strictly Grounded as the fail-closed default.
 - Add approved prompt/task definitions for typed Agile artifacts and require a
@@ -1555,6 +1557,18 @@ was opened or modified. Checkpoint 8 remains not started.
 
 Exit gate: no prompt can execute without an approved task/profile mapping and
 eligible selected evidence; Top-K cannot alter profile or generation settings.
+
+Completion evidence: 17 focused profile/prompt/control tests and the complete
+293-test suite pass. The implementation reuses the Checkpoint 7 profile enum,
+adds immutable validated business-behavior definitions and five versioned
+structured prompt/task contracts, keeps trusted instructions and application
+selections separate from untrusted source data, and validates structured
+artifacts, criteria, traceability mappings, missing requirements, and labeled
+proposals. Retrieval Top-K and model controls use different types; explicit
+capabilities include supported optional controls, omit unsupported optional
+controls, and reject unsupported required controls before any provider call.
+Phase 9 APIs and Checkpoint 7 storage remain unchanged, no schema migration or
+API call occurred, and Checkpoint 9 remains not started.
 
 ### Checkpoint 9 — Grounded Agile generation and claim-support assessment
 

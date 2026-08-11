@@ -13,6 +13,9 @@ flowchart LR
     PM[Product Manager] --> UI[Streamlit interface<br/>app.py]
     UI --> CORE[Models and validation<br/>models.py + validation.py]
     CORE --> AGILE[Typed Agile contracts<br/>agile.py]
+    AGILE --> PROFILE[Behavior profiles<br/>agile_profiles.py]
+    PROFILE --> APROMPT[Structured Agile prompts<br/>agile_prompt_catalog.py]
+    APROMPT --> CONTROL[Separated controls<br/>model_controls.py]
     UI --> DOCS[BRD and PRD templates<br/>document_templates.py]
     UI --> PROMPTS[Approved prompt catalog<br/>prompt_catalog.py]
     CORE --> DB[SQLite persistence<br/>database.py]
@@ -56,6 +59,39 @@ rewrite accepted provenance. Deleting the owning product intentionally cascades
 through its accepted Agile batches. Pending review remains out of accepted
 storage. Profile behavior, generation, support assessment, acceptance workflow,
 and UI are not part of Checkpoint 7.
+
+## Agile profiles, prompts, and separated controls
+
+Checkpoint 8 adds three non-persistent contract layers. The profile catalog
+defines Strictly Grounded, Balanced, and Exploratory through enums and immutable
+policy records, with Strictly Grounded as the fail-closed default. Profile
+instructions describe grounding strictness, permitted variation, missing-source
+behavior, unsupported-content treatment, citations, assumptions, and inference.
+They do not claim that unsupported content has already been detected.
+
+The versioned Agile prompt catalog contains one prompt/task definition for each
+artifact type plus structured acceptance criteria. A prompt envelope preserves
+separate roles for trusted application instructions, validated application
+selections, Product Manager request data, untrusted Approved BRD/PRD source
+records, and the output contract. Source text therefore cannot change the
+selected prompt, version, profile, artifact type, source scope, or response
+schema. Strict response-shape validation covers artifacts, ordered criteria,
+claim/source references, missing requirements, and explicitly unsupported,
+non-saveable proposals; it does not assess whether claims are supported.
+
+`RetrievalControls.top_k` limits only retrieved Approved-source chunks.
+`GenerationControls` has no Top-K field and represents Temperature and Top-P as
+separate validated optional controls. Model capabilities decide whether optional
+settings are included or whether required unsupported settings fail before an
+API request; one control is never substituted for another. Profile behavior
+remains the business rule regardless of provider settings.
+
+The [official GPT-5.6 Terra model page](https://developers.openai.com/api/docs/models/gpt-5.6-terra)
+documents Responses API and Structured Outputs support. It does not establish
+Temperature or Top-P support, so PMC's default capability contract enables only
+structured output and omits both sampling controls. No database migration,
+provider call, Agile generation, claim-support assessment, or save-workflow
+change is part of Checkpoint 8.
 
 The database is local application data. It is never allowlisted into a release
 archive, and fictional samples are loaded only after an explicit user action.
@@ -123,6 +159,9 @@ GitHub Release, or public posting requires later explicit approval.
 | Streamlit navigation and review UI | `app.py` |
 | Product and document models | `src/models.py` |
 | Typed Agile domain contracts | `src/agile.py` |
+| Agile behavior profiles | `src/agile_profiles.py` |
+| Versioned structured Agile prompts | `src/agile_prompt_catalog.py` |
+| Retrieval/generation control mapping | `src/model_controls.py` |
 | Validation and normalization | `src/validation.py` |
 | BRD/PRD structure | `src/document_templates.py` |
 | SQLite persistence and eligible-source reads | `src/database.py` |

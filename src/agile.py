@@ -31,7 +31,7 @@ class AgileReviewState(str, Enum):
 
 
 class AgileBehaviorProfile(str, Enum):
-    """Profile identity only; profile behavior is implemented in Checkpoint 8."""
+    """Supported behavior-profile identities shared across Agile contracts."""
 
     STRICTLY_GROUNDED = "strictly_grounded"
     BALANCED = "balanced"
