@@ -10,6 +10,17 @@ from typing import Final
 
 import pandas as pd
 
+from src.agile import (
+    AgileAcceptanceCriterion,
+    AgileArtifact,
+    AgileArtifactBatch,
+    AgileArtifactType,
+    AgileBehaviorProfile,
+    AgileContractError,
+    AgileReviewState,
+    AgileSourceReference,
+    ContentProvenance,
+)
 from src.document_templates import document_template
 from src.models import (
     DEFAULT_PRODUCT_STATUS,
@@ -36,6 +47,7 @@ SCHEMA_MISSING: Final[str] = "missing"
 SCHEMA_LEGACY: Final[str] = "legacy"
 SCHEMA_PRODUCT_ONLY: Final[str] = "canonical_product_only"
 SCHEMA_DOCUMENT_ONLY: Final[str] = "canonical_documents"
+SCHEMA_PHASE9: Final[str] = "canonical_phase9"
 SCHEMA_CANONICAL: Final[str] = "canonical"
 SCHEMA_UNKNOWN: Final[str] = "unknown"
 
@@ -103,6 +115,73 @@ GENERATED_CITATION_COLUMNS: Final[tuple[str, ...]] = (
     "section_title",
 )
 
+AGILE_RUN_COLUMNS: Final[tuple[str, ...]] = (
+    "batch_id",
+    "product_id",
+    "behavior_profile",
+    "review_state",
+    "prompt_version",
+    "revision",
+    "created_at",
+    "updated_at",
+    "accepted_at",
+)
+
+AGILE_ARTIFACT_COLUMNS: Final[tuple[str, ...]] = (
+    "artifact_id",
+    "batch_id",
+    "product_id",
+    "artifact_type",
+    "title",
+    "description",
+    "parent_artifact_id",
+    "position",
+    "review_state",
+    "provenance",
+    "revision",
+    "created_at",
+    "updated_at",
+)
+
+AGILE_CRITERION_COLUMNS: Final[tuple[str, ...]] = (
+    "criterion_id",
+    "artifact_id",
+    "position",
+    "criterion_text",
+)
+
+AGILE_SOURCE_COLUMNS: Final[tuple[str, ...]] = (
+    "id",
+    "batch_id",
+    "reference_id",
+    "source_product_id",
+    "source_product_name",
+    "document_id",
+    "document_title",
+    "document_type",
+    "section_key",
+    "section_title",
+)
+
+AGILE_ARTIFACT_SOURCE_COLUMNS: Final[tuple[str, ...]] = (
+    "artifact_id",
+    "source_id",
+)
+
+AGILE_CRITERION_SOURCE_COLUMNS: Final[tuple[str, ...]] = (
+    "criterion_id",
+    "source_id",
+)
+
+AGILE_TABLES: Final[tuple[str, ...]] = (
+    "agile_acceptance_criteria",
+    "agile_artifact_sources",
+    "agile_artifacts",
+    "agile_criterion_sources",
+    "agile_generation_runs",
+    "agile_source_snapshots",
+)
+
 LEGACY_COLUMN_SIGNATURE: Final[tuple[tuple[object, ...], ...]] = (
     ("id", "INTEGER", 0, None, 1),
     ("product_name", "TEXT", 1, None, 0),
@@ -146,6 +225,10 @@ class DocumentAssociationError(ValueError):
 
 class GeneratedArtifactValidationError(ValueError):
     """Raised when accepted generated content is unsafe to persist."""
+
+
+class AgilePersistenceError(ValueError):
+    """Raised when an Agile batch is not eligible for accepted persistence."""
 
 
 def _database_path(database_path: str | os.PathLike[str]) -> Path:
@@ -238,6 +321,12 @@ def _table_info(
         "document_sections",
         "generated_artifacts",
         "generated_artifact_citations",
+        "agile_generation_runs",
+        "agile_artifacts",
+        "agile_acceptance_criteria",
+        "agile_source_snapshots",
+        "agile_artifact_sources",
+        "agile_criterion_sources",
         MIGRATION_TABLE_NAME,
         LEGACY_TABLE_NAME,
     }:
@@ -261,9 +350,32 @@ def _legacy_signature_is_exact(table_info: tuple[sqlite3.Row, ...]) -> bool:
 
 def _detect_schema(connection: sqlite3.Connection) -> str:
     tables = _user_tables(connection)
+    table_set = set(tables)
+    agile_table_set = set(AGILE_TABLES)
+    has_exact_agile_tables = agile_table_set.issubset(table_set)
+
+    def columns_are(table_name: str, expected: tuple[str, ...]) -> bool:
+        return tuple(
+            row["name"] for row in _table_info(connection, table_name)
+        ) == expected
+
+    agile_schema_is_exact = has_exact_agile_tables and all(
+        (
+            columns_are("agile_generation_runs", AGILE_RUN_COLUMNS),
+            columns_are("agile_artifacts", AGILE_ARTIFACT_COLUMNS),
+            columns_are("agile_acceptance_criteria", AGILE_CRITERION_COLUMNS),
+            columns_are("agile_source_snapshots", AGILE_SOURCE_COLUMNS),
+            columns_are("agile_artifact_sources", AGILE_ARTIFACT_SOURCE_COLUMNS),
+            columns_are("agile_criterion_sources", AGILE_CRITERION_SOURCE_COLUMNS),
+        )
+    )
+    if has_exact_agile_tables and not agile_schema_is_exact:
+        return SCHEMA_UNKNOWN
+
+    base_tables = table_set - agile_table_set if agile_schema_is_exact else table_set
     if not tables:
         return SCHEMA_MISSING
-    if tables == ("products",):
+    if base_tables == {"products"}:
         table_info = _table_info(connection)
         columns = tuple(row["name"] for row in table_info)
         if columns == CANONICAL_COLUMNS:
@@ -272,7 +384,7 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
             return SCHEMA_LEGACY
         return SCHEMA_UNKNOWN
 
-    if tables == ("document_sections", "documents", "products"):
+    if base_tables == {"document_sections", "documents", "products"}:
         product_columns = tuple(row["name"] for row in _table_info(connection))
         document_columns = tuple(
             row["name"] for row in _table_info(connection, "documents")
@@ -286,13 +398,13 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
             and section_columns == DOCUMENT_SECTION_COLUMNS
         ):
             return SCHEMA_DOCUMENT_ONLY
-    if tables == (
+    if base_tables == {
         "document_sections",
         "documents",
         "generated_artifact_citations",
         "generated_artifacts",
         "products",
-    ):
+    }:
         product_columns = tuple(row["name"] for row in _table_info(connection))
         document_columns = tuple(
             row["name"] for row in _table_info(connection, "documents")
@@ -314,7 +426,7 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
             and artifact_columns == GENERATED_ARTIFACT_COLUMNS
             and citation_columns == GENERATED_CITATION_COLUMNS
         ):
-            return SCHEMA_CANONICAL
+            return SCHEMA_CANONICAL if agile_schema_is_exact else SCHEMA_PHASE9
     return SCHEMA_UNKNOWN
 
 
@@ -477,6 +589,291 @@ def _create_generated_artifact_tables(connection: sqlite3.Connection) -> None:
     )
 
 
+def _create_agile_tables(connection: sqlite3.Connection) -> None:
+    """Add accepted Agile storage without changing Phase 9 tables or rows."""
+
+    artifact_types = ", ".join(
+        f"'{artifact_type.value}'" for artifact_type in AgileArtifactType
+    )
+    behavior_profiles = ", ".join(
+        f"'{profile.value}'" for profile in AgileBehaviorProfile
+    )
+    provenance_values = ", ".join(
+        f"'{provenance.value}'" for provenance in ContentProvenance
+    )
+    connection.execute(
+        f"""
+        CREATE TABLE agile_generation_runs (
+            batch_id TEXT PRIMARY KEY
+                CHECK (length(trim(batch_id)) BETWEEN 1 AND 128),
+            product_id INTEGER NOT NULL,
+            behavior_profile TEXT NOT NULL
+                CHECK (behavior_profile IN ({behavior_profiles})),
+            review_state TEXT NOT NULL
+                CHECK (review_state = 'accepted'),
+            prompt_version TEXT NOT NULL
+                CHECK (length(trim(prompt_version)) BETWEEN 1 AND 50),
+            revision INTEGER NOT NULL CHECK (revision > 0),
+            created_at TEXT NOT NULL CHECK (length(trim(created_at)) > 0),
+            updated_at TEXT NOT NULL CHECK (length(trim(updated_at)) > 0),
+            accepted_at TEXT NOT NULL CHECK (length(trim(accepted_at)) > 0),
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        f"""
+        CREATE TABLE agile_artifacts (
+            artifact_id TEXT PRIMARY KEY
+                CHECK (length(trim(artifact_id)) BETWEEN 1 AND 128),
+            batch_id TEXT NOT NULL,
+            product_id INTEGER NOT NULL,
+            artifact_type TEXT NOT NULL
+                CHECK (artifact_type IN ({artifact_types})),
+            title TEXT NOT NULL
+                CHECK (length(trim(title)) BETWEEN 1 AND 200),
+            description TEXT NOT NULL
+                CHECK (length(trim(description)) BETWEEN 1 AND 10000),
+            parent_artifact_id TEXT,
+            position INTEGER NOT NULL CHECK (position > 0),
+            review_state TEXT NOT NULL CHECK (review_state = 'accepted'),
+            provenance TEXT NOT NULL
+                CHECK (provenance IN ({provenance_values})),
+            revision INTEGER NOT NULL CHECK (revision > 0),
+            created_at TEXT NOT NULL CHECK (length(trim(created_at)) > 0),
+            updated_at TEXT NOT NULL CHECK (length(trim(updated_at)) > 0),
+            UNIQUE (batch_id, position),
+            FOREIGN KEY (batch_id)
+                REFERENCES agile_generation_runs(batch_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_artifact_id)
+                REFERENCES agile_artifacts(artifact_id) ON DELETE CASCADE,
+            CHECK (artifact_type <> 'epic' OR parent_artifact_id IS NULL)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE agile_acceptance_criteria (
+            criterion_id TEXT PRIMARY KEY
+                CHECK (length(trim(criterion_id)) BETWEEN 1 AND 128),
+            artifact_id TEXT NOT NULL,
+            position INTEGER NOT NULL CHECK (position > 0),
+            criterion_text TEXT NOT NULL
+                CHECK (length(trim(criterion_text)) BETWEEN 1 AND 2000),
+            UNIQUE (artifact_id, position),
+            FOREIGN KEY (artifact_id)
+                REFERENCES agile_artifacts(artifact_id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX idx_agile_criterion_unique_text
+        ON agile_acceptance_criteria (artifact_id, lower(trim(criterion_text)))
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE agile_source_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            batch_id TEXT NOT NULL,
+            reference_id TEXT NOT NULL
+                CHECK (length(trim(reference_id)) BETWEEN 1 AND 128),
+            source_product_id INTEGER NOT NULL CHECK (source_product_id > 0),
+            source_product_name TEXT NOT NULL
+                CHECK (length(trim(source_product_name)) BETWEEN 1 AND 120),
+            document_id INTEGER NOT NULL CHECK (document_id > 0),
+            document_title TEXT NOT NULL
+                CHECK (length(trim(document_title)) BETWEEN 1 AND 200),
+            document_type TEXT NOT NULL CHECK (document_type IN ('BRD', 'PRD')),
+            section_key TEXT NOT NULL
+                CHECK (length(trim(section_key)) BETWEEN 1 AND 100),
+            section_title TEXT NOT NULL
+                CHECK (length(trim(section_title)) BETWEEN 1 AND 200),
+            UNIQUE (batch_id, reference_id),
+            FOREIGN KEY (batch_id)
+                REFERENCES agile_generation_runs(batch_id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE agile_artifact_sources (
+            artifact_id TEXT NOT NULL,
+            source_id INTEGER NOT NULL,
+            PRIMARY KEY (artifact_id, source_id),
+            FOREIGN KEY (artifact_id)
+                REFERENCES agile_artifacts(artifact_id) ON DELETE CASCADE,
+            FOREIGN KEY (source_id)
+                REFERENCES agile_source_snapshots(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE agile_criterion_sources (
+            criterion_id TEXT NOT NULL,
+            source_id INTEGER NOT NULL,
+            PRIMARY KEY (criterion_id, source_id),
+            FOREIGN KEY (criterion_id)
+                REFERENCES agile_acceptance_criteria(criterion_id) ON DELETE CASCADE,
+            FOREIGN KEY (source_id)
+                REFERENCES agile_source_snapshots(id) ON DELETE CASCADE
+        )
+        """
+    )
+    statements = (
+        """CREATE INDEX idx_agile_runs_product_id
+            ON agile_generation_runs (product_id, accepted_at DESC)""",
+        """CREATE INDEX idx_agile_artifacts_batch
+            ON agile_artifacts (batch_id, position)""",
+        """CREATE INDEX idx_agile_artifacts_product
+            ON agile_artifacts (product_id, artifact_type, position)""",
+        """CREATE INDEX idx_agile_criteria_artifact
+            ON agile_acceptance_criteria (artifact_id, position)""",
+        """CREATE INDEX idx_agile_sources_batch
+            ON agile_source_snapshots (batch_id, reference_id)""",
+        """
+        CREATE TRIGGER trg_agile_artifact_insert_contract
+        BEFORE INSERT ON agile_artifacts
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1 FROM agile_generation_runs AS run
+                WHERE run.batch_id = NEW.batch_id
+                  AND run.product_id = NEW.product_id
+            ) THEN RAISE(ABORT, 'Agile artifact must match its batch product') END;
+            SELECT CASE WHEN NEW.parent_artifact_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM agile_artifacts AS parent
+                WHERE parent.artifact_id = NEW.parent_artifact_id
+                  AND parent.batch_id = NEW.batch_id
+                  AND parent.product_id = NEW.product_id
+                  AND parent.position < NEW.position
+                  AND (
+                    (NEW.artifact_type = 'capability' AND parent.artifact_type = 'epic')
+                    OR (NEW.artifact_type = 'feature' AND parent.artifact_type = 'capability')
+                    OR (NEW.artifact_type = 'user_story' AND parent.artifact_type = 'feature')
+                  )
+            ) THEN RAISE(ABORT, 'Invalid Agile parent relationship') END;
+        END
+        """,
+        """
+        CREATE TRIGGER trg_agile_artifact_update_contract
+        BEFORE UPDATE ON agile_artifacts
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1 FROM agile_generation_runs AS run
+                WHERE run.batch_id = NEW.batch_id
+                  AND run.product_id = NEW.product_id
+            ) THEN RAISE(ABORT, 'Agile artifact must match its batch product') END;
+            SELECT CASE WHEN NEW.parent_artifact_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM agile_artifacts AS parent
+                WHERE parent.artifact_id = NEW.parent_artifact_id
+                  AND parent.batch_id = NEW.batch_id
+                  AND parent.product_id = NEW.product_id
+                  AND parent.position < NEW.position
+                  AND (
+                    (NEW.artifact_type = 'capability' AND parent.artifact_type = 'epic')
+                    OR (NEW.artifact_type = 'feature' AND parent.artifact_type = 'capability')
+                    OR (NEW.artifact_type = 'user_story' AND parent.artifact_type = 'feature')
+                  )
+            ) THEN RAISE(ABORT, 'Invalid Agile parent relationship') END;
+        END
+        """,
+        """
+        CREATE TRIGGER trg_agile_source_product_contract
+        BEFORE INSERT ON agile_source_snapshots
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1 FROM agile_generation_runs AS run
+                WHERE run.batch_id = NEW.batch_id
+                  AND run.product_id = NEW.source_product_id
+            ) THEN RAISE(ABORT, 'Agile source must match its batch product') END;
+        END
+        """,
+        """
+        CREATE TRIGGER trg_agile_source_snapshot_immutable
+        BEFORE UPDATE ON agile_source_snapshots
+        BEGIN
+            SELECT RAISE(ABORT, 'Agile source snapshots are immutable');
+        END
+        """,
+        """
+        CREATE TRIGGER trg_agile_artifact_source_batch
+        BEFORE INSERT ON agile_artifact_sources
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1
+                FROM agile_artifacts AS artifact
+                INNER JOIN agile_source_snapshots AS source
+                    ON source.id = NEW.source_id
+                WHERE artifact.artifact_id = NEW.artifact_id
+                  AND artifact.batch_id = source.batch_id
+            ) THEN RAISE(ABORT, 'Agile artifact source must be in the same batch') END;
+        END
+        """,
+        """
+        CREATE TRIGGER trg_agile_criterion_source_batch
+        BEFORE INSERT ON agile_criterion_sources
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1
+                FROM agile_acceptance_criteria AS criterion
+                INNER JOIN agile_artifacts AS artifact
+                    ON artifact.artifact_id = criterion.artifact_id
+                INNER JOIN agile_source_snapshots AS source
+                    ON source.id = NEW.source_id
+                WHERE criterion.criterion_id = NEW.criterion_id
+                  AND artifact.batch_id = source.batch_id
+            ) THEN RAISE(ABORT, 'Agile criterion source must be in the same batch') END;
+        END
+        """,
+    )
+    for statement in statements:
+        connection.execute(statement)
+
+
+def _agile_tables_exist(connection: sqlite3.Connection) -> bool:
+    return set(AGILE_TABLES).issubset(_user_tables(connection))
+
+
+def _add_agile_schema(connection: sqlite3.Connection) -> None:
+    """Transactionally add Agile tables and verify all Phase 9 rows exactly."""
+
+    preserved_tables = (
+        "products",
+        "documents",
+        "document_sections",
+        "generated_artifacts",
+        "generated_artifact_citations",
+    )
+    before = {
+        table: tuple(
+            tuple(row)
+            for row in connection.execute(
+                f'SELECT * FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+        )
+        for table in preserved_tables
+    }
+    _create_agile_tables(connection)
+    after = {
+        table: tuple(
+            tuple(row)
+            for row in connection.execute(
+                f'SELECT * FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+        )
+        for table in preserved_tables
+    }
+    if after != before:
+        raise MigrationVerificationError(
+            "Agile migration changed existing Phase 9 data."
+        )
+    if _detect_schema(connection) != SCHEMA_CANONICAL:
+        raise MigrationVerificationError("Agile schema verification failed.")
+
+
 def _add_document_schema(connection: sqlite3.Connection) -> None:
     """Transactionally add document tables while verifying product rows."""
 
@@ -518,6 +915,7 @@ def initialize_database(
                 _create_canonical_table(connection)
                 _create_document_tables(connection)
                 _create_generated_artifact_tables(connection)
+                _create_agile_tables(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -527,6 +925,8 @@ def initialize_database(
             try:
                 _add_document_schema(connection)
                 _create_generated_artifact_tables(connection)
+                if not _agile_tables_exist(connection):
+                    _create_agile_tables(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -535,6 +935,16 @@ def initialize_database(
             connection.execute("BEGIN IMMEDIATE")
             try:
                 _create_generated_artifact_tables(connection)
+                if not _agile_tables_exist(connection):
+                    _create_agile_tables(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_PHASE9:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _add_agile_schema(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -553,6 +963,7 @@ def _require_canonical_schema(connection: sqlite3.Connection) -> None:
     if schema not in {
         SCHEMA_PRODUCT_ONLY,
         SCHEMA_DOCUMENT_ONLY,
+        SCHEMA_PHASE9,
         SCHEMA_CANONICAL,
     }:
         raise DatabaseSchemaError(
@@ -562,7 +973,7 @@ def _require_canonical_schema(connection: sqlite3.Connection) -> None:
 
 def _require_document_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema not in {SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
+    if schema not in {SCHEMA_DOCUMENT_ONLY, SCHEMA_PHASE9, SCHEMA_CANONICAL}:
         raise DatabaseSchemaError(
             f"Phase 8 document schema required; found {schema}."
         )
@@ -570,10 +981,16 @@ def _require_document_schema(connection: sqlite3.Connection) -> None:
 
 def _require_generated_artifact_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema != SCHEMA_CANONICAL:
+    if schema not in {SCHEMA_PHASE9, SCHEMA_CANONICAL}:
         raise DatabaseSchemaError(
             f"Generated artifact schema required; found {schema}."
         )
+
+
+def _require_agile_schema(connection: sqlite3.Connection) -> None:
+    schema = _detect_schema(connection)
+    if schema != SCHEMA_CANONICAL:
+        raise DatabaseSchemaError(f"Accepted Agile schema required; found {schema}.")
 
 
 def _utc_now() -> str:
@@ -1463,6 +1880,394 @@ def save_accepted_generated_artifact(
         return artifact, True
 
 
+def _select_agile_sources(
+    connection: sqlite3.Connection,
+    *,
+    artifact_id: str | None = None,
+    criterion_id: str | None = None,
+) -> tuple[AgileSourceReference, ...]:
+    if (artifact_id is None) == (criterion_id is None):
+        raise ValueError("Select sources for exactly one Agile record.")
+    if artifact_id is not None:
+        link_table = "agile_artifact_sources"
+        id_column = "artifact_id"
+        record_id = artifact_id
+    else:
+        link_table = "agile_criterion_sources"
+        id_column = "criterion_id"
+        record_id = criterion_id
+    rows = connection.execute(
+        f"""
+        SELECT source.reference_id, source.source_product_id,
+               source.source_product_name, source.document_id,
+               source.document_title, source.document_type,
+               source.section_key, source.section_title
+        FROM {link_table} AS link
+        INNER JOIN agile_source_snapshots AS source
+            ON source.id = link.source_id
+        WHERE link.{id_column} = ?
+        ORDER BY source.reference_id
+        """,
+        (record_id,),
+    ).fetchall()
+    return tuple(
+        AgileSourceReference(
+            reference_id=row["reference_id"],
+            product_id=row["source_product_id"],
+            product_name=row["source_product_name"],
+            document_id=row["document_id"],
+            document_title=row["document_title"],
+            document_type=DocumentType(row["document_type"]),
+            section_key=row["section_key"],
+            section_title=row["section_title"],
+        )
+        for row in rows
+    )
+
+
+def _select_accepted_agile_batch(
+    connection: sqlite3.Connection,
+    batch_id: str,
+) -> AgileArtifactBatch | None:
+    run = connection.execute(
+        """
+        SELECT batch_id, product_id, behavior_profile, review_state,
+               prompt_version, revision, created_at, updated_at, accepted_at
+        FROM agile_generation_runs
+        WHERE batch_id = ?
+        """,
+        (batch_id,),
+    ).fetchone()
+    if run is None:
+        return None
+    artifact_rows = connection.execute(
+        """
+        SELECT artifact_id, artifact_type, product_id, title, description,
+               parent_artifact_id, position, review_state, provenance,
+               revision, created_at, updated_at
+        FROM agile_artifacts
+        WHERE batch_id = ?
+        ORDER BY position
+        """,
+        (batch_id,),
+    ).fetchall()
+    artifacts: list[AgileArtifact] = []
+    for row in artifact_rows:
+        criterion_rows = connection.execute(
+            """
+            SELECT criterion_id, position, criterion_text
+            FROM agile_acceptance_criteria
+            WHERE artifact_id = ?
+            ORDER BY position
+            """,
+            (row["artifact_id"],),
+        ).fetchall()
+        criteria = tuple(
+            AgileAcceptanceCriterion(
+                criterion_id=criterion["criterion_id"],
+                position=criterion["position"],
+                text=criterion["criterion_text"],
+                source_references=_select_agile_sources(
+                    connection,
+                    criterion_id=criterion["criterion_id"],
+                ),
+            )
+            for criterion in criterion_rows
+        )
+        artifacts.append(
+            AgileArtifact(
+                artifact_id=row["artifact_id"],
+                artifact_type=AgileArtifactType(row["artifact_type"]),
+                product_id=row["product_id"],
+                title=row["title"],
+                description=row["description"],
+                acceptance_criteria=criteria,
+                source_references=_select_agile_sources(
+                    connection,
+                    artifact_id=row["artifact_id"],
+                ),
+                position=row["position"],
+                parent_artifact_id=row["parent_artifact_id"],
+                review_state=AgileReviewState(row["review_state"]),
+                provenance=ContentProvenance(row["provenance"]),
+                revision=row["revision"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+            )
+        )
+    try:
+        return AgileArtifactBatch(
+            batch_id=run["batch_id"],
+            product_id=run["product_id"],
+            behavior_profile=AgileBehaviorProfile(run["behavior_profile"]),
+            review_state=AgileReviewState(run["review_state"]),
+            prompt_version=run["prompt_version"],
+            artifacts=tuple(artifacts),
+            revision=run["revision"],
+            created_at=run["created_at"],
+            updated_at=run["updated_at"],
+            accepted_at=run["accepted_at"],
+        )
+    except AgileContractError as error:
+        raise DatabaseSchemaError("Stored Agile data violates its contract.") from error
+
+
+def get_accepted_agile_batch(
+    batch_id: str,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> AgileArtifactBatch | None:
+    """Return one accepted Agile batch and its ordered, snapshotted records."""
+
+    with _open_connection(database_path) as connection:
+        _require_agile_schema(connection)
+        return _select_accepted_agile_batch(connection, batch_id)
+
+
+def list_accepted_agile_batches_for_product(
+    product_id: int,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> list[AgileArtifactBatch]:
+    """Return accepted Agile batches for one product, newest first."""
+
+    with _open_connection(database_path) as connection:
+        _require_agile_schema(connection)
+        rows = connection.execute(
+            """
+            SELECT batch_id
+            FROM agile_generation_runs
+            WHERE product_id = ?
+            ORDER BY accepted_at DESC, batch_id
+            """,
+            (product_id,),
+        ).fetchall()
+        return [
+            batch
+            for row in rows
+            if (
+                batch := _select_accepted_agile_batch(connection, row["batch_id"])
+            )
+            is not None
+        ]
+
+
+def _verify_agile_source_is_current(
+    connection: sqlite3.Connection,
+    source: AgileSourceReference,
+) -> None:
+    current = connection.execute(
+        """
+        SELECT products.id AS product_id, products.name AS product_name,
+               documents.title AS document_title, documents.document_type,
+               documents.document_status, document_sections.content
+        FROM documents
+        INNER JOIN products ON products.id = documents.product_id
+        INNER JOIN document_sections
+            ON document_sections.document_id = documents.id
+        WHERE documents.id = ? AND document_sections.section_key = ?
+        """,
+        (source.document_id, source.section_key),
+    ).fetchone()
+    if (
+        current is None
+        or current["product_id"] != source.product_id
+        or current["product_name"] != source.product_name
+        or current["document_title"] != source.document_title
+        or current["document_type"] != source.document_type.value
+        or current["document_status"] != DocumentStatus.APPROVED.value
+        or not str(current["content"]).strip()
+    ):
+        raise AgilePersistenceError(
+            "Every Agile source must be a current Approved BRD or PRD section."
+        )
+    section_titles = {
+        definition.key: definition.label
+        for definition in document_template(source.document_type)
+    }
+    if section_titles.get(source.section_key) != source.section_title:
+        raise AgilePersistenceError(
+            "Agile source section metadata does not match the approved template."
+        )
+
+
+def save_accepted_agile_batch(
+    batch: AgileArtifactBatch,
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> tuple[AgileArtifactBatch, bool]:
+    """Transactionally persist one fully accepted, traceable Agile batch."""
+
+    if not isinstance(batch, AgileArtifactBatch):
+        raise AgilePersistenceError("A validated Agile batch is required.")
+    if batch.review_state is not AgileReviewState.ACCEPTED:
+        raise AgilePersistenceError("Pending or rejected Agile batches cannot be saved.")
+    if any(
+        artifact.review_state is not AgileReviewState.ACCEPTED
+        for artifact in batch.artifacts
+    ):
+        raise AgilePersistenceError("Every saved Agile artifact must be accepted.")
+
+    with _open_connection(database_path) as connection:
+        _require_agile_schema(connection)
+        existing = _select_accepted_agile_batch(connection, batch.batch_id)
+        if existing is not None:
+            return existing, False
+        if connection.execute(
+            "SELECT 1 FROM products WHERE id = ?", (batch.product_id,)
+        ).fetchone() is None:
+            raise AgilePersistenceError("The Agile batch product no longer exists.")
+
+        sources: dict[str, AgileSourceReference] = {}
+        for artifact in batch.artifacts:
+            for source in artifact.source_references:
+                existing_source = sources.setdefault(source.reference_id, source)
+                if existing_source != source:
+                    raise AgilePersistenceError(
+                        "A source reference ID cannot describe different sources."
+                    )
+            for criterion in artifact.acceptance_criteria:
+                for source in criterion.source_references:
+                    existing_source = sources.setdefault(source.reference_id, source)
+                    if existing_source != source:
+                        raise AgilePersistenceError(
+                            "A source reference ID cannot describe different sources."
+                        )
+        for source in sources.values():
+            _verify_agile_source_is_current(connection, source)
+
+        connection.execute(
+            """
+            INSERT INTO agile_generation_runs (
+                batch_id, product_id, behavior_profile, review_state,
+                prompt_version, revision, created_at, updated_at, accepted_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                batch.batch_id,
+                batch.product_id,
+                batch.behavior_profile.value,
+                batch.review_state.value,
+                batch.prompt_version,
+                batch.revision,
+                batch.created_at,
+                batch.updated_at,
+                batch.accepted_at,
+            ),
+        )
+        source_ids: dict[str, int] = {}
+        for source in sorted(sources.values(), key=lambda item: item.reference_id):
+            cursor = connection.execute(
+                """
+                INSERT INTO agile_source_snapshots (
+                    batch_id, reference_id, source_product_id,
+                    source_product_name, document_id, document_title,
+                    document_type, section_key, section_title
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    batch.batch_id,
+                    source.reference_id,
+                    source.product_id,
+                    source.product_name,
+                    source.document_id,
+                    source.document_title,
+                    source.document_type.value,
+                    source.section_key,
+                    source.section_title,
+                ),
+            )
+            source_ids[source.reference_id] = int(cursor.lastrowid)
+
+        for artifact in batch.artifacts:
+            connection.execute(
+                """
+                INSERT INTO agile_artifacts (
+                    artifact_id, batch_id, product_id, artifact_type, title,
+                    description, parent_artifact_id, position, review_state,
+                    provenance, revision, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    artifact.artifact_id,
+                    batch.batch_id,
+                    artifact.product_id,
+                    artifact.artifact_type.value,
+                    artifact.title,
+                    artifact.description,
+                    artifact.parent_artifact_id,
+                    artifact.position,
+                    artifact.review_state.value,
+                    artifact.provenance.value,
+                    artifact.revision,
+                    artifact.created_at,
+                    artifact.updated_at,
+                ),
+            )
+            connection.executemany(
+                """
+                INSERT INTO agile_artifact_sources (artifact_id, source_id)
+                VALUES (?, ?)
+                """,
+                (
+                    (artifact.artifact_id, source_ids[source.reference_id])
+                    for source in artifact.source_references
+                ),
+            )
+            for criterion in artifact.acceptance_criteria:
+                connection.execute(
+                    """
+                    INSERT INTO agile_acceptance_criteria (
+                        criterion_id, artifact_id, position, criterion_text
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        criterion.criterion_id,
+                        artifact.artifact_id,
+                        criterion.position,
+                        criterion.text,
+                    ),
+                )
+                connection.executemany(
+                    """
+                    INSERT INTO agile_criterion_sources (criterion_id, source_id)
+                    VALUES (?, ?)
+                    """,
+                    (
+                        (criterion.criterion_id, source_ids[source.reference_id])
+                        for source in criterion.source_references
+                    ),
+                )
+
+        saved = _select_accepted_agile_batch(connection, batch.batch_id)
+        if saved is None:
+            raise RuntimeError("Saved Agile batch could not be retrieved.")
+        return saved, True
+
+
+def migrate_agile_database(
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> bool:
+    """Add Checkpoint 7 tables to an exact Phase 9 database, idempotently."""
+
+    path = _database_path(database_path)
+    if not path.exists():
+        raise DatabaseSchemaError("Cannot migrate a missing database.")
+    with _open_connection(path) as connection:
+        schema = _detect_schema(connection)
+        if schema == SCHEMA_CANONICAL:
+            return False
+        if schema != SCHEMA_PHASE9:
+            raise DatabaseSchemaError(
+                "Agile migration requires the exact Phase 9 canonical schema."
+            )
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            _add_agile_schema(connection)
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+    return True
+
+
 def migrate_document_database(
     database_path: str | os.PathLike[str] = DATABASE_FILE,
 ) -> bool:
@@ -1476,7 +2281,11 @@ def migrate_document_database(
         schema = _detect_schema(connection)
         if schema == SCHEMA_CANONICAL:
             return False
-        if schema not in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY}:
+        if schema not in {
+            SCHEMA_PRODUCT_ONLY,
+            SCHEMA_DOCUMENT_ONLY,
+            SCHEMA_PHASE9,
+        }:
             raise DatabaseSchemaError(
                 "Document migration requires the product-only canonical schema."
             )
@@ -1484,7 +2293,10 @@ def migrate_document_database(
         try:
             if schema == SCHEMA_PRODUCT_ONLY:
                 _add_document_schema(connection)
-            _create_generated_artifact_tables(connection)
+            if schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY}:
+                _create_generated_artifact_tables(connection)
+            if not _agile_tables_exist(connection):
+                _create_agile_tables(connection)
             connection.commit()
         except Exception:
             connection.rollback()
@@ -1627,6 +2439,7 @@ def migrate_legacy_database(
 
             _create_document_tables(connection)
             _create_generated_artifact_tables(connection)
+            _create_agile_tables(connection)
 
             if _detect_schema(connection) != SCHEMA_CANONICAL:
                 raise MigrationVerificationError(
@@ -1684,7 +2497,12 @@ def save_product(
             )
         return
 
-    if schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
+    if schema in {
+        SCHEMA_PRODUCT_ONLY,
+        SCHEMA_DOCUMENT_ONLY,
+        SCHEMA_PHASE9,
+        SCHEMA_CANONICAL,
+    }:
         create_product(
             {
                 "name": product_name,
@@ -1723,7 +2541,12 @@ def load_products(
                 FROM products
                 ORDER BY id DESC
             """
-        elif schema in {SCHEMA_PRODUCT_ONLY, SCHEMA_DOCUMENT_ONLY, SCHEMA_CANONICAL}:
+        elif schema in {
+            SCHEMA_PRODUCT_ONLY,
+            SCHEMA_DOCUMENT_ONLY,
+            SCHEMA_PHASE9,
+            SCHEMA_CANONICAL,
+        }:
             query = """
                 SELECT
                     id AS "ID",

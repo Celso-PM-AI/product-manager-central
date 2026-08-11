@@ -8,7 +8,9 @@ is stored locally in SQLite. Phase 9 adds an optional,
 inactive-by-default OpenAI connection, semantic retrieval from Approved BRDs
 and PRDs, grounded draft generation with citations, and explicit human review
 with separate accepted-artifact persistence. Deterministic offline evaluation
-scores the completed workflow for release without calling a live model.
+scores the completed workflow for release without calling a live model. Phase
+10 Checkpoint 7 adds typed Agile domain contracts and additive accepted-artifact
+storage; Agile generation, review, and interface workflows remain later work.
 
 PMC is preparing a source-based local v1.0.0 portfolio release under the
 [MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
@@ -53,6 +55,10 @@ evidence boundaries.
   human acceptance.
 - Developer-facing offline evaluation for retrieval quality, source trust,
   citations, grounding, human control, and source separation.
+- Validated backend contracts for Epics, Capabilities, Features, User Stories,
+  ordered acceptance criteria, optional hierarchy, and source traceability.
+- Additive accepted-Agile persistence with immutable BRD/PRD provenance
+  snapshots, while legacy accepted generated artifacts remain unchanged.
 
 Duplicate product names are allowed. Updates and deletion always target the
 product ID rather than its name.
@@ -123,6 +129,8 @@ diagrams in [Architecture](docs/ARCHITECTURE.md).
 
 - `app.py` contains the single Streamlit application and workflow state.
 - `src/models.py` defines the canonical `Product` and field categories.
+- `src/agile.py` defines typed Agile artifacts, criteria, hierarchy, lifecycle,
+  provenance, revision, timestamp, and source-traceability contracts.
 - `src/document_templates.py` defines stable BRD/PRD section keys, labels,
   guidance, order, and prepopulation mappings.
 - `src/validation.py` provides reusable validation and normalization.
@@ -288,6 +296,13 @@ Run the focused offline Phase 9 evaluation tests with:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
   tests.test_rag_evaluation tests.test_phase9_end_to_end -v
+```
+
+Run the focused Checkpoint 7 contract and additive-persistence tests with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
+  tests.test_agile_contracts tests.test_agile_database -v
 ```
 
 The evaluator scores eight criteria from 0 to 1: retrieval precision, retrieval

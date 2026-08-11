@@ -27,6 +27,7 @@ scripts/run_macos.command
 scripts/setup_windows.ps1
 scripts/run_windows.ps1
 src/__init__.py
+src/agile.py
 src/ai_service.py
 src/database.py
 src/document_templates.py

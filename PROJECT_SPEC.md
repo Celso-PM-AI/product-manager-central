@@ -590,3 +590,20 @@ Checkpoint 6 is complete as a requirements-reconciliation checkpoint on August
 feature is represented as implemented; implementation begins only in the
 additional checkpoints defined in `IMPLEMENTATION_PLAN.md`, and the original
 release-candidate checkpoint moves to the end of that revised sequence.
+
+#### Checkpoint 7 implementation record
+
+Checkpoint 7 is complete on August 11, 2026. PMC now has validated contracts
+for typed Epic, Capability, Feature, and User Story records; ordered structured
+acceptance criteria; optional hierarchy; artifact- and criterion-level Approved
+BRD/PRD section traceability; review state; profile identity; provenance;
+revision; and UTC timestamps. Six additive SQLite tables store only accepted
+Agile batches, artifacts, criteria, immutable source snapshots, and source
+links. The exact Phase 9 schema upgrades transactionally and idempotently while
+preserving all existing rows and generic accepted-artifact behavior. Pending
+review, generation/profile behavior, claim-support assessment, acceptance
+workflow changes, UI, and export remain assigned to later checkpoints.
+
+Checkpoint 7 verification uses temporary databases only: 24 focused tests and
+the complete 276-test suite pass. The production database and backups were not
+opened or modified, and Checkpoint 8 was not started.

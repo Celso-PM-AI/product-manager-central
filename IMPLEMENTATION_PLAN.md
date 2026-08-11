@@ -1506,6 +1506,8 @@ planning/requirements files.
 
 ### Checkpoint 7 — Agile domain contracts and additive persistence
 
+**Completed:** August 11, 2026
+
 - Define enums and validated contracts for Epic, Capability, Feature, and User
   Story, including per-artifact acceptance criteria, optional hierarchy, batch
   identity, review state, behavior profile, and timestamps.
@@ -1524,6 +1526,16 @@ planning/requirements files.
 
 Exit gate: all persistence tests and the complete regression suite pass; no
 production database or backup is opened or modified.
+
+Completion evidence: 24 focused contract and disposable-database tests and the
+complete 276-test suite pass. The implementation adds explicit artifact,
+criterion, source, lifecycle, provenance, profile-identity, revision, and
+timestamp contracts plus six additive accepted-Agile tables. Exact Phase 9
+rowsets are preserved during an idempotent transactional migration, rollback is
+verified, generic accepted-artifact history remains operational, source
+snapshots remain unchanged after document edits or deletion, and product
+deletion follows the tested cascade policy. No production database or backup
+was opened or modified. Checkpoint 8 remains not started.
 
 ### Checkpoint 8 — Profile catalog, structured prompts, and generation controls
 
