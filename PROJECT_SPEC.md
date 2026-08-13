@@ -661,5 +661,30 @@ Checkpoint 9 adds no schema or accepted-storage write path.
 
 Checkpoint 9 verification uses injected providers and temporary databases
 only: 22 focused tests and the complete 315-test suite pass. No live provider
-call or production-database access occurred. Checkpoint 10 review, revision,
-acceptance, and persistence work has not started.
+call or production-database access occurred. At Checkpoint 9 completion,
+Checkpoint 10 review, revision, acceptance, and persistence had not started.
+
+#### Checkpoint 10 implementation record
+
+Checkpoint 10 is complete on August 13, 2026. A generated Agile result now
+enters an immutable, in-memory pending review containing its original and
+current structured artifacts, criteria, traceability, exact source chunks,
+profile, prompt, Top-K, gaps, proposals, claims, assessments, gates, version,
+reviewer events, timestamps, and reasons. Generation is never acceptance.
+
+A changed review revision increments the version and reruns hierarchy,
+metadata, source-scope/freshness, citation, claim, criterion, gap, and proposal
+checks. Unchanged content is a deterministic no-op. Rejection requires a reason
+and remains unsaved. Acceptance requires the current revision, current
+assessment, explicit reviewer action, and every gate to pass. Immediately
+before saving, sources are revalidated again; the database entry point
+independently reassesses all claims and criteria and checks exact full-section
+digests within the accepted-batch transaction. Failed and repeated operations
+produce zero partial or duplicate rows.
+
+Checkpoint 10 reuses the additive Checkpoint 7 accepted Agile schema. Pending,
+revised, blocked, and rejected evidence remains in memory as approved; only the
+fully accepted batch, typed hierarchy, criteria, provenance, revisions, and
+source snapshots enter accepted storage. Verification uses 24 focused tests
+and the complete 339-test suite with temporary databases and no provider call.
+Checkpoint 11 UI work has not started.

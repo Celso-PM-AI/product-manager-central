@@ -12,8 +12,8 @@ scores the completed workflow for release without calling a live model. Phase
 10 Checkpoint 7 adds typed Agile domain contracts and additive accepted-artifact
 storage. Checkpoint 8 adds immutable behavior profiles, versioned structured
 Agile prompts, separated retrieval/model controls, and explicit model capability
-mapping; Agile generation, claim assessment, review, and interface workflows
-remain later work.
+mapping; Agile generation, claim assessment, and review are implemented through
+Checkpoint 10, while the Agile interface remains later work.
 
 PMC is preparing a source-based local v1.0.0 portfolio release under the
 [MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
@@ -68,6 +68,9 @@ evidence boundaries.
   instructions, Product Manager request data, and untrusted source data.
 - Distinct retrieval Top-K and capability-gated model-generation controls;
   provider settings never substitute for grounding or claim validation.
+- Immutable Agile review batches with revision-triggered reassessment,
+  structured blocking gates, rejection history, explicit fail-closed
+  acceptance, exact-source race protection, and idempotent transactional save.
 
 Duplicate product names are allowed. Updates and deletion always target the
 product ID rather than its name.
@@ -143,6 +146,10 @@ diagrams in [Architecture](docs/ARCHITECTURE.md).
 - `src/agile_profiles.py` defines immutable Agile business behavior profiles.
 - `src/agile_prompt_catalog.py` defines versioned prompt roles and structured
   response contracts without executing an Agile-generation workflow.
+- `src/agile_generation.py` owns source-scoped typed Agile generation, and
+  `src/claim_support.py` owns deterministic field-level support assessment.
+- `src/agile_review.py` owns re-grounded Agile revision, rejection, acceptance
+  gates, review evidence, stale-version protection, and save orchestration.
 - `src/model_controls.py` separates retrieval Top-K from capability-gated
   Temperature, Top-P, and structured-output settings.
 - `src/document_templates.py` defines stable BRD/PRD section keys, labels,
@@ -334,6 +341,13 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
   tests.test_checkpoint9_grounded_agile -v
 ```
 
+Run the focused Checkpoint 10 re-grounded review and acceptance tests with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
+  tests.test_checkpoint10_agile_review -v
+```
+
 The evaluator scores eight criteria from 0 to 1: retrieval precision, retrieval
 recall, source trust, citation completeness, citation/source correspondence,
 grounded generation, human control, and source separation. Their unweighted
@@ -522,7 +536,7 @@ accepted-artifact persistence, the code-controlled prompt catalog, and hardened
 assistant workflow are implemented. Deterministic offline evaluation and
 end-to-end release verification cover the complete Phase 9 workflow.
 
-Phase 10 is preparing a local source release. Checkpoints 1 through 9 are
+Phase 10 is preparing a local source release. Checkpoints 1 through 10 are
 complete. Checkpoint 1 establishes the MIT License, planned v1.0.0 metadata,
 changelog, contribution
 and security policies, and evidence-based environment/dependency rules.
@@ -544,7 +558,10 @@ sanitized fictional screenshots, a 2–4 minute
 conducted. No checkpoint creates an official package, tag, GitHub Release, or
 external post. Checkpoint 9 adds source-scoped, typed, unsaved Agile generation
 and conservative claim-support assessment; 22 focused tests and all 315 tests
-pass offline. Checkpoint 10 review and acceptance work is not started.
+pass offline. Checkpoint 10 adds immutable human-review evidence,
+revision-triggered re-grounding, structured fail-closed gates, rejection,
+exact-source acceptance checks, and idempotent transactional persistence; 24
+focused tests and all 339 tests pass offline. Checkpoint 11 is not started.
 
 ## Governance and release policy
 

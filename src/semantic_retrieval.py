@@ -42,6 +42,7 @@ class RetrievalChunk:
     document_status: DocumentStatus
     section_key: str
     section_title: str
+    section_content_digest: str | None = None
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,9 @@ def chunk_approved_sections(
                     document_status=section.document_status,
                     section_key=section.section_key,
                     section_title=section.section_title,
+                    section_content_digest=hashlib.sha256(
+                        section.section_content.encode("utf-8")
+                    ).hexdigest(),
                 )
             )
     return chunks

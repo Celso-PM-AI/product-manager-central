@@ -15,6 +15,9 @@
 - DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
 - DEC-014 Allowlisted Cross-Platform Source Packaging
 - DEC-015 Evidence-Qualified Portfolio Materials and Fictional Visuals
+- DEC-016 Typed Agile Expansion Before Release
+- DEC-017 Conservative Grounded Agile Support Assessment
+- DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -36,6 +39,10 @@ This document records significant product, architecture, and technical decisions
 - DEC-012 Local Portfolio Release Governance and Distribution
 - DEC-013 Optional Fictional Onboarding Data and Read-Only Artifact History
 - DEC-014 Allowlisted Cross-Platform Source Packaging
+- DEC-015 Evidence-Qualified Portfolio Materials and Fictional Visuals
+- DEC-016 Typed Agile Expansion Before Release
+- DEC-017 Conservative Grounded Agile Support Assessment
+- DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
 
 ## Decision 001
 
@@ -780,6 +787,67 @@ evaluation. The source-release allowlist and focused tests expand accordingly.
 There is no dependency, schema, database-write, Phase 9 interface, UI, or export
 change. Valid paraphrases may remain ambiguous until a later approved method or
 human review resolves them.
+
+**Status:**
+Approved
+
+## Decision 018
+
+**Date:** August 13, 2026
+
+**Category:** Re-grounded Agile review and acceptance
+
+**Title:** Checkpoint 10 keeps review evidence in memory and repeats every safety gate at acceptance
+
+**Decision:**
+Checkpoint 10 adds an immutable in-memory Agile review batch rather than a
+pending-review database schema. It preserves the original and current
+artifacts, generation request, profile, retrieval Top-K, prompt identity,
+selected chunks, claims, assessments, gaps, proposals, structured gates,
+versions, reviewer events, timestamps, and rejection reasons. Any changed
+artifact or criterion revision increments the review version and reruns the
+Checkpoint 9 structural, source, citation, and support boundaries. Unchanged
+content is a deterministic no-op.
+
+Acceptance is a distinct reviewer action. It requires the current version and
+assessment and every gate to pass under every profile. Sources are revalidated
+immediately before saving. The reviewed database entry point then independently
+reassesses every artifact and criterion claim and compares full-section digests
+inside the existing Checkpoint 7 accepted-batch transaction. Rejection,
+unsupported content, gaps, proposals, stale sources, invalid hierarchy,
+malformed citations, stale reviews, and failed writes remain entirely outside
+accepted storage. Repeated acceptance returns the existing batch without
+duplicates.
+
+Checkpoint 10 does not add a schema migration. The existing accepted Agile
+tables already provide transactional hierarchy, criterion, provenance,
+revision, prompt-version, profile, timestamp, and immutable source-snapshot
+storage. Pending, revised, rejected, and detailed gate history remains in the
+approved in-memory review boundary until a later explicitly authorized design
+requires durable review-session storage.
+
+**Reason:**
+- Reassessment prevents edited content from inheriting stale grounding.
+- Independent service and database checks close UI/session-state bypasses and
+  source changes between review and commit.
+- Full-section fingerprints detect source edits beyond the cited substring.
+- Reusing the accepted schema avoids persisting unsafe intermediate content or
+  introducing an unnecessary migration.
+
+**Alternatives Considered:**
+- Reusing generation-time support after Product Manager edits.
+- Treating reviewer approval as a substitute for source support.
+- Saving pending and rejected sessions in new tables without authorization.
+- Checking only citation presence, current document status, or cited substrings.
+- Partially saving safe artifacts from an unsafe batch.
+
+**Impact:**
+One review service module, full-section retrieval fingerprints, a strengthened
+reviewed persistence entry point, focused tests, documentation, and the release
+allowlist are added. Existing Product, document, generic Phase 9 acceptance,
+Checkpoint 7 persistence, Checkpoint 8 controls, and Checkpoint 9 generation
+interfaces remain compatible. There is no UI, export, dependency, live
+provider, production-data, or release operation change.
 
 **Status:**
 Approved

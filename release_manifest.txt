@@ -32,6 +32,7 @@ src/agile_evaluation.py
 src/agile_generation.py
 src/agile_profiles.py
 src/agile_prompt_catalog.py
+src/agile_review.py
 src/ai_service.py
 src/claim_support.py
 src/database.py

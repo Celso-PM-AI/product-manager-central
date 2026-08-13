@@ -127,6 +127,9 @@ class AgileGenerationResult:
     missing_requirements: tuple[MissingRequirement, ...] = ()
     proposals: tuple[NonSaveableProposal, ...] = ()
     source_references: tuple[AgileSourceReference, ...] = ()
+    review_artifacts: tuple[AgileArtifact, ...] = ()
+    prompt_sources: tuple[AgilePromptSource, ...] = ()
+    retrieval_chunks: tuple[RetrievalChunk, ...] = ()
     profile: AgileBehaviorProfile = AgileBehaviorProfile.STRICTLY_GROUNDED
     prompt_id: str | None = None
     prompt_version: str | None = None
@@ -542,6 +545,9 @@ class GroundedAgileGenerationService:
             missing_requirements=missing,
             proposals=proposals,
             source_references=tuple(source_records[key] for key in sorted(source_records)),
+            review_artifacts=artifacts,
+            prompt_sources=sources,
+            retrieval_chunks=chunks,
             profile=profile,
             prompt_id=envelope.prompt.prompt_id,
             prompt_version=envelope.prompt.version,

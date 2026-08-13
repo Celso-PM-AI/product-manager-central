@@ -2089,9 +2089,78 @@ def _verify_agile_source_is_current(
         )
 
 
+def _verify_review_chunks_are_current(
+    connection: sqlite3.Connection,
+    batch: AgileArtifactBatch,
+    expected_chunks: Sequence[object],
+) -> None:
+    """Close the review/save race against the exact chunks assessed in memory."""
+
+    import hashlib
+
+    from src.semantic_retrieval import RetrievalChunk
+
+    chunks = tuple(expected_chunks)
+    if not chunks or any(not isinstance(chunk, RetrievalChunk) for chunk in chunks):
+        raise AgilePersistenceError("Current assessed source chunks are required.")
+    if len({chunk.chunk_id for chunk in chunks}) != len(chunks):
+        raise AgilePersistenceError("Assessed source chunks must be unique.")
+    referenced = {
+        source.reference_id
+        for artifact in batch.artifacts
+        for source in (
+            *artifact.source_references,
+            *(
+                source
+                for criterion in artifact.acceptance_criteria
+                for source in criterion.source_references
+            ),
+        )
+    }
+    if not referenced or not referenced.issubset(
+        {chunk.chunk_id for chunk in chunks}
+    ):
+        raise AgilePersistenceError(
+            "Accepted citations must resolve within the currently assessed chunks."
+        )
+    for chunk in chunks:
+        row = connection.execute(
+            """
+            SELECT products.id AS product_id, products.name AS product_name,
+                   documents.title AS document_title, documents.document_type,
+                   documents.document_status, document_sections.content
+            FROM documents
+            INNER JOIN products ON products.id = documents.product_id
+            INNER JOIN document_sections
+                ON document_sections.document_id = documents.id
+            WHERE documents.id = ? AND document_sections.section_key = ?
+            """,
+            (chunk.document_id, chunk.section_key),
+        ).fetchone()
+        if (
+            row is None
+            or chunk.product_id != batch.product_id
+            or row["product_id"] != chunk.product_id
+            or row["product_name"] != chunk.product_name
+            or row["document_title"] != chunk.document_title
+            or row["document_type"] != chunk.document_type.value
+            or row["document_status"] != DocumentStatus.APPROVED.value
+            or chunk.document_status is not DocumentStatus.APPROVED
+            or chunk.text not in str(row["content"])
+            or not chunk.section_content_digest
+            or hashlib.sha256(str(row["content"]).encode("utf-8")).hexdigest()
+            != chunk.section_content_digest
+        ):
+            raise AgilePersistenceError(
+                "Assessed Agile source content changed or became ineligible before saving."
+            )
+
+
 def save_accepted_agile_batch(
     batch: AgileArtifactBatch,
     database_path: str | os.PathLike[str] = DATABASE_FILE,
+    *,
+    expected_source_chunks: Sequence[object] | None = None,
 ) -> tuple[AgileArtifactBatch, bool]:
     """Transactionally persist one fully accepted, traceable Agile batch."""
 
@@ -2132,6 +2201,10 @@ def save_accepted_agile_batch(
                         )
         for source in sources.values():
             _verify_agile_source_is_current(connection, source)
+        if expected_source_chunks is not None:
+            _verify_review_chunks_are_current(
+                connection, batch, expected_source_chunks
+            )
 
         connection.execute(
             """
@@ -2240,6 +2313,73 @@ def save_accepted_agile_batch(
         if saved is None:
             raise RuntimeError("Saved Agile batch could not be retrieved.")
         return saved, True
+
+
+def save_reviewed_agile_batch(
+    batch: AgileArtifactBatch,
+    expected_source_chunks: Sequence[object],
+    database_path: str | os.PathLike[str] = DATABASE_FILE,
+) -> tuple[AgileArtifactBatch, bool]:
+    """Persist a reviewed batch only with its exact current assessment inputs."""
+
+    from src.agile_prompt_catalog import AgilePromptSource
+    from src.claim_support import assess_all_claims, extract_assessable_claims
+    from src.semantic_retrieval import RetrievalChunk
+
+    chunks = tuple(expected_source_chunks)
+    if any(not isinstance(chunk, RetrievalChunk) for chunk in chunks):
+        raise AgilePersistenceError("Current assessed source chunks are required.")
+    prompt_sources = tuple(
+        AgilePromptSource(
+            reference_id=chunk.chunk_id,
+            product_id=chunk.product_id,
+            product_name=chunk.product_name,
+            document_id=chunk.document_id,
+            document_title=chunk.document_title,
+            document_type=chunk.document_type,
+            document_status=chunk.document_status,
+            section_key=chunk.section_key,
+            section_title=chunk.section_title,
+            source_text=chunk.text,
+        )
+        for chunk in chunks
+    )
+    claim_references: dict[tuple[str, str], tuple[str, ...]] = {}
+    for artifact in batch.artifacts:
+        artifact_references = tuple(
+            sorted(source.reference_id for source in artifact.source_references)
+        )
+        claim_references[(artifact.artifact_id, "title")] = artifact_references
+        claim_references[(artifact.artifact_id, "description")] = artifact_references
+        if artifact.parent_artifact_id is not None:
+            claim_references[
+                (artifact.artifact_id, "parent_relationship")
+            ] = artifact_references
+        for criterion in artifact.acceptance_criteria:
+            claim_references[
+                (
+                    artifact.artifact_id,
+                    f"acceptance_criteria.{criterion.criterion_id}",
+                )
+            ] = tuple(
+                sorted(
+                    source.reference_id for source in criterion.source_references
+                )
+            )
+    claims = extract_assessable_claims(batch.artifacts, claim_references)
+    if not claims or not all(
+        assessment.supported
+        for assessment in assess_all_claims(claims, prompt_sources)
+    ):
+        raise AgilePersistenceError(
+            "Every reviewed Agile claim and criterion must have current source support."
+        )
+
+    return save_accepted_agile_batch(
+        batch,
+        database_path,
+        expected_source_chunks=chunks,
+    )
 
 
 def migrate_agile_database(

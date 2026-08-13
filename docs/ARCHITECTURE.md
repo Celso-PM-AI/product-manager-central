@@ -121,10 +121,21 @@ a semantic guarantee. `agile_evaluation.py` reports offline source precision
 and recall, artifact/criterion traceability, unsupported-claim recall,
 false-positive IDs, missing-requirement recall, and profile conformance.
 
-All Checkpoint 9 outputs remain temporary with `can_save=False`. No generation
-run, candidate, assessment, gap, or proposal is written to SQLite. Checkpoint
-10 remains responsible for review, revision, acceptance-time revalidation, and
-authorized persistence.
+All Checkpoint 9 outputs remain temporary with `can_save=False`. Checkpoint 10
+passes them to `agile_review.py`, which holds immutable original/current
+artifacts, configuration, exact chunks, assessments, gates, review versions,
+events, reviewers, and reasons in memory. Changed revisions are reassessed;
+unchanged revisions do not create a new version. Rejection and blocked output
+never reach accepted storage.
+
+Explicit acceptance revalidates the exact chunks and every structural,
+citation, claim, criterion, gap, and proposal gate. The reviewed database entry
+point independently repeats deterministic claim support and compares a
+full-section digest inside the existing accepted-Agile transaction. This closes
+session-state bypass and check/save races while retaining Checkpoint 7 rollback
+and idempotency. Only accepted artifacts, criteria, hierarchy, provenance,
+revision, prompt version, profile, timestamps, and source snapshots persist;
+there is no Checkpoint 10 schema migration.
 
 The database is local application data. It is never allowlisted into a release
 archive, and fictional samples are loaded only after an explicit user action.

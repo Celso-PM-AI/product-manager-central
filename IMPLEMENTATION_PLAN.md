@@ -12,11 +12,11 @@
 
 ## Current phase status
 
-**Updated:** August 11, 2026
+**Updated:** August 13, 2026
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 9 are complete; Checkpoint 10 is not started.
+- Phase 10 Checkpoints 1 through 10 are complete; Checkpoint 11 is not started.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1608,9 +1608,11 @@ and offline retrieval/traceability/support/gap metrics. Unsupported,
 ambiguous, missing-source, gap-bearing, or proposal-bearing output is blocked
 and never enters accepted storage. No schema change, live API call, production
 database access, UI, review/acceptance workflow, or export was added;
-Checkpoint 10 remains not started.
+at Checkpoint 9 completion, Checkpoint 10 remained not started.
 
 ### Checkpoint 10 — Product Manager review and fail-closed acceptance
+
+**Completed:** August 13, 2026
 
 - Add a pending in-memory review batch containing original structured output,
   rendered artifacts, acceptance criteria, traceability, support findings,
@@ -1628,6 +1630,20 @@ Checkpoint 10 remains not started.
 
 Exit gate: bypass, race, rerun, partial-write, stale-source, revision, reject,
 and repeated-acceptance tests pass with zero unsafe or duplicate rows.
+
+Completion evidence: 24 focused Checkpoint 10 tests and the complete 339-test
+suite pass with temporary databases and injected offline boundaries. Immutable
+in-memory review batches preserve original/current artifacts, request, profile,
+Top-K, prompt metadata, exact chunks, claims, assessments, gates, events,
+versions, reviewers, and reasons. Changed revisions are structurally validated
+and fully reassessed; unchanged revisions are deterministic no-ops. Explicit
+acceptance repeats source/citation/support gates, then the reviewed database
+entry point independently reassesses every claim and criterion and verifies
+full-section digests inside the transaction. Rejection and every failed gate
+remain unsaved; repeated acceptance is idempotent, and simulated late failures
+roll back every row. Existing accepted Agile tables are reused without a schema
+migration. No UI, export, live provider call, production-database access, or
+Checkpoint 11 work was added.
 
 ### Checkpoint 11 — Agile generation, review, and traceability interface
 
