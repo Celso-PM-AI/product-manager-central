@@ -16,6 +16,8 @@ flowchart LR
     AGILE --> PROFILE[Behavior profiles<br/>agile_profiles.py]
     PROFILE --> APROMPT[Structured Agile prompts<br/>agile_prompt_catalog.py]
     APROMPT --> CONTROL[Separated controls<br/>model_controls.py]
+    CONTROL --> AGEN[Scoped Agile generation<br/>agile_generation.py]
+    AGEN --> CLAIM[Claim support assessment<br/>claim_support.py]
     UI --> DOCS[BRD and PRD templates<br/>document_templates.py]
     UI --> PROMPTS[Approved prompt catalog<br/>prompt_catalog.py]
     CORE --> DB[SQLite persistence<br/>database.py]
@@ -93,6 +95,37 @@ structured output and omits both sampling controls. No database migration,
 provider call, Agile generation, claim-support assessment, or save-workflow
 change is part of Checkpoint 8.
 
+## Grounded Agile generation and claim support
+
+Checkpoint 9 adds a separate in-memory workflow in `agile_generation.py`.
+Trusted selections are validated before retrieval; only ranked chunks from the
+selected product and selected Approved BRD/PRD document scope enter the prompt
+envelope. The exact chunks are reloaded and compared before and after provider
+execution. The provider is injected, receives the strict response schema and
+capability-filtered generation settings, and has no persistence authority.
+
+Structured output is validated before domain construction. Citations resolve
+only to context source IDs, preserve deterministic order, and must cover each
+artifact title, description, relationship, and acceptance criterion through an
+owner-specific claim mapping. Criterion claims use criterion references, so an
+artifact-level citation cannot prove them. Malformed output is rejected as one
+unit.
+
+`claim_support.py` assigns stable content-derived IDs to field-level claims in
+artifact order and returns supported, unsupported, ambiguous, or missing-source
+assessments with explicit reasons and evidence IDs. Direct normalized text
+correspondence is the only supported result; contradictions, broad
+non-contiguous correspondence, absent correspondence, and uncited or unresolved
+references remain findings. The method is deterministic and conservative, not
+a semantic guarantee. `agile_evaluation.py` reports offline source precision
+and recall, artifact/criterion traceability, unsupported-claim recall,
+false-positive IDs, missing-requirement recall, and profile conformance.
+
+All Checkpoint 9 outputs remain temporary with `can_save=False`. No generation
+run, candidate, assessment, gap, or proposal is written to SQLite. Checkpoint
+10 remains responsible for review, revision, acceptance-time revalidation, and
+authorized persistence.
+
 The database is local application data. It is never allowlisted into a release
 archive, and fictional samples are loaded only after an explicit user action.
 
@@ -159,6 +192,9 @@ GitHub Release, or public posting requires later explicit approval.
 | Streamlit navigation and review UI | `app.py` |
 | Product and document models | `src/models.py` |
 | Typed Agile domain contracts | `src/agile.py` |
+| Grounded typed Agile generation | `src/agile_generation.py` |
+| Deterministic Agile claim support | `src/claim_support.py` |
+| Offline Agile evaluation | `src/agile_evaluation.py` |
 | Agile behavior profiles | `src/agile_profiles.py` |
 | Versioned structured Agile prompts | `src/agile_prompt_catalog.py` |
 | Retrieval/generation control mapping | `src/model_controls.py` |

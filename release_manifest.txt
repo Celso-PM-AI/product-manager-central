@@ -28,9 +28,12 @@ scripts/setup_windows.ps1
 scripts/run_windows.ps1
 src/__init__.py
 src/agile.py
+src/agile_evaluation.py
+src/agile_generation.py
 src/agile_profiles.py
 src/agile_prompt_catalog.py
 src/ai_service.py
+src/claim_support.py
 src/database.py
 src/document_templates.py
 src/generated_content.py

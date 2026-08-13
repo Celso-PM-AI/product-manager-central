@@ -631,3 +631,35 @@ focused tests and the complete 293-test suite pass. No API call or production
 database access occurred. Grounded Agile generation, claim-support assessment,
 save blocking, UI, and export remain assigned to later checkpoints; Checkpoint
 9 was not started.
+
+#### Checkpoint 9 implementation record
+
+Checkpoint 9 is complete on August 11, 2026. PMC now performs read-only,
+Product-and-document-scoped retrieval from Approved BRDs and PRDs, revalidates
+the exact ranked chunks before and after the injected provider boundary, and
+creates temporary typed Epics, Capabilities, Features, User Stories, or
+structured acceptance criteria through the Checkpoint 8 prompts and controls.
+Strict response validation resolves artifact-, criterion-, and claim-level
+citations only against the supplied generation context and rejects malformed,
+duplicate, fabricated, cross-scope, or incomplete mappings.
+
+The application deterministically extracts field-level claims from titles,
+descriptions, parent relationships, and acceptance criteria, gives them stable
+content-derived IDs, and applies a conservative text-correspondence assessment.
+The approved outcomes are supported, unsupported, ambiguous, and missing
+source; contradiction and uncited/unresolved citation conditions are explicit
+reasons within those outcomes. Citation presence or keyword overlap alone is
+never support. This deterministic method is intentionally labeled as neither a
+probabilistic score nor a semantic guarantee; ambiguous and unsupported output
+remains blocked for later review.
+
+Strictly Grounded is the default. Balanced may report gaps without filling
+them, and Exploratory alone may return clearly labeled unsupported,
+non-saveable proposals. Every profile retains identical source, citation, and
+support-integrity controls. All results remain in memory with `can_save=False`;
+Checkpoint 9 adds no schema or accepted-storage write path.
+
+Checkpoint 9 verification uses injected providers and temporary databases
+only: 22 focused tests and the complete 315-test suite pass. No live provider
+call or production-database access occurred. Checkpoint 10 review, revision,
+acceptance, and persistence work has not started.

@@ -715,3 +715,71 @@ Checkpoint 1–5 behavior remain mandatory regression gates.
 
 **Status:**
 Approved
+
+## Decision 017
+
+**Date:** August 11, 2026
+
+**Category:** Grounded Agile generation and support assessment
+
+**Title:** Checkpoint 9 uses conservative field-level correspondence and keeps all output unsaved
+
+**Decision:**
+Checkpoint 9 implements Agile generation as an in-memory workflow over only the
+selected product's selected Approved BRD/PRD documents. Ranked chunks are
+revalidated immediately before and after the injected structured-provider
+boundary. Provider output must match the versioned Checkpoint 8 contract and
+the Checkpoint 7 artifact contracts, including valid hierarchy, ordered
+criteria, and resolvable artifact-, criterion-, and claim-level references.
+
+Assessable claims are deterministically extracted in artifact order from each
+title, description, parent relationship, and acceptance criterion. Stable
+claim IDs derive from artifact identity, location, and text. The support
+boundary returns the approved supported, unsupported, ambiguous, or
+missing-source outcome, with contradiction and uncited or unresolved citations
+recorded as reasons. Direct normalized text correspondence is supported;
+opposite modal/negation correspondence is contradicted; broad non-contiguous
+token correspondence is ambiguous; and weaker correspondence is unsupported.
+A citation or isolated keyword match is never sufficient.
+
+This method is deliberately conservative and deterministic for offline testing.
+Its records explicitly state that it is not a semantic guarantee. It can
+produce false negatives for valid paraphrases, so ambiguous or unsupported
+content is preserved as a finding and is never silently rewritten as grounded.
+Strictly Grounded and Balanced cannot return proposals; Exploratory may return
+only labeled unsupported, non-saveable proposals. Missing requirements and
+proposals block the result under every profile.
+
+Checkpoint 9 does not add persistence. Generated candidates, findings, gaps,
+and proposals always retain `can_save=False`; Checkpoint 10 will own review,
+revision, acceptance-time re-grounding, and any authorized accepted-storage
+write.
+
+**Reason:**
+- A conservative deterministic boundary is reproducible without an LLM judge
+  and does not overstate heuristic text comparison as truth.
+- Claim locations and owner-specific citations prevent artifact references from
+  automatically proving acceptance criteria.
+- Revalidation on both sides of provider execution closes approval, deletion,
+  content-change, and cross-scope races during Checkpoint 9 generation.
+- Keeping persistence absent preserves the approved Checkpoint 9/10 lifecycle
+  boundary.
+
+**Alternatives Considered:**
+- Treating citations or keyword overlap as sufficient evidence.
+- Asking the generation provider to judge its own support without a separate
+  deterministic application boundary.
+- Using probabilistic semantic similarity while presenting it as proof.
+- Persisting pending generation runs or support findings before Checkpoint 10.
+- Allowing Balanced or Exploratory behavior to weaken source eligibility or
+  support integrity.
+
+**Impact:**
+Three source modules implement generation, support assessment, and offline
+evaluation. The source-release allowlist and focused tests expand accordingly.
+There is no dependency, schema, database-write, Phase 9 interface, UI, or export
+change. Valid paraphrases may remain ambiguous until a later approved method or
+human review resolves them.
+
+**Status:**
+Approved

@@ -12,11 +12,11 @@
 
 ## Current phase status
 
-**Updated:** August 10, 2026
+**Updated:** August 11, 2026
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 5 are complete; Checkpoint 6 is not started.
+- Phase 10 Checkpoints 1 through 9 are complete; Checkpoint 10 is not started.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1572,6 +1572,8 @@ API call occurred, and Checkpoint 9 remains not started.
 
 ### Checkpoint 9 — Grounded Agile generation and claim-support assessment
 
+**Completed:** August 11, 2026
+
 - Implement source-scoped retrieval and typed generation for Epics,
   Capabilities, Features, and User Stories, preserving deterministic artifact
   order and valid parent relationships.
@@ -1595,6 +1597,18 @@ API call occurred, and Checkpoint 9 remains not started.
 Exit gate: deterministic adversarial fixtures demonstrate that invented dates,
 metrics, actors, scope, constraints, and relationships are flagged and cannot
 be represented as grounded.
+
+Completion evidence: 22 focused Checkpoint 9 tests and the complete 315-test
+suite pass using deterministic fakes, injected providers, and temporary
+databases only. The implementation adds source-scoped read-only retrieval,
+pre/post-provider source revalidation, typed in-memory generation, exact
+structured response and citation resolution, stable field-level claim
+extraction, conservative support outcomes/reasons, profile-conformance gates,
+and offline retrieval/traceability/support/gap metrics. Unsupported,
+ambiguous, missing-source, gap-bearing, or proposal-bearing output is blocked
+and never enters accepted storage. No schema change, live API call, production
+database access, UI, review/acceptance workflow, or export was added;
+Checkpoint 10 remains not started.
 
 ### Checkpoint 10 — Product Manager review and fail-closed acceptance
 

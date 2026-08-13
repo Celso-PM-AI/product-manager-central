@@ -326,6 +326,14 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
   tests.test_checkpoint8_contracts -v
 ```
 
+Run the focused Checkpoint 9 grounded Agile generation and support-assessment
+tests with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
+  tests.test_checkpoint9_grounded_agile -v
+```
+
 The evaluator scores eight criteria from 0 to 1: retrieval precision, retrieval
 recall, source trust, citation completeness, citation/source correspondence,
 grounded generation, human control, and source separation. Their unweighted
@@ -514,8 +522,9 @@ accepted-artifact persistence, the code-controlled prompt catalog, and hardened
 assistant workflow are implemented. Deterministic offline evaluation and
 end-to-end release verification cover the complete Phase 9 workflow.
 
-Phase 10 is preparing a local source release. Checkpoint 1 is complete and
-establishes the MIT License, planned v1.0.0 metadata, changelog, contribution
+Phase 10 is preparing a local source release. Checkpoints 1 through 9 are
+complete. Checkpoint 1 establishes the MIT License, planned v1.0.0 metadata,
+changelog, contribution
 and security policies, and evidence-based environment/dependency rules.
 Checkpoint 2 is complete with first-time guidance, optional deterministic
 fictional data, and read-only accepted-artifact history. Its complete suite
@@ -533,7 +542,9 @@ sanitized fictional screenshots, a 2–4 minute
 [demo storyboard](docs/DEMO_STORYBOARD.md), and draft
 [launch materials](docs/LAUNCH_MATERIALS.md). The external beta has not been
 conducted. No checkpoint creates an official package, tag, GitHub Release, or
-external post, and Checkpoint 6 is not started.
+external post. Checkpoint 9 adds source-scoped, typed, unsaved Agile generation
+and conservative claim-support assessment; 22 focused tests and all 315 tests
+pass offline. Checkpoint 10 review and acceptance work is not started.
 
 ## Governance and release policy
 
