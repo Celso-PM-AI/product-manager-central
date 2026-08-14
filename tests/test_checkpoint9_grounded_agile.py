@@ -36,6 +36,7 @@ from src.semantic_retrieval import (
     SemanticRetrievalResult,
     SemanticRetrievalState,
 )
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 NOW = "2026-08-11T12:00:00Z"
@@ -559,6 +560,8 @@ class SourceScopedRetrievalTests(unittest.TestCase):
                     "title": "Atlas PRD",
                     "version": "1.0",
                     "document_status": "approved",
+                    "success_matrix": complete_success_matrix(),
+                    "agile_hierarchy": complete_prd_agile_hierarchy("checkpoint9"),
                     "sections": {
                         definition.key: source_text()
                         for definition in document_template(DocumentType.PRD)

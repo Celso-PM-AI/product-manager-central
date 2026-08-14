@@ -38,6 +38,7 @@ from src.database import (
 )
 from src.document_templates import document_template
 from src.models import DocumentStatus, DocumentType
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 TIMESTAMP = "2026-08-11T10:00:00.000000Z"
@@ -75,6 +76,8 @@ class AgileDatabaseTestCase(unittest.TestCase):
                 "title": "Atlas PRD",
                 "version": "1.0",
                 "document_status": DocumentStatus.APPROVED,
+                "success_matrix": complete_success_matrix(),
+                "agile_hierarchy": complete_prd_agile_hierarchy("agile-db"),
                 "sections": sections,
             },
             self.database_path,

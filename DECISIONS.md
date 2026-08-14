@@ -18,6 +18,8 @@
 - DEC-016 Typed Agile Expansion Before Release
 - DEC-017 Conservative Grounded Agile Support Assessment
 - DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
+- DEC-019 Guided Workspace, Professional Document Builders, and PRD Success Matrix
+- DEC-020 Explicit PRD Agile Hierarchy
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -43,6 +45,8 @@ This document records significant product, architecture, and technical decisions
 - DEC-016 Typed Agile Expansion Before Release
 - DEC-017 Conservative Grounded Agile Support Assessment
 - DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
+- DEC-019 Guided Workspace, Professional Document Builders, and PRD Success Matrix
+- DEC-020 Explicit PRD Agile Hierarchy
 
 ## Decision 001
 
@@ -848,6 +852,117 @@ allowlist are added. Existing Product, document, generic Phase 9 acceptance,
 Checkpoint 7 persistence, Checkpoint 8 controls, and Checkpoint 9 generation
 interfaces remain compatible. There is no UI, export, dependency, live
 provider, production-data, or release operation change.
+
+**Status:**
+Approved
+
+## Decision 019
+
+**Date:** August 13, 2026
+
+**Category:** Guided workspace, product documents, and Agile review interface
+
+**Title:** Checkpoint 11 uses additive professional templates and a separate measurable PRD Success Matrix
+
+**Decision:**
+Checkpoint 11 presents one ordered Product workspace navigation group: Dashboard,
+Create Product, Create PRD, Create BRD, AI Assistant, View Products, and Search
+Products. The BRD and PRD builders retain every existing stable section key and
+add the approved professional outline fields in deterministic group order.
+Existing rows are never rewritten during initialization; absent new sections
+render blank and are inserted only by an explicit document save.
+
+PRDs additionally own zero or more ordered Success Matrix entries in the
+additive `prd_success_matrix_entries` table. Each entry has a stable ID and
+position plus requirement/outcome, metric, optional baseline, target, minimum
+acceptance threshold, measurement method, data source, evaluation period,
+validation owner, and status. Draft entries may be incomplete. Approved PRDs
+require at least one entry and every measurable field except baseline. This
+matrix remains distinct from user-story acceptance criteria.
+
+The completed Product Manager review keeps hierarchy counts informational and
+shows the Success Matrix count separately. PRD Contributors and Roles and Key
+Dates and Milestones are repeatable structured pairs with stable IDs and
+Draft-tolerant editing. Tracking Strategy and Analytics Events or Telemetry
+retain their stable section keys and provide examples as help text only.
+Legacy contributor, date, and milestone text remains unchanged and initializes
+the structured editor without being overwritten.
+
+Temperature, generation Top-P, GEPA settings, and hallucination flags remain
+internal controls. Retrieval Top-K is exposed only in the governed Agile
+workflow and never as a PRD field. Grounding quality is authored as a measurable
+product outcome. The AI Assistant calls the existing Checkpoints 7–10 generation,
+claim-support, review, and accepted-persistence services; revision reassesses,
+every failed gate blocks acceptance, and rejected or pending output remains
+outside accepted storage.
+
+**Reason:**
+- Additive keys and a child table preserve existing document IDs, associations,
+  content, and approval states without lossy mapping.
+- A structured outcome matrix makes approval criteria measurable without mixing
+  product success with story-level acceptance conditions.
+- Reusing trusted Agile service boundaries prevents UI logic from weakening
+  source, citation, claim, hierarchy, staleness, or transaction gates.
+
+**Alternatives Considered:**
+- Replacing or merging old section content into the new outline automatically.
+- Storing Success Matrix rows as free-form text or acceptance criteria.
+- Exposing model tuning or a hallucination checkbox in the PRD.
+- Reimplementing generation and acceptance decisions in `app.py`.
+
+**Impact:**
+The document template, validation, model, SQLite, Streamlit, sample-data,
+documentation, screenshot, and focused-test surfaces change. The migration is
+additive and idempotent. Checkpoint 12 export is not implemented; its future
+Word/PDF contract must include the Success Matrix.
+
+**Status:**
+Approved
+
+## Decision 020
+
+**Date:** August 13, 2026
+
+**Category:** PRD Agile authoring hierarchy
+
+**Title:** PRDs use the explicit Epic → Capability → Feature → User Story hierarchy
+
+**Decision:**
+The PRD builder owns repeatable, ordered Epic, Capability, Feature, and User
+Story authoring records. It reuses the shared Agile artifact types and parent
+map: Capabilities belong to Epics, Features belong to Capabilities, and User
+Stories belong to Features. Functional requirements remain a separate
+professional-outline section and are not a hierarchy level.
+
+Every hierarchy entry owns zero or more independently identified and ordered
+acceptance criteria. Draft PRDs may keep incomplete entries. Approved PRDs
+require every level, valid parents, complete artifact content, and at least one
+measurable criterion per entry. Criteria are never copied between levels or
+treated as proof for another artifact. Additive child tables initialize empty
+for existing PRDs; legacy user-story, functional-requirement, and
+acceptance-criteria section text remains unchanged and editable.
+
+The completed Product Manager review also represents BRD Agile content as
+repeatable Epic → Capability → Feature → User Story rows with independently
+owned acceptance criteria at every level and an eight-field preview table.
+Business Risk and Mitigation Strategy use linked repeatable rows and a
+two-column preview. One additive, typed-payload document-row table persists
+contributors, milestones, BRD hierarchy rows, and BRD risk rows with stable
+IDs and deterministic order. Legacy section text is retained as a compatibility
+source and is never copied across hierarchy levels.
+
+**Reason:**
+- One explicit hierarchy avoids presenting functional requirements as an Agile
+  level or peer.
+- Shared types and parent rules prevent a conflicting second hierarchy model.
+- Independent criteria preserve the distinct validation intent of each level.
+- Additive storage preserves existing PRD content and approval state.
+
+**Impact:**
+The PRD model, validation, additive SQLite schema, builder, preview, fictional
+sample, documentation, and focused tests expand. Accepted generated Agile
+artifacts retain their existing Checkpoints 7–10 lifecycle and storage.
+Checkpoint 12 export remains unimplemented.
 
 **Status:**
 Approved

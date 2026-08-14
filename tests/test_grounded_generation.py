@@ -21,6 +21,7 @@ from src.grounded_generation import (
     build_grounded_prompt,
 )
 from src.models import DocumentStatus, DocumentType
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 from src.prompt_catalog import (
     GROUNDED_DRAFT_PROMPT_ID,
     AssistantTask,
@@ -241,6 +242,14 @@ class ApprovedSourceGenerationIntegrationTests(unittest.TestCase):
                 "version": "1.0",
                 "document_status": status,
                 "sections": sections,
+                "success_matrix": (
+                    complete_success_matrix() if status == "approved" else []
+                ),
+                "agile_hierarchy": (
+                    complete_prd_agile_hierarchy(f"grounded-{title.lower().replace(' ', '-')}")
+                    if status == "approved"
+                    else []
+                ),
             },
             self.database_path,
         )

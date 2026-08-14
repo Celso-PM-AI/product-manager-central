@@ -687,4 +687,44 @@ revised, blocked, and rejected evidence remains in memory as approved; only the
 fully accepted batch, typed hierarchy, criteria, provenance, revisions, and
 source snapshots enter accepted storage. Verification uses 24 focused tests
 and the complete 339-test suite with temporary databases and no provider call.
-Checkpoint 11 UI work has not started.
+#### Checkpoint 11 implementation record
+
+Checkpoint 11 implements the guided seven-destination Product workspace,
+Dashboard onboarding, approved nine-group BRD and PRD builders, and the governed
+Agile generation/review interface over the existing Checkpoints 7–10 services.
+The interface intentionally selects a Product, Approved BRD/PRD sources, Agile
+type, applicable parent, approved profile, and separate retrieval Top-K; it
+shows prompt identity, structured artifacts and criteria, citations, claim
+support, gates, and accept/revise/reject actions. Revisions reassess and every
+failed gate remains fail-closed.
+
+PRDs now include a separate ordered Success Matrix whose entries contain stable
+IDs, requirement/outcome, metric, optional baseline, target, minimum acceptance
+threshold, measurement method, data source, evaluation period, validation
+owner, and status. Draft rows may be incomplete; approval requires at least one
+entry and every measurable field except baseline. Existing document content is
+not rewritten, and the additive child table initializes empty for old PRDs.
+Temperature, Top-P, GEPA, and hallucination flags are internal controls rather
+than PRD fields. Grounding quality is expressed as a measurable outcome.
+
+The PRD builder also provides repeatable Epic, Capability, Feature, and User
+Story records using the shared typed parent map. Each record has a stable ID,
+deterministic type-relative order, explicit parent where required, and its own
+repeatable acceptance criteria. Drafts may be incomplete; approval requires all
+four levels, valid Epic → Capability → Feature → User Story relationships,
+complete artifact content, and measurable criteria for every entry. General
+functional requirements and existing user-story or acceptance-criteria text
+remain separate preserved outline sections.
+
+The completed Product Manager review keeps PRD hierarchy counts informational,
+shows Success Matrix counts separately, adds help-only tracking/telemetry
+examples, and uses repeatable Contributors/Roles and combined Date/Milestone
+pairs. BRDs use repeatable Epic-to-User-Story hierarchy rows with independently
+owned criteria at every level and linked Business Risk/Mitigation rows. Drafts
+may keep incomplete rows; Approved documents validate structured completeness,
+parent relationships, and measurable criteria. Additive persistence and safe
+legacy initialization preserve all existing section text without copying or
+overwriting it.
+
+Checkpoint 12 remains not started. Its Word/PDF exports must include the Success
+Matrix but no export implementation is part of Checkpoint 11.

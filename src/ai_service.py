@@ -1,6 +1,8 @@
 """Secure configuration and testable OpenAI Responses API boundary."""
 
 import os
+import json
+from dataclasses import asdict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Protocol
@@ -194,3 +196,64 @@ class OpenAIService:
         if not isinstance(output_text, str) or not output_text.strip():
             raise AIServiceError("OpenAI returned no text response. Please try again.")
         return output_text
+
+    def create_structured_response(
+        self,
+        envelope: object,
+        *,
+        json_schema: Mapping[str, object],
+        settings: object,
+    ) -> object:
+        """Request strict JSON Schema output for the governed Agile boundary."""
+
+        trusted = getattr(envelope, "trusted_instructions", None)
+        application_context = getattr(envelope, "application_context", None)
+        request_data = getattr(envelope, "request_data", None)
+        source_data = getattr(envelope, "source_data", None)
+        model = getattr(settings, "model", None)
+        parameters = getattr(settings, "as_request_parameters", None)
+        if (
+            not isinstance(trusted, tuple)
+            or not isinstance(application_context, Mapping)
+            or not isinstance(request_data, str)
+            or not isinstance(source_data, tuple)
+            or not isinstance(model, str)
+            or not callable(parameters)
+        ):
+            raise ValueError("A validated structured Agile request is required.")
+        input_data = json.dumps(
+            {
+                "application_context": dict(application_context),
+                "product_manager_request": request_data,
+                "untrusted_source_data": [asdict(source) for source in source_data],
+            },
+            default=lambda value: value.value if hasattr(value, "value") else str(value),
+            sort_keys=True,
+        )
+        request: dict[str, object] = {
+            "model": model,
+            "instructions": "\n".join(trusted),
+            "input": input_data,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": "pmc_agile_output",
+                    "schema": dict(json_schema),
+                    "strict": True,
+                }
+            },
+            **dict(parameters()),
+        }
+        try:
+            response = self._client.responses.create(**request)
+        except Exception as error:
+            raise AIServiceError(
+                "OpenAI structured generation is temporarily unavailable. Please try again."
+            ) from error
+        output_text = getattr(response, "output_text", None)
+        if not isinstance(output_text, str) or not output_text.strip():
+            raise AIServiceError("OpenAI returned no structured response.")
+        try:
+            return json.loads(output_text)
+        except json.JSONDecodeError as error:
+            raise AIServiceError("OpenAI returned an invalid structured response.") from error

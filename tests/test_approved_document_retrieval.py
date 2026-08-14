@@ -14,6 +14,7 @@ from src.database import (
 )
 from src.document_templates import document_template
 from src.models import DocumentStatus, DocumentType
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 def complete_sections(document_type: DocumentType, prefix: str) -> dict[str, str]:
@@ -62,6 +63,16 @@ class ApprovedDocumentRetrievalTests(unittest.TestCase):
                 "version": "1.0",
                 "document_status": status,
                 "sections": sections,
+                "success_matrix": (
+                    complete_success_matrix()
+                    if document_type is DocumentType.PRD and status in {"approved", DocumentStatus.APPROVED}
+                    else []
+                ),
+                "agile_hierarchy": (
+                    complete_prd_agile_hierarchy(f"retrieval-{title.lower().replace(' ', '-')}")
+                    if document_type is DocumentType.PRD and status in {"approved", DocumentStatus.APPROVED}
+                    else []
+                ),
             },
             self.database_path,
         )

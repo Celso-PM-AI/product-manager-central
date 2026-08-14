@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from streamlit.testing.v1 import AppTest
 
+from src.agile import AgileArtifactType, PARENT_TYPE
 from src.database import (
     create_document,
     create_product,
@@ -16,8 +17,9 @@ from src.database import (
     list_documents_for_product,
 )
 from src.document_templates import document_template
-from src.models import DocumentStatus, DocumentType
+from src.models import DocumentStatus, DocumentType, SuccessMatrixStatus
 from src.prompt_catalog import GROUNDED_DRAFT_PROMPT_ID, AssistantTask
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
@@ -133,6 +135,18 @@ class DocumentWorkflowTests(unittest.TestCase):
 
     def test_complete_approved_prd_can_be_created(self):
         prefix = self.open_new_document_form(DocumentType.PRD)
+        self.app.number_input(
+            key=f"{prefix}_success_matrix_count"
+        ).set_value(1).run()
+        hierarchy = complete_prd_agile_hierarchy("workflow")
+        for artifact in hierarchy:
+            artifact_type = artifact["artifact_type"]
+            self.app.number_input(
+                key=f"{prefix}_agile_{artifact_type}_count"
+            ).set_value(1).run()
+            self.app.number_input(
+                key=f"{prefix}_agile_{artifact_type}_0_criterion_count"
+            ).set_value(1).run()
         self.app.selectbox(key=f"{prefix}_status").set_value(
             DocumentStatus.APPROVED
         )
@@ -140,6 +154,42 @@ class DocumentWorkflowTests(unittest.TestCase):
             self.app.text_area(
                 key=f"{prefix}_section_{definition.key}"
             ).set_value(f"Completed {definition.label}")
+        matrix = complete_success_matrix()[0]
+        for field in (
+            "requirement_outcome",
+            "metric",
+            "baseline",
+            "target",
+            "minimum_acceptance_threshold",
+            "measurement_method",
+            "data_source",
+            "evaluation_period",
+            "validation_owner",
+        ):
+            self.app.text_input(
+                key=f"{prefix}_success_0_{field}"
+            ).set_value(matrix[field])
+        self.app.selectbox(key=f"{prefix}_success_0_status").set_value(
+            SuccessMatrixStatus.NOT_STARTED
+        )
+        for artifact in hierarchy:
+            artifact_type = artifact["artifact_type"]
+            artifact_key = f"{prefix}_agile_{artifact_type}_0"
+            self.app.text_input(key=f"{artifact_key}_title").set_value(
+                artifact["title"]
+            )
+            self.app.text_area(key=f"{artifact_key}_description").set_value(
+                artifact["description"]
+            )
+            if artifact["parent_artifact_id"] is not None:
+                self.app.selectbox(key=f"{artifact_key}_parent").set_value(
+                    self.app.session_state[
+                        f"{prefix}_agile_{PARENT_TYPE[AgileArtifactType(artifact_type)].value}_0_id"
+                    ]
+                )
+            self.app.text_area(key=f"{artifact_key}_criterion_0_text").set_value(
+                artifact["acceptance_criteria"][0]["text"]
+            )
 
         self.app.button(key=f"FormSubmitter:{prefix}-Save document").click().run()
 

@@ -16,6 +16,7 @@ from src.prompt_catalog import (
     AssistantTask,
     get_approved_prompt,
 )
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
@@ -44,6 +45,8 @@ class AssistantWorkflowTests(unittest.TestCase):
                 "title": "Approved Atlas PRD",
                 "version": "1.0",
                 "document_status": DocumentStatus.APPROVED,
+                "success_matrix": complete_success_matrix(),
+                "agile_hierarchy": complete_prd_agile_hierarchy("assistant"),
                 "sections": {
                     section.key: f"Approved evidence for {section.label}."
                     for section in document_template(DocumentType.PRD)

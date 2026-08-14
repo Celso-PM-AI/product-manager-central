@@ -13,7 +13,10 @@ scores the completed workflow for release without calling a live model. Phase
 storage. Checkpoint 8 adds immutable behavior profiles, versioned structured
 Agile prompts, separated retrieval/model controls, and explicit model capability
 mapping; Agile generation, claim assessment, and review are implemented through
-Checkpoint 10, while the Agile interface remains later work.
+Checkpoint 10. Checkpoint 11 exposes the governed Agile interface, guided
+workspace, professional BRD/PRD outlines, and PRD Success Matrix.
+The PRD builder uses the explicit Epic → Capability → Feature → User Story
+hierarchy with independently owned acceptance criteria at every level.
 
 PMC is preparing a source-based local v1.0.0 portfolio release under the
 [MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
@@ -51,6 +54,19 @@ evidence boundaries.
   multiple documents per product, and stable document ID-based editing.
 - Separate Create PRD and Create BRD primary navigation paths with explicit,
   ID-safe product selection.
+- A seven-destination Product workspace and guided Dashboard workflow.
+- Professional nine-group BRD and PRD outlines with stable additive section
+  keys and backward-compatible existing-document editing.
+- A structured, ordered PRD Success Matrix with stable entry IDs, Draft-tolerant
+  editing, and measurable-field approval validation.
+- Repeatable PRD Epics, Capabilities, Features, and User Stories with stable IDs,
+  explicit parents, deterministic order, and separate repeatable acceptance
+  criteria at every level.
+- Informational PRD hierarchy counts with the Success Matrix count displayed
+  separately, plus non-saving Tracking Strategy and telemetry examples.
+- Repeatable PRD Contributors and Roles and combined Key Dates and Milestones.
+- Structured BRD Epic-to-User-Story rows with acceptance criteria at every
+  level, an eight-field preview table, and linked Business Risk/Mitigation rows.
 - Stable, citation-ready chunks and ranked semantic retrieval from Approved
   BRDs and PRDs through an injectable embedding boundary.
 - An AI Assistant that returns temporary generated drafts grounded in retrieved
@@ -71,6 +87,9 @@ evidence boundaries.
 - Immutable Agile review batches with revision-triggered reassessment,
   structured blocking gates, rejection history, explicit fail-closed
   acceptance, exact-source race protection, and idempotent transactional save.
+- A governed Agile UI for Product and Approved-source selection, all five output
+  types, prompt/profile/Top-K visibility, traceability, claim gates, revision,
+  rejection, explicit acceptance, and read-only accepted history.
 
 Duplicate product names are allowed. Updates and deletion always target the
 product ID rather than its name.
@@ -140,7 +159,7 @@ The complete trust, data, and packaging flows are shown in the compact Mermaid
 diagrams in [Architecture](docs/ARCHITECTURE.md).
 
 - `app.py` contains the single Streamlit application and workflow state.
-- `src/models.py` defines the canonical `Product` and field categories.
+- `src/models.py` defines canonical Product, document, and Success Matrix records.
 - `src/agile.py` defines typed Agile artifacts, criteria, hierarchy, lifecycle,
   provenance, revision, timestamp, and source-traceability contracts.
 - `src/agile_profiles.py` defines immutable Agile business behavior profiles.
@@ -153,7 +172,7 @@ diagrams in [Architecture](docs/ARCHITECTURE.md).
 - `src/model_controls.py` separates retrieval Top-K from capability-gated
   Temperature, Top-P, and structured-output settings.
 - `src/document_templates.py` defines stable BRD/PRD section keys, labels,
-  guidance, order, and prepopulation mappings.
+  professional group order, guidance, and prepopulation mappings.
 - `src/validation.py` provides reusable validation and normalization.
 - `src/database.py` owns parameterized SQLite initialization, product and
   document persistence, approved-source retrieval, search, dashboard metrics,
@@ -457,7 +476,19 @@ New documents default to version `1.0` and Draft status.
 
 Draft documents require a product association, type, title, version, and valid
 status; body sections may remain empty. Approved documents require content in
-every section, and validation identifies each incomplete section. Titles allow
+every section, and validation identifies each incomplete section. PRDs also
+provide multiple ordered Success Matrix entries that remain separate from
+user-story acceptance criteria. Draft entries may be incomplete; Approved PRDs
+require at least one entry with requirement/outcome, metric, target, minimum
+threshold, measurement method, data source, evaluation period, validation owner,
+and status. Baseline is optional when unknown.
+PRDs additionally use Epic → Capability → Feature → User Story as their
+structured Agile hierarchy. Functional requirements remain a separate outline
+section. Draft hierarchy entries may be incomplete; approval requires every
+level, valid parents, complete entries, and measurable criteria owned by each
+entry. Criteria are not inherited or copied between levels.
+
+Document titles allow
 up to 200 characters, versions allow up to 50 characters of nonblank free text,
 and each long-form section allows up to 10,000 characters.
 
@@ -465,8 +496,8 @@ Saved documents are listed only under their associated product and identified
 by stable database IDs. A product can have multiple BRDs and PRDs. Opening a
 document displays a formatted preview; Edit updates that same document ID.
 Prepopulated content is a starting snapshot and does not change when the product
-is edited later. Phase 8 does not include document deletion, Word/PDF export,
-or AI-generated content.
+is edited later. Word/PDF export remains deferred to Checkpoint 12, where the
+PRD Success Matrix must be included.
 
 The interface uses readable status labels, guided empty states, consistent
 user-safe messages, and full-width detail sections so long product context
@@ -561,7 +592,9 @@ and conservative claim-support assessment; 22 focused tests and all 315 tests
 pass offline. Checkpoint 10 adds immutable human-review evidence,
 revision-triggered re-grounding, structured fail-closed gates, rejection,
 exact-source acceptance checks, and idempotent transactional persistence; 24
-focused tests and all 339 tests pass offline. Checkpoint 11 is not started.
+focused tests and all 339 baseline tests passed before Checkpoint 11. Checkpoint
+11 adds the guided workspace, professional builders, PRD Success Matrix, and
+governed Agile review UI. Checkpoint 12 export is not started.
 
 ## Governance and release policy
 

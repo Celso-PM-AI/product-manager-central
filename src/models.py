@@ -2,7 +2,10 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from src.agile import AgileArtifactType
 
 
 class ProductStatus(str, Enum):
@@ -28,6 +31,16 @@ class DocumentStatus(str, Enum):
 
     DRAFT = "draft"
     APPROVED = "approved"
+
+
+class SuccessMatrixStatus(str, Enum):
+    """Product-Manager-visible lifecycle status for one PRD outcome."""
+
+    NOT_STARTED = "not_started"
+    ON_TRACK = "on_track"
+    AT_RISK = "at_risk"
+    MET = "met"
+    NOT_MET = "not_met"
 
 
 DEFAULT_PRODUCT_STATUS: Final[ProductStatus] = ProductStatus.DISCOVERY
@@ -69,6 +82,12 @@ EDITABLE_DOCUMENT_FIELDS: Final[tuple[str, ...]] = (
     "version",
     "document_status",
     "sections",
+    "success_matrix",
+    "agile_hierarchy",
+    "contributors",
+    "key_dates_milestones",
+    "brd_hierarchy",
+    "brd_risks",
 )
 
 SYSTEM_MANAGED_DOCUMENT_FIELDS: Final[tuple[str, ...]] = (
@@ -108,6 +127,114 @@ class ProductDocument:
     id: int | None = None
     created_at: str | None = None
     updated_at: str | None = None
+    success_matrix: tuple["SuccessMatrixEntry", ...] = ()
+    agile_hierarchy: tuple["PRDAgileArtifact", ...] = ()
+    contributors: tuple["DocumentContributor", ...] = ()
+    key_dates_milestones: tuple["DocumentMilestone", ...] = ()
+    brd_hierarchy: tuple["BRDHierarchyRow", ...] = ()
+    brd_risks: tuple["BRDRiskRow", ...] = ()
+
+
+@dataclass(frozen=True)
+class DocumentContributor:
+    """One ordered contributor and their document role."""
+
+    entry_id: str
+    position: int
+    contributor_name: str
+    contributor_role: str
+
+
+@dataclass(frozen=True)
+class DocumentMilestone:
+    """One ordered PRD date and milestone pair."""
+
+    entry_id: str
+    position: int
+    date: str
+    milestone: str
+
+
+@dataclass(frozen=True)
+class BRDAcceptanceCriterion:
+    """One criterion owned by exactly one level in a BRD hierarchy row."""
+
+    criterion_id: str
+    position: int
+    text: str
+
+
+@dataclass(frozen=True)
+class BRDHierarchyRow:
+    """One readable Epic-to-User-Story chain for BRD authoring and preview."""
+
+    row_id: str
+    position: int
+    epic_id: str
+    epic: str
+    epic_acceptance_criteria: tuple[BRDAcceptanceCriterion, ...]
+    capability_id: str
+    capability_parent_id: str
+    capability: str
+    capability_acceptance_criteria: tuple[BRDAcceptanceCriterion, ...]
+    feature_id: str
+    feature_parent_id: str
+    feature: str
+    feature_acceptance_criteria: tuple[BRDAcceptanceCriterion, ...]
+    user_story_id: str
+    user_story_parent_id: str
+    user_story: str
+    user_story_acceptance_criteria: tuple[BRDAcceptanceCriterion, ...]
+
+
+@dataclass(frozen=True)
+class BRDRiskRow:
+    """One ordered business risk kept linked to its mitigation."""
+
+    entry_id: str
+    position: int
+    business_risk: str
+    mitigation_strategy: str
+
+
+@dataclass(frozen=True)
+class SuccessMatrixEntry:
+    """One independently measurable PRD success outcome."""
+
+    entry_id: str
+    position: int
+    requirement_outcome: str
+    metric: str
+    baseline: str | None
+    target: str
+    minimum_acceptance_threshold: str
+    measurement_method: str
+    data_source: str
+    evaluation_period: str
+    validation_owner: str
+    status: SuccessMatrixStatus | None
+
+
+@dataclass(frozen=True)
+class PRDAcceptanceCriterion:
+    """One independently ordered criterion owned by one PRD Agile artifact."""
+
+    criterion_id: str
+    position: int
+    text: str
+
+
+@dataclass(frozen=True)
+class PRDAgileArtifact:
+    """One PRD-authored Agile item using the shared Agile artifact type."""
+
+    artifact_id: str
+    artifact_type: "AgileArtifactType"
+    position: int
+    title: str
+    description: str
+    parent_artifact_id: str | None
+    acceptance_criteria: tuple[PRDAcceptanceCriterion, ...]
 
 
 @dataclass(frozen=True)

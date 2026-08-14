@@ -12,11 +12,12 @@
 
 ## Current phase status
 
-**Updated:** August 13, 2026
+**Updated:** August 14, 2026
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 10 are complete; Checkpoint 11 is not started.
+- Phase 10 Checkpoints 1 through 10 are complete; Checkpoint 11 implementation
+  and the approved Product Manager UI corrections are complete.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1647,6 +1648,29 @@ Checkpoint 11 work was added.
 
 ### Checkpoint 11 — Agile generation, review, and traceability interface
 
+**Expanded scope implemented:** August 13, 2026
+
+- Add the seven-destination Product workspace and guided Dashboard onboarding.
+- Align BRD and PRD builders to the approved nine-group professional outlines
+  while preserving existing keys and content through additive initialization.
+- Add an ordered, stable-ID PRD Success Matrix with Draft-tolerant entry editing
+  and measurable-field approval validation. Keep it separate from story
+  acceptance criteria and reserve it for future Checkpoint 12 exports.
+- Keep Temperature, Top-P, GEPA, and hallucination flags internal; expose
+  retrieval Top-K only as a separate Agile retrieval control.
+- Add repeatable PRD Epic, Capability, Feature, and User Story entries using the
+  shared typed hierarchy, stable IDs, explicit parents, deterministic order, and
+  independently ordered acceptance criteria at every level. Preserve the
+  separate functional-requirements section and all legacy PRD text.
+- Keep hierarchy totals informational and display the Success Matrix total in
+  its own section; do not enforce exact item counts.
+- Add repeatable PRD Contributors/Roles and combined Date/Milestone pairs, plus
+  help-only Tracking Strategy and telemetry examples.
+- Replace BRD general Agile cells with repeatable structured hierarchy rows and
+  an eight-field preview; add linked repeatable Business Risk/Mitigation rows.
+- Preserve all replaced legacy section text through additive, idempotent
+  structured-row initialization without copying criteria between levels.
+
 - Add clear navigation from a product to Agile artifact generation and accepted
   Agile artifact history.
 - Require intentional source-document and artifact-type selection; show only
@@ -1664,11 +1688,16 @@ Checkpoint 11 work was added.
 Exit gate: Streamlit workflow tests cover empty, no-key, stale selection,
 success, unsafe output, revision, rejection, acceptance, and rerun states.
 
+Implementation uses the existing Checkpoints 7–10 services and accepted tables.
+Checkpoint 11 schema additions are the backward-compatible Success Matrix, PRD
+Agile hierarchy child tables, and typed-payload structured document-row table.
+No Word/PDF export code is included.
+
 ### Checkpoint 12 — Word and PDF export for BRDs and PRDs
 
 - Add deterministic, read-only export services for saved BRDs and PRDs in
   `.docx` and PDF formats, preserving product/document metadata and ordered
-  sections.
+  sections, including ordered PRD Success Matrix entries.
 - Add document-preview download controls with sanitized deterministic filenames,
   explicit format labels, safe memory/temp-file handling, and user-safe errors.
 - Evaluate and pin only the minimum direct export dependencies after clean

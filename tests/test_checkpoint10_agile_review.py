@@ -47,6 +47,7 @@ from src.database import (
 from src.document_templates import document_template
 from src.model_controls import RetrievalControls
 from src.models import DocumentStatus, DocumentType
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 from src.semantic_retrieval import chunk_approved_sections
 from src.database import list_retrievable_document_sections
 
@@ -103,6 +104,8 @@ class Checkpoint10ReviewTests(unittest.TestCase):
                 "title": "Atlas PRD",
                 "version": "1.0",
                 "document_status": DocumentStatus.APPROVED,
+                "success_matrix": complete_success_matrix(),
+                "agile_hierarchy": complete_prd_agile_hierarchy("checkpoint10"),
                 "sections": sections,
             },
             self.database_path,

@@ -1,5 +1,6 @@
 """SQLite persistence, migration, and compatibility helpers for PMC."""
 
+import json
 import os
 import sqlite3
 from collections.abc import Iterator, Mapping, Sequence
@@ -7,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Final
+from uuid import uuid4
 
 import pandas as pd
 
@@ -24,14 +26,23 @@ from src.agile import (
 from src.document_templates import document_template
 from src.models import (
     DEFAULT_PRODUCT_STATUS,
+    BRDAcceptanceCriterion,
+    BRDHierarchyRow,
+    BRDRiskRow,
+    DocumentContributor,
+    DocumentMilestone,
     DocumentStatus,
     DocumentType,
     GeneratedArtifact,
     GeneratedArtifactCitation,
     Product,
     ProductDocument,
+    PRDAcceptanceCriterion,
+    PRDAgileArtifact,
     ProductStatus,
     RetrievableDocumentSection,
+    SuccessMatrixEntry,
+    SuccessMatrixStatus,
 )
 from src.validation import (
     DocumentValidationResult,
@@ -48,6 +59,9 @@ SCHEMA_LEGACY: Final[str] = "legacy"
 SCHEMA_PRODUCT_ONLY: Final[str] = "canonical_product_only"
 SCHEMA_DOCUMENT_ONLY: Final[str] = "canonical_documents"
 SCHEMA_PHASE9: Final[str] = "canonical_phase9"
+SCHEMA_CHECKPOINT10: Final[str] = "canonical_checkpoint10"
+SCHEMA_CHECKPOINT11: Final[str] = "canonical_checkpoint11"
+SCHEMA_CHECKPOINT11_HIERARCHY: Final[str] = "canonical_checkpoint11_hierarchy"
 SCHEMA_CANONICAL: Final[str] = "canonical"
 SCHEMA_UNKNOWN: Final[str] = "unknown"
 
@@ -89,6 +103,48 @@ DOCUMENT_SECTION_COLUMNS: Final[tuple[str, ...]] = (
     "document_id",
     "section_key",
     "content",
+)
+
+SUCCESS_MATRIX_COLUMNS: Final[tuple[str, ...]] = (
+    "entry_id",
+    "document_id",
+    "position",
+    "requirement_outcome",
+    "metric",
+    "baseline",
+    "target",
+    "minimum_acceptance_threshold",
+    "measurement_method",
+    "data_source",
+    "evaluation_period",
+    "validation_owner",
+    "status",
+)
+SUCCESS_MATRIX_TABLE: Final[str] = "prd_success_matrix_entries"
+PRD_AGILE_ARTIFACT_TABLE: Final[str] = "prd_agile_artifacts"
+PRD_AGILE_CRITERION_TABLE: Final[str] = "prd_agile_acceptance_criteria"
+PRD_AGILE_ARTIFACT_COLUMNS: Final[tuple[str, ...]] = (
+    "artifact_id",
+    "document_id",
+    "artifact_type",
+    "position",
+    "parent_artifact_id",
+    "title",
+    "description",
+)
+PRD_AGILE_CRITERION_COLUMNS: Final[tuple[str, ...]] = (
+    "criterion_id",
+    "document_id",
+    "artifact_id",
+    "position",
+    "text",
+)
+STRUCTURED_DOCUMENT_ROW_TABLE: Final[str] = "structured_document_rows"
+STRUCTURED_DOCUMENT_ROW_COLUMNS: Final[tuple[str, ...]] = (
+    "row_id", "document_id", "row_type", "position", "payload"
+)
+STRUCTURED_ROW_TYPES: Final[tuple[str, ...]] = (
+    "contributor", "milestone", "brd_hierarchy", "brd_risk"
 )
 
 GENERATED_ARTIFACT_COLUMNS: Final[tuple[str, ...]] = (
@@ -319,6 +375,10 @@ def _table_info(
         "products",
         "documents",
         "document_sections",
+        SUCCESS_MATRIX_TABLE,
+        PRD_AGILE_ARTIFACT_TABLE,
+        PRD_AGILE_CRITERION_TABLE,
+        STRUCTURED_DOCUMENT_ROW_TABLE,
         "generated_artifacts",
         "generated_artifact_citations",
         "agile_generation_runs",
@@ -353,6 +413,11 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
     table_set = set(tables)
     agile_table_set = set(AGILE_TABLES)
     has_exact_agile_tables = agile_table_set.issubset(table_set)
+    has_success_matrix = SUCCESS_MATRIX_TABLE in table_set
+    hierarchy_tables = {PRD_AGILE_ARTIFACT_TABLE, PRD_AGILE_CRITERION_TABLE}
+    has_any_hierarchy = bool(hierarchy_tables & table_set)
+    has_hierarchy = hierarchy_tables.issubset(table_set)
+    has_structured_rows = STRUCTURED_DOCUMENT_ROW_TABLE in table_set
 
     def columns_are(table_name: str, expected: tuple[str, ...]) -> bool:
         return tuple(
@@ -371,8 +436,32 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
     )
     if has_exact_agile_tables and not agile_schema_is_exact:
         return SCHEMA_UNKNOWN
+    success_matrix_is_exact = has_success_matrix and columns_are(
+        SUCCESS_MATRIX_TABLE, SUCCESS_MATRIX_COLUMNS
+    )
+    if has_success_matrix and not success_matrix_is_exact:
+        return SCHEMA_UNKNOWN
+    hierarchy_is_exact = has_hierarchy and all(
+        (
+            columns_are(PRD_AGILE_ARTIFACT_TABLE, PRD_AGILE_ARTIFACT_COLUMNS),
+            columns_are(PRD_AGILE_CRITERION_TABLE, PRD_AGILE_CRITERION_COLUMNS),
+        )
+    )
+    if has_any_hierarchy and not hierarchy_is_exact:
+        return SCHEMA_UNKNOWN
+    structured_rows_are_exact = has_structured_rows and columns_are(
+        STRUCTURED_DOCUMENT_ROW_TABLE, STRUCTURED_DOCUMENT_ROW_COLUMNS
+    )
+    if has_structured_rows and not structured_rows_are_exact:
+        return SCHEMA_UNKNOWN
 
-    base_tables = table_set - agile_table_set if agile_schema_is_exact else table_set
+    base_tables = table_set - (agile_table_set if agile_schema_is_exact else set())
+    if success_matrix_is_exact:
+        base_tables -= {SUCCESS_MATRIX_TABLE}
+    if hierarchy_is_exact:
+        base_tables -= hierarchy_tables
+    if structured_rows_are_exact:
+        base_tables -= {STRUCTURED_DOCUMENT_ROW_TABLE}
     if not tables:
         return SCHEMA_MISSING
     if base_tables == {"products"}:
@@ -426,7 +515,18 @@ def _detect_schema(connection: sqlite3.Connection) -> str:
             and artifact_columns == GENERATED_ARTIFACT_COLUMNS
             and citation_columns == GENERATED_CITATION_COLUMNS
         ):
-            return SCHEMA_CANONICAL if agile_schema_is_exact else SCHEMA_PHASE9
+            if (
+                agile_schema_is_exact and success_matrix_is_exact
+                and hierarchy_is_exact and structured_rows_are_exact
+            ):
+                return SCHEMA_CANONICAL
+            if agile_schema_is_exact and success_matrix_is_exact and hierarchy_is_exact:
+                return SCHEMA_CHECKPOINT11_HIERARCHY
+            if agile_schema_is_exact and success_matrix_is_exact:
+                return SCHEMA_CHECKPOINT11
+            if agile_schema_is_exact:
+                return SCHEMA_CHECKPOINT10
+            return SCHEMA_PHASE9
     return SCHEMA_UNKNOWN
 
 
@@ -535,6 +635,111 @@ def _create_document_tables(connection: sqlite3.Connection) -> None:
         CREATE INDEX idx_documents_product_id
         ON documents (product_id, id DESC)
         """
+    )
+
+
+def _create_success_matrix_table(connection: sqlite3.Connection) -> None:
+    """Add ordered, structured PRD success outcomes without changing documents."""
+
+    statuses = ", ".join(f"'{status.value}'" for status in SuccessMatrixStatus)
+    connection.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {SUCCESS_MATRIX_TABLE} (
+            entry_id TEXT PRIMARY KEY
+                CHECK (length(trim(entry_id)) BETWEEN 1 AND 128),
+            document_id INTEGER NOT NULL,
+            position INTEGER NOT NULL CHECK (position > 0),
+            requirement_outcome TEXT NOT NULL CHECK (length(requirement_outcome) <= 2000),
+            metric TEXT NOT NULL CHECK (length(metric) <= 2000),
+            baseline TEXT CHECK (baseline IS NULL OR length(baseline) <= 2000),
+            target TEXT NOT NULL CHECK (length(target) <= 2000),
+            minimum_acceptance_threshold TEXT NOT NULL CHECK (length(minimum_acceptance_threshold) <= 2000),
+            measurement_method TEXT NOT NULL CHECK (length(measurement_method) <= 2000),
+            data_source TEXT NOT NULL CHECK (length(data_source) <= 2000),
+            evaluation_period TEXT NOT NULL CHECK (length(evaluation_period) <= 2000),
+            validation_owner TEXT NOT NULL CHECK (length(validation_owner) <= 2000),
+            status TEXT NOT NULL CHECK (status = '' OR status IN ({statuses})),
+            UNIQUE (document_id, position),
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        f"""CREATE INDEX IF NOT EXISTS idx_prd_success_matrix_document
+        ON {SUCCESS_MATRIX_TABLE} (document_id, position)"""
+    )
+
+
+def _create_prd_agile_hierarchy_tables(connection: sqlite3.Connection) -> None:
+    """Add PRD-owned authoring records using the shared Agile type hierarchy."""
+
+    artifact_types = ", ".join(f"'{item.value}'" for item in AgileArtifactType)
+    connection.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {PRD_AGILE_ARTIFACT_TABLE} (
+            artifact_id TEXT NOT NULL CHECK (length(trim(artifact_id)) BETWEEN 1 AND 128),
+            document_id INTEGER NOT NULL,
+            artifact_type TEXT NOT NULL CHECK (artifact_type IN ({artifact_types})),
+            position INTEGER NOT NULL CHECK (position > 0),
+            parent_artifact_id TEXT,
+            title TEXT NOT NULL CHECK (length(title) <= 200),
+            description TEXT NOT NULL CHECK (length(description) <= 10000),
+            PRIMARY KEY (document_id, artifact_id),
+            UNIQUE (document_id, artifact_type, position),
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+            FOREIGN KEY (document_id, parent_artifact_id)
+                REFERENCES {PRD_AGILE_ARTIFACT_TABLE}(document_id, artifact_id)
+                DEFERRABLE INITIALLY DEFERRED
+        )
+        """
+    )
+    connection.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {PRD_AGILE_CRITERION_TABLE} (
+            criterion_id TEXT NOT NULL CHECK (length(trim(criterion_id)) BETWEEN 1 AND 128),
+            document_id INTEGER NOT NULL,
+            artifact_id TEXT NOT NULL,
+            position INTEGER NOT NULL CHECK (position > 0),
+            text TEXT NOT NULL CHECK (length(text) <= 2000),
+            PRIMARY KEY (document_id, criterion_id),
+            UNIQUE (document_id, artifact_id, position),
+            FOREIGN KEY (document_id, artifact_id)
+                REFERENCES {PRD_AGILE_ARTIFACT_TABLE}(document_id, artifact_id)
+                ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        f"""CREATE INDEX IF NOT EXISTS idx_prd_agile_artifact_order
+        ON {PRD_AGILE_ARTIFACT_TABLE} (document_id, artifact_type, position)"""
+    )
+    connection.execute(
+        f"""CREATE INDEX IF NOT EXISTS idx_prd_agile_criterion_order
+        ON {PRD_AGILE_CRITERION_TABLE} (document_id, artifact_id, position)"""
+    )
+
+
+def _create_structured_document_row_table(connection: sqlite3.Connection) -> None:
+    """Add ordered structured corrections without changing legacy section text."""
+
+    row_types = ", ".join(f"'{row_type}'" for row_type in STRUCTURED_ROW_TYPES)
+    connection.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {STRUCTURED_DOCUMENT_ROW_TABLE} (
+            row_id TEXT NOT NULL CHECK (length(trim(row_id)) BETWEEN 1 AND 128),
+            document_id INTEGER NOT NULL,
+            row_type TEXT NOT NULL CHECK (row_type IN ({row_types})),
+            position INTEGER NOT NULL CHECK (position > 0),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            PRIMARY KEY (document_id, row_id),
+            UNIQUE (document_id, row_type, position),
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        f"""CREATE INDEX IF NOT EXISTS idx_structured_document_row_order
+        ON {STRUCTURED_DOCUMENT_ROW_TABLE} (document_id, row_type, position, row_id)"""
     )
 
 
@@ -857,6 +1062,9 @@ def _add_agile_schema(connection: sqlite3.Connection) -> None:
         for table in preserved_tables
     }
     _create_agile_tables(connection)
+    _create_success_matrix_table(connection)
+    _create_prd_agile_hierarchy_tables(connection)
+    _create_structured_document_row_table(connection)
     after = {
         table: tuple(
             tuple(row)
@@ -916,6 +1124,9 @@ def initialize_database(
                 _create_document_tables(connection)
                 _create_generated_artifact_tables(connection)
                 _create_agile_tables(connection)
+                _create_success_matrix_table(connection)
+                _create_prd_agile_hierarchy_tables(connection)
+                _create_structured_document_row_table(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -927,6 +1138,9 @@ def initialize_database(
                 _create_generated_artifact_tables(connection)
                 if not _agile_tables_exist(connection):
                     _create_agile_tables(connection)
+                _create_success_matrix_table(connection)
+                _create_prd_agile_hierarchy_tables(connection)
+                _create_structured_document_row_table(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -937,6 +1151,9 @@ def initialize_database(
                 _create_generated_artifact_tables(connection)
                 if not _agile_tables_exist(connection):
                     _create_agile_tables(connection)
+                _create_success_matrix_table(connection)
+                _create_prd_agile_hierarchy_tables(connection)
+                _create_structured_document_row_table(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -945,6 +1162,33 @@ def initialize_database(
             connection.execute("BEGIN IMMEDIATE")
             try:
                 _add_agile_schema(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_CHECKPOINT10:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _create_success_matrix_table(connection)
+                _create_prd_agile_hierarchy_tables(connection)
+                _create_structured_document_row_table(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_CHECKPOINT11:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _create_prd_agile_hierarchy_tables(connection)
+                _create_structured_document_row_table(connection)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        elif schema == SCHEMA_CHECKPOINT11_HIERARCHY:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                _create_structured_document_row_table(connection)
                 connection.commit()
             except Exception:
                 connection.rollback()
@@ -964,6 +1208,9 @@ def _require_canonical_schema(connection: sqlite3.Connection) -> None:
         SCHEMA_PRODUCT_ONLY,
         SCHEMA_DOCUMENT_ONLY,
         SCHEMA_PHASE9,
+        SCHEMA_CHECKPOINT10,
+        SCHEMA_CHECKPOINT11,
+        SCHEMA_CHECKPOINT11_HIERARCHY,
         SCHEMA_CANONICAL,
     }:
         raise DatabaseSchemaError(
@@ -973,7 +1220,14 @@ def _require_canonical_schema(connection: sqlite3.Connection) -> None:
 
 def _require_document_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema not in {SCHEMA_DOCUMENT_ONLY, SCHEMA_PHASE9, SCHEMA_CANONICAL}:
+    if schema not in {
+        SCHEMA_DOCUMENT_ONLY,
+        SCHEMA_PHASE9,
+        SCHEMA_CHECKPOINT10,
+        SCHEMA_CHECKPOINT11,
+        SCHEMA_CHECKPOINT11_HIERARCHY,
+        SCHEMA_CANONICAL,
+    }:
         raise DatabaseSchemaError(
             f"Phase 8 document schema required; found {schema}."
         )
@@ -981,7 +1235,13 @@ def _require_document_schema(connection: sqlite3.Connection) -> None:
 
 def _require_generated_artifact_schema(connection: sqlite3.Connection) -> None:
     schema = _detect_schema(connection)
-    if schema not in {SCHEMA_PHASE9, SCHEMA_CANONICAL}:
+    if schema not in {
+        SCHEMA_PHASE9,
+        SCHEMA_CHECKPOINT10,
+        SCHEMA_CHECKPOINT11,
+        SCHEMA_CHECKPOINT11_HIERARCHY,
+        SCHEMA_CANONICAL,
+    }:
         raise DatabaseSchemaError(
             f"Generated artifact schema required; found {schema}."
         )
@@ -1342,11 +1602,393 @@ def _select_document_sections(
     return {row["section_key"]: row["content"] for row in rows}
 
 
+def _select_success_matrix(
+    connection: sqlite3.Connection,
+    document_id: int,
+) -> tuple[SuccessMatrixEntry, ...]:
+    rows = connection.execute(
+        f"""
+        SELECT {", ".join(SUCCESS_MATRIX_COLUMNS)}
+        FROM {SUCCESS_MATRIX_TABLE}
+        WHERE document_id = ?
+        ORDER BY position, entry_id
+        """,
+        (document_id,),
+    ).fetchall()
+    return tuple(
+        SuccessMatrixEntry(
+            entry_id=row["entry_id"],
+            position=int(row["position"]),
+            requirement_outcome=row["requirement_outcome"],
+            metric=row["metric"],
+            baseline=row["baseline"],
+            target=row["target"],
+            minimum_acceptance_threshold=row["minimum_acceptance_threshold"],
+            measurement_method=row["measurement_method"],
+            data_source=row["data_source"],
+            evaluation_period=row["evaluation_period"],
+            validation_owner=row["validation_owner"],
+            status=(SuccessMatrixStatus(row["status"]) if row["status"] else None),
+        )
+        for row in rows
+    )
+
+
+def _select_prd_agile_hierarchy(
+    connection: sqlite3.Connection,
+    document_id: int,
+) -> tuple[PRDAgileArtifact, ...]:
+    artifact_rows = connection.execute(
+        f"""
+        SELECT {", ".join(PRD_AGILE_ARTIFACT_COLUMNS)}
+        FROM {PRD_AGILE_ARTIFACT_TABLE}
+        WHERE document_id = ?
+        ORDER BY CASE artifact_type
+            WHEN 'epic' THEN 1 WHEN 'capability' THEN 2
+            WHEN 'feature' THEN 3 ELSE 4 END,
+            position, artifact_id
+        """,
+        (document_id,),
+    ).fetchall()
+    criterion_rows = connection.execute(
+        f"""
+        SELECT {", ".join(PRD_AGILE_CRITERION_COLUMNS)}
+        FROM {PRD_AGILE_CRITERION_TABLE}
+        WHERE document_id = ?
+        ORDER BY artifact_id, position, criterion_id
+        """,
+        (document_id,),
+    ).fetchall()
+    criteria_by_artifact: dict[str, list[PRDAcceptanceCriterion]] = {}
+    for row in criterion_rows:
+        criteria_by_artifact.setdefault(row["artifact_id"], []).append(
+            PRDAcceptanceCriterion(
+                criterion_id=row["criterion_id"],
+                position=int(row["position"]),
+                text=row["text"],
+            )
+        )
+    return tuple(
+        PRDAgileArtifact(
+            artifact_id=row["artifact_id"],
+            artifact_type=AgileArtifactType(row["artifact_type"]),
+            position=int(row["position"]),
+            title=row["title"],
+            description=row["description"],
+            parent_artifact_id=row["parent_artifact_id"],
+            acceptance_criteria=tuple(criteria_by_artifact.get(row["artifact_id"], ())),
+        )
+        for row in artifact_rows
+    )
+
+
+def _prd_agile_hierarchy_data(
+    artifacts: Sequence[PRDAgileArtifact],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "artifact_id": artifact.artifact_id,
+            "artifact_type": artifact.artifact_type,
+            "position": artifact.position,
+            "title": artifact.title,
+            "description": artifact.description,
+            "parent_artifact_id": artifact.parent_artifact_id,
+            "acceptance_criteria": [
+                {
+                    "criterion_id": criterion.criterion_id,
+                    "position": criterion.position,
+                    "text": criterion.text,
+                }
+                for criterion in artifact.acceptance_criteria
+            ],
+        }
+        for artifact in artifacts
+    ]
+
+
+def _replace_prd_agile_hierarchy(
+    connection: sqlite3.Connection,
+    document_id: int,
+    artifacts: Sequence[Mapping[str, object]],
+) -> None:
+    connection.execute(
+        f"DELETE FROM {PRD_AGILE_CRITERION_TABLE} WHERE document_id = ?",
+        (document_id,),
+    )
+    connection.execute(
+        f"DELETE FROM {PRD_AGILE_ARTIFACT_TABLE} WHERE document_id = ?",
+        (document_id,),
+    )
+    prepared: list[tuple[Mapping[str, object], str]] = []
+    supplied_to_stable: dict[str, str] = {}
+    for artifact in artifacts:
+        supplied_id = str(artifact.get("artifact_id") or "")
+        stable_id = supplied_id or f"prd-agile-{uuid4().hex}"
+        if supplied_id:
+            supplied_to_stable[supplied_id] = stable_id
+        prepared.append((artifact, stable_id))
+    for artifact, stable_id in prepared:
+        raw_parent = artifact.get("parent_artifact_id")
+        parent_id = supplied_to_stable.get(str(raw_parent), raw_parent)
+        artifact_type = artifact["artifact_type"]
+        connection.execute(
+            f"""
+            INSERT INTO {PRD_AGILE_ARTIFACT_TABLE} (
+                {", ".join(PRD_AGILE_ARTIFACT_COLUMNS)}
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                stable_id,
+                document_id,
+                artifact_type.value if isinstance(artifact_type, AgileArtifactType) else artifact_type,
+                artifact["position"],
+                parent_id,
+                artifact["title"],
+                artifact["description"],
+            ),
+        )
+        for criterion in artifact["acceptance_criteria"]:
+            criterion_id = str(
+                criterion.get("criterion_id") or f"prd-criterion-{uuid4().hex}"
+            )
+            connection.execute(
+                f"""
+                INSERT INTO {PRD_AGILE_CRITERION_TABLE} (
+                    {", ".join(PRD_AGILE_CRITERION_COLUMNS)}
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    criterion_id,
+                    document_id,
+                    stable_id,
+                    criterion["position"],
+                    criterion["text"],
+                ),
+            )
+
+
+def _success_matrix_data(
+    entries: Sequence[SuccessMatrixEntry],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "entry_id": entry.entry_id,
+            "position": entry.position,
+            "requirement_outcome": entry.requirement_outcome,
+            "metric": entry.metric,
+            "baseline": entry.baseline,
+            "target": entry.target,
+            "minimum_acceptance_threshold": entry.minimum_acceptance_threshold,
+            "measurement_method": entry.measurement_method,
+            "data_source": entry.data_source,
+            "evaluation_period": entry.evaluation_period,
+            "validation_owner": entry.validation_owner,
+            "status": entry.status.value if entry.status is not None else "",
+        }
+        for entry in entries
+    ]
+
+
+def _replace_success_matrix(
+    connection: sqlite3.Connection,
+    document_id: int,
+    entries: Sequence[Mapping[str, object]],
+) -> None:
+    connection.execute(
+        f"DELETE FROM {SUCCESS_MATRIX_TABLE} WHERE document_id = ?",
+        (document_id,),
+    )
+    connection.executemany(
+        f"""
+        INSERT INTO {SUCCESS_MATRIX_TABLE} (
+            {", ".join(SUCCESS_MATRIX_COLUMNS)}
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                str(entry.get("entry_id") or f"success-{uuid4().hex}"),
+                document_id,
+                int(entry["position"]),
+                entry["requirement_outcome"],
+                entry["metric"],
+                entry["baseline"],
+                entry["target"],
+                entry["minimum_acceptance_threshold"],
+                entry["measurement_method"],
+                entry["data_source"],
+                entry["evaluation_period"],
+                entry["validation_owner"],
+                (
+                    entry["status"].value
+                    if isinstance(entry["status"], SuccessMatrixStatus)
+                    else entry["status"]
+                ),
+            )
+            for entry in entries
+        ),
+    )
+
+
+def _select_structured_payloads(
+    connection: sqlite3.Connection, document_id: int, row_type: str
+) -> list[dict[str, object]]:
+    rows = connection.execute(
+        f"""SELECT row_id, position, payload FROM {STRUCTURED_DOCUMENT_ROW_TABLE}
+        WHERE document_id = ? AND row_type = ?
+        ORDER BY position, row_id""",
+        (document_id, row_type),
+    ).fetchall()
+    return [
+        {"row_id": row["row_id"], "position": int(row["position"]), **json.loads(row["payload"])}
+        for row in rows
+    ]
+
+
+def _criteria_from_payload(rows: object) -> tuple[BRDAcceptanceCriterion, ...]:
+    return tuple(
+        BRDAcceptanceCriterion(
+            criterion_id=str(row["criterion_id"]),
+            position=int(row["position"]),
+            text=str(row["text"]),
+        )
+        for row in rows if isinstance(row, Mapping)
+    ) if isinstance(rows, list) else ()
+
+
+def _select_structured_document_rows(
+    connection: sqlite3.Connection, document_id: int
+) -> tuple[
+    tuple[DocumentContributor, ...], tuple[DocumentMilestone, ...],
+    tuple[BRDHierarchyRow, ...], tuple[BRDRiskRow, ...],
+]:
+    contributors = tuple(
+        DocumentContributor(
+            entry_id=str(row["row_id"]), position=int(row["position"]),
+            contributor_name=str(row.get("contributor_name", "")),
+            contributor_role=str(row.get("contributor_role", "")),
+        )
+        for row in _select_structured_payloads(connection, document_id, "contributor")
+    )
+    milestones = tuple(
+        DocumentMilestone(
+            entry_id=str(row["row_id"]), position=int(row["position"]),
+            date=str(row.get("date", "")), milestone=str(row.get("milestone", "")),
+        )
+        for row in _select_structured_payloads(connection, document_id, "milestone")
+    )
+    hierarchy = tuple(
+        BRDHierarchyRow(
+            row_id=str(row["row_id"]), position=int(row["position"]),
+            epic_id=str(row.get("epic_id", "")), epic=str(row.get("epic", "")),
+            epic_acceptance_criteria=_criteria_from_payload(row.get("epic_acceptance_criteria")),
+            capability_id=str(row.get("capability_id", "")),
+            capability_parent_id=str(row.get("capability_parent_id", "")),
+            capability=str(row.get("capability", "")),
+            capability_acceptance_criteria=_criteria_from_payload(row.get("capability_acceptance_criteria")),
+            feature_id=str(row.get("feature_id", "")),
+            feature_parent_id=str(row.get("feature_parent_id", "")),
+            feature=str(row.get("feature", "")),
+            feature_acceptance_criteria=_criteria_from_payload(row.get("feature_acceptance_criteria")),
+            user_story_id=str(row.get("user_story_id", "")),
+            user_story_parent_id=str(row.get("user_story_parent_id", "")),
+            user_story=str(row.get("user_story", "")),
+            user_story_acceptance_criteria=_criteria_from_payload(row.get("user_story_acceptance_criteria")),
+        )
+        for row in _select_structured_payloads(connection, document_id, "brd_hierarchy")
+    )
+    risks = tuple(
+        BRDRiskRow(
+            entry_id=str(row["row_id"]), position=int(row["position"]),
+            business_risk=str(row.get("business_risk", "")),
+            mitigation_strategy=str(row.get("mitigation_strategy", "")),
+        )
+        for row in _select_structured_payloads(connection, document_id, "brd_risk")
+    )
+    return contributors, milestones, hierarchy, risks
+
+
+def _structured_document_data(document: ProductDocument) -> dict[str, list[dict[str, object]]]:
+    def criteria(values: Sequence[BRDAcceptanceCriterion]) -> list[dict[str, object]]:
+        return [
+            {"criterion_id": item.criterion_id, "position": item.position, "text": item.text}
+            for item in values
+        ]
+    return {
+        "contributors": [
+            {"entry_id": row.entry_id, "position": row.position,
+             "contributor_name": row.contributor_name, "contributor_role": row.contributor_role}
+            for row in document.contributors
+        ],
+        "key_dates_milestones": [
+            {"entry_id": row.entry_id, "position": row.position, "date": row.date, "milestone": row.milestone}
+            for row in document.key_dates_milestones
+        ],
+        "brd_hierarchy": [
+            {
+                "row_id": row.row_id, "position": row.position,
+                "epic_id": row.epic_id, "epic": row.epic,
+                "epic_acceptance_criteria": criteria(row.epic_acceptance_criteria),
+                "capability_id": row.capability_id, "capability_parent_id": row.capability_parent_id,
+                "capability": row.capability,
+                "capability_acceptance_criteria": criteria(row.capability_acceptance_criteria),
+                "feature_id": row.feature_id, "feature_parent_id": row.feature_parent_id,
+                "feature": row.feature,
+                "feature_acceptance_criteria": criteria(row.feature_acceptance_criteria),
+                "user_story_id": row.user_story_id, "user_story_parent_id": row.user_story_parent_id,
+                "user_story": row.user_story,
+                "user_story_acceptance_criteria": criteria(row.user_story_acceptance_criteria),
+            }
+            for row in document.brd_hierarchy
+        ],
+        "brd_risks": [
+            {"entry_id": row.entry_id, "position": row.position,
+             "business_risk": row.business_risk, "mitigation_strategy": row.mitigation_strategy}
+            for row in document.brd_risks
+        ],
+    }
+
+
+def _replace_structured_document_rows(
+    connection: sqlite3.Connection, document_id: int, data: Mapping[str, object]
+) -> None:
+    connection.execute(
+        f"DELETE FROM {STRUCTURED_DOCUMENT_ROW_TABLE} WHERE document_id = ?",
+        (document_id,),
+    )
+    specs = (
+        ("contributors", "contributor", "entry_id", "document-contributor"),
+        ("key_dates_milestones", "milestone", "entry_id", "document-milestone"),
+        ("brd_hierarchy", "brd_hierarchy", "row_id", "brd-hierarchy"),
+        ("brd_risks", "brd_risk", "entry_id", "brd-risk"),
+    )
+    for field, row_type, id_field, prefix in specs:
+        rows = data.get(field, ())
+        if not isinstance(rows, Sequence):
+            continue
+        for row in rows:
+            if not isinstance(row, Mapping):
+                continue
+            stable_id = str(row.get(id_field) or f"{prefix}-{uuid4().hex}")
+            payload = {
+                key: value.value if hasattr(value, "value") else value
+                for key, value in row.items()
+                if key not in {id_field, "position"}
+            }
+            connection.execute(
+                f"""INSERT INTO {STRUCTURED_DOCUMENT_ROW_TABLE}
+                ({", ".join(STRUCTURED_DOCUMENT_ROW_COLUMNS)}) VALUES (?, ?, ?, ?, ?)""",
+                (stable_id, document_id, row_type, int(row["position"]), json.dumps(payload, sort_keys=True)),
+            )
+
+
 def _row_to_document(
     connection: sqlite3.Connection,
     row: sqlite3.Row,
 ) -> ProductDocument:
     document_id = int(row["id"])
+    contributors, milestones, brd_hierarchy, brd_risks = _select_structured_document_rows(
+        connection, document_id
+    )
     return ProductDocument(
         id=document_id,
         product_id=row["product_id"],
@@ -1357,6 +1999,12 @@ def _row_to_document(
         sections=_select_document_sections(connection, document_id),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+        success_matrix=_select_success_matrix(connection, document_id),
+        agile_hierarchy=_select_prd_agile_hierarchy(connection, document_id),
+        contributors=contributors,
+        key_dates_milestones=milestones,
+        brd_hierarchy=brd_hierarchy,
+        brd_risks=brd_risks,
     )
 
 
@@ -1428,6 +2076,9 @@ def create_document(
                 for definition in document_template(data["document_type"])
             ),
         )
+        _replace_success_matrix(connection, document_id, data["success_matrix"])
+        _replace_prd_agile_hierarchy(connection, document_id, data["agile_hierarchy"])
+        _replace_structured_document_rows(connection, document_id, data)
         document = _select_document_by_id(connection, document_id)
 
     if document is None:
@@ -1592,7 +2243,18 @@ def update_document(
             "version": existing.version,
             "document_status": existing.document_status,
             "sections": sections,
+            "success_matrix": _success_matrix_data(existing.success_matrix),
+            "agile_hierarchy": _prd_agile_hierarchy_data(existing.agile_hierarchy),
         }
+        structured_existing = _structured_document_data(existing)
+        id_fields = {
+            "contributors": "entry_id", "key_dates_milestones": "entry_id",
+            "brd_hierarchy": "row_id", "brd_risks": "entry_id",
+        }
+        for field, rows in structured_existing.items():
+            id_field = id_fields[field]
+            if any(not str(row.get(id_field, "")).startswith("legacy-") for row in rows):
+                merged[field] = rows
         merged.update(supplied_updates)
         result = _normalized_document_or_raise(merged)
         data = result.normalized_data
@@ -1624,6 +2286,9 @@ def update_document(
                 for definition in document_template(existing.document_type)
             ),
         )
+        _replace_success_matrix(connection, document_id, data["success_matrix"])
+        _replace_prd_agile_hierarchy(connection, document_id, data["agile_hierarchy"])
+        _replace_structured_document_rows(connection, document_id, data)
         return _select_document_by_id(connection, document_id)
 
 
@@ -2425,6 +3090,9 @@ def migrate_document_database(
             SCHEMA_PRODUCT_ONLY,
             SCHEMA_DOCUMENT_ONLY,
             SCHEMA_PHASE9,
+            SCHEMA_CHECKPOINT10,
+            SCHEMA_CHECKPOINT11,
+            SCHEMA_CHECKPOINT11_HIERARCHY,
         }:
             raise DatabaseSchemaError(
                 "Document migration requires the product-only canonical schema."
@@ -2437,6 +3105,9 @@ def migrate_document_database(
                 _create_generated_artifact_tables(connection)
             if not _agile_tables_exist(connection):
                 _create_agile_tables(connection)
+            _create_success_matrix_table(connection)
+            _create_prd_agile_hierarchy_tables(connection)
+            _create_structured_document_row_table(connection)
             connection.commit()
         except Exception:
             connection.rollback()
@@ -2580,6 +3251,9 @@ def migrate_legacy_database(
             _create_document_tables(connection)
             _create_generated_artifact_tables(connection)
             _create_agile_tables(connection)
+            _create_success_matrix_table(connection)
+            _create_prd_agile_hierarchy_tables(connection)
+            _create_structured_document_row_table(connection)
 
             if _detect_schema(connection) != SCHEMA_CANONICAL:
                 raise MigrationVerificationError(

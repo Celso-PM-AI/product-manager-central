@@ -19,6 +19,9 @@ flowchart LR
     CONTROL --> AGEN[Scoped Agile generation<br/>agile_generation.py]
     AGEN --> CLAIM[Claim support assessment<br/>claim_support.py]
     UI --> DOCS[BRD and PRD templates<br/>document_templates.py]
+    DOCS --> MATRIX[Ordered PRD Success Matrix<br/>separate child records]
+    DOCS --> PRDAGILE[PRD Agile hierarchy<br/>Epic → Capability → Feature → User Story]
+    PRDAGILE --> PRDAC[Independent ordered criteria<br/>owned at every level]
     UI --> PROMPTS[Approved prompt catalog<br/>prompt_catalog.py]
     CORE --> DB[SQLite persistence<br/>database.py]
     AGILE --> DB
@@ -30,9 +33,35 @@ flowchart LR
 
 The interface owns navigation and transient workflow state. Models and
 centralized validation define the product and document contracts. Templates
-provide stable BRD/PRD sections and controlled prepopulation. Parameterized
+provide stable, grouped BRD/PRD sections and controlled prepopulation. The PRD
+Success Matrix is a separate structured child collection rather than a document
+section or acceptance-criterion list. Parameterized
 database functions own initialization, migrations, persistence, search,
 dashboard metrics, and retrieval-eligible document reads.
+
+Checkpoint 11 adds `prd_success_matrix_entries` without rewriting documents or
+sections. Entry IDs are stable, positions are unique per PRD, and reads order by
+position. Draft rows may persist incomplete values; Approved PRDs require the
+measurable validation contract. Existing Checkpoint 10 databases are detected
+and upgraded transactionally with an empty matrix table, preserving all prior
+rows exactly. Temperature, Top-P, GEPA, and hallucination flags are not PRD
+fields; grounding quality is represented as a measurable outcome.
+
+The additive `prd_agile_artifacts` and `prd_agile_acceptance_criteria` tables
+store repeatable PRD authoring records separately from accepted generated Agile
+artifacts. They reuse the shared artifact types and parent map, retain
+document-scoped stable IDs and deterministic ordering, and initialize empty for
+existing PRDs without changing legacy user-story, functional-requirement, or
+acceptance-criteria section text.
+
+The additive `structured_document_rows` table stores four ordered row types:
+PRD contributors, PRD key dates/milestones, BRD hierarchy chains, and linked
+BRD risk/mitigation pairs. A document-scoped stable row ID, row type, position,
+and validated deterministic JSON payload keep the schema additive while typed
+models and centralized validation provide the application contract. Existing
+section rows remain sources for backward-compatible editor initialization.
+BRD acceptance criteria remain owned by their original Epic, Capability,
+Feature, or User Story and are never copied between levels.
 
 ## Typed Agile contracts and accepted storage
 
@@ -136,6 +165,13 @@ session-state bypass and check/save races while retaining Checkpoint 7 rollback
 and idempotency. Only accepted artifacts, criteria, hierarchy, provenance,
 revision, prompt version, profile, timestamps, and source snapshots persist;
 there is no Checkpoint 10 schema migration.
+
+Checkpoint 11 exposes this lifecycle through the AI Assistant. UI controls
+select only the current Product's Approved sources and approved profiles;
+retrieval Top-K stays separate. The UI displays prompt identity, hierarchy,
+artifact- and criterion-level citations, claim findings, gaps, proposals, and
+every acceptance gate. It delegates revision, rejection, and acceptance to
+`agile_review.py`; it does not reproduce trust decisions in `app.py`.
 
 The database is local application data. It is never allowlisted into a release
 archive, and fictional samples are loaded only after an explicit user action.

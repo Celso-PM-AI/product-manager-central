@@ -13,6 +13,10 @@ from src.validation import (
     DOCUMENT_VERSION_MAX_LENGTH,
     validate_document,
 )
+from tests.success_matrix_fixtures import (
+    complete_prd_agile_hierarchy,
+    complete_success_matrix,
+)
 
 
 def valid_document_data(
@@ -65,6 +69,16 @@ class DocumentValidationTests(unittest.TestCase):
                         document_type,
                         document_status="approved",
                         sections=sections,
+                        success_matrix=(
+                            complete_success_matrix()
+                            if document_type is DocumentType.PRD
+                            else []
+                        ),
+                        agile_hierarchy=(
+                            complete_prd_agile_hierarchy()
+                            if document_type is DocumentType.PRD
+                            else []
+                        ),
                     )
                 )
                 self.assertTrue(result.is_valid)

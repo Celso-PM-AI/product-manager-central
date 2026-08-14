@@ -36,6 +36,7 @@ from src.grounded_generation import (
     GroundedGenerationState,
 )
 from src.models import DocumentStatus, DocumentType
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 from src.prompt_catalog import GROUNDED_DRAFT_PROMPT_ID, AssistantTask
 
 
@@ -65,6 +66,8 @@ class GeneratedContentTestCase(unittest.TestCase):
                 "title": "Approved Atlas PRD",
                 "version": "1.0",
                 "document_status": DocumentStatus.APPROVED,
+                "success_matrix": complete_success_matrix(),
+                "agile_hierarchy": complete_prd_agile_hierarchy("generated-content"),
                 "sections": {
                     section.key: f"Approved source for {section.label}."
                     for section in document_template(DocumentType.PRD)

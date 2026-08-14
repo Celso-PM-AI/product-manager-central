@@ -3,9 +3,24 @@
 import os
 import sqlite3
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Final
+from uuid import uuid4
 
 import streamlit as st
+
+from src.agile import AgileArtifactType, AgileReviewState, PARENT_TYPE
+from src.agile_generation import (
+    AgileGenerationError,
+    AgileGenerationRequest,
+    AgileGenerationState,
+    AgileParentContext,
+    GroundedAgileGenerationService,
+    SourceScopedAgileRetriever,
+)
+from src.agile_profiles import AGILE_PROFILE_DEFINITIONS, DEFAULT_AGILE_PROFILE
+from src.agile_prompt_catalog import AgilePromptTask, get_agile_prompt
+from src.agile_review import AgileReviewBatch, AgileReviewError, AgileReviewService
 
 from src.ai_service import (
     AIConfigurationError,
@@ -28,8 +43,10 @@ from src.database import (
     get_product,
     initialize_database,
     list_documents_for_product,
+    list_accepted_agile_batches_for_product,
     list_generated_artifacts_for_product,
     list_products,
+    list_retrievable_document_sections,
     search_products,
     update_document,
     update_product,
@@ -57,7 +74,9 @@ from src.models import (
     Product,
     ProductDocument,
     ProductStatus,
+    SuccessMatrixStatus,
 )
+from src.model_controls import ModelCapabilities, RetrievalControls
 from src.prompt_catalog import (
     AssistantTask,
     PromptCatalogError,
@@ -105,6 +124,9 @@ DOCUMENT_PREVIEW_MODE: Final[str] = "document_preview"
 DOCUMENT_EDIT_MODE: Final[str] = "document_edit"
 GENERATED_REVIEW_STATE_KEY: Final[str] = "generated_content_review"
 GENERATION_SUBMISSION_STATE_KEY: Final[str] = "grounded_generation_submission"
+AGILE_REVIEW_STATE_KEY: Final[str] = "agile_review_batch"
+AGILE_SUBMISSION_STATE_KEY: Final[str] = "agile_generation_submission"
+LAST_NAVIGATION_KEY: Final[str] = "_last_navigation_section"
 
 
 def display_generation_citations(review: GeneratedContentReview) -> None:
@@ -210,10 +232,10 @@ def render_generated_content_review(review: GeneratedContentReview) -> None:
     st.rerun()
 
 
-def render_ai_assistant() -> None:
-    """Render grounded generation followed by explicit human acceptance."""
+def render_general_assistant() -> None:
+    """Render the original grounded-draft workflow."""
 
-    st.header("AI Assistant")
+    st.subheader("General grounded draft")
     st.caption(
         "Generate a temporary draft grounded only in Approved BRDs and PRDs. "
         "Draft documents are excluded."
@@ -381,6 +403,441 @@ def render_ai_assistant() -> None:
         "status": "completed",
     }
     render_generated_content_review(review)
+
+
+AGILE_TYPE_OPTIONS: Final[tuple[tuple[str, AgilePromptTask, AgileArtifactType], ...]] = (
+    ("Epic", AgilePromptTask.GENERATE_EPIC, AgileArtifactType.EPIC),
+    ("Capability", AgilePromptTask.GENERATE_CAPABILITY, AgileArtifactType.CAPABILITY),
+    ("Feature", AgilePromptTask.GENERATE_FEATURE, AgileArtifactType.FEATURE),
+    ("User Story", AgilePromptTask.GENERATE_USER_STORY, AgileArtifactType.USER_STORY),
+    (
+        "Structured acceptance criteria",
+        AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA,
+        AgileArtifactType.USER_STORY,
+    ),
+)
+
+
+def _agile_runtime() -> tuple[SourceScopedAgileRetriever, OpenAIService]:
+    ai_service = OpenAIService.from_environment()
+    retriever = SourceScopedAgileRetriever(
+        lambda: list_retrievable_document_sections(APP_DATABASE_FILE),
+        ai_service,
+    )
+    return retriever, ai_service
+
+
+class _ReviewOnlyEmbeddingProvider:
+    """Guard against accidentally performing retrieval during review actions."""
+
+    def create_embeddings(self, texts: list[str]) -> list[tuple[float, ...]]:
+        raise RuntimeError("Review revalidation must not request new embeddings.")
+
+
+def _agile_review_retriever() -> SourceScopedAgileRetriever:
+    """Build the read-only revalidator without requiring provider credentials."""
+
+    return SourceScopedAgileRetriever(
+        lambda: list_retrievable_document_sections(APP_DATABASE_FILE),
+        _ReviewOnlyEmbeddingProvider(),
+    )
+
+
+def _display_agile_sources(sources: tuple[object, ...]) -> None:
+    for source in sources:
+        st.markdown(
+            f"- `{source.reference_id}` — {source.document_title} "
+            f"(document ID {source.document_id}) · {source.document_type.value} · "
+            f"{source.section_title}"
+        )
+
+
+def render_agile_review(review: AgileReviewBatch) -> None:
+    """Show structured output, traceability, gates, and explicit review actions."""
+
+    st.divider()
+    st.subheader("Agile generation review")
+    st.caption(
+        f"Review {review.review_id} · revision {review.revision} · "
+        f"{review.review_state.value.replace('_', ' ').title()} · "
+        f"prompt {review.request.prompt_id} v{review.request.prompt_version} · "
+        f"profile {review.original_generation.profile.value.replace('_', ' ').title()} · "
+        f"retrieval Top-K {review.request.retrieval_controls.top_k}"
+    )
+    st.warning(
+        "Generated content is temporary until explicit acceptance. Revisions are "
+        "re-grounded and reassessed; source documents are never changed."
+    )
+
+    for artifact in review.artifacts:
+        with st.expander(
+            f"{artifact.position}. {artifact.artifact_type.value.replace('_', ' ').title()}: {artifact.title}",
+            expanded=True,
+        ):
+            st.markdown("**Description**")
+            st.write(artifact.description)
+            if artifact.parent_artifact_id:
+                st.markdown(f"**Parent artifact:** `{artifact.parent_artifact_id}`")
+            st.markdown("**Artifact-level citations**")
+            _display_agile_sources(artifact.source_references)
+            st.markdown("**Structured acceptance criteria**")
+            for criterion in artifact.acceptance_criteria:
+                st.markdown(
+                    f"{criterion.position}. {criterion.text} "
+                    f"(`{criterion.criterion_id}`)"
+                )
+                _display_agile_sources(criterion.source_references)
+
+    st.markdown("### Claim-support results")
+    for assessment in review.assessments:
+        display = st.success if assessment.supported else st.error
+        display(
+            f"{assessment.claim.location}: {assessment.outcome.value} "
+            f"({assessment.reason.value}) · claim {assessment.claim.claim_id}"
+        )
+    if review.missing_requirements:
+        st.error("Unresolved source gaps block acceptance.")
+        for requirement in review.missing_requirements:
+            st.write(f"- {requirement.requirement_id}: {requirement.description}")
+    if review.proposals:
+        st.error("Non-saveable proposals block acceptance.")
+        for proposal in review.proposals:
+            st.write(f"- {proposal.proposal_id}: {proposal.text}")
+
+    st.markdown("### Fail-closed acceptance gates")
+    for gate in review.gates:
+        if gate.passed:
+            st.success(f"{gate.gate_id.replace('_', ' ').title()}: passed")
+        else:
+            st.error(f"{gate.gate_id.replace('_', ' ').title()}: blocked")
+            for reason in gate.reasons:
+                st.write(f"- {reason.code.value}: {reason.message}")
+
+    if review.review_state is AgileReviewState.REJECTED:
+        st.warning("This review was rejected and did not enter accepted storage.")
+        return
+    if review.review_state is AgileReviewState.ACCEPTED:
+        st.success(
+            f"Accepted batch {review.accepted_batch.batch_id} is stored separately "
+            "from its BRD/PRD sources."
+        )
+        return
+
+    with st.form(f"agile_revision_form_{review.review_id}_{review.revision}"):
+        revised_artifacts = []
+        for artifact in review.artifacts:
+            title = st.text_input(
+                f"Revise title · {artifact.artifact_id}",
+                value=artifact.title,
+                key=f"agile_revision_title_{review.review_id}_{review.revision}_{artifact.artifact_id}",
+            )
+            description = st.text_area(
+                f"Revise description · {artifact.artifact_id}",
+                value=artifact.description,
+                key=f"agile_revision_description_{review.review_id}_{review.revision}_{artifact.artifact_id}",
+            )
+            criteria = tuple(
+                replace(
+                    criterion,
+                    text=st.text_area(
+                        f"Revise criterion · {criterion.criterion_id}",
+                        value=criterion.text,
+                        key=f"agile_revision_criterion_{review.review_id}_{review.revision}_{criterion.criterion_id}",
+                    ),
+                )
+                for criterion in artifact.acceptance_criteria
+            )
+            revised_artifacts.append(
+                replace(artifact, title=title, description=description, acceptance_criteria=criteria)
+            )
+        reviewer = st.text_input(
+            "Reviewer identity *",
+            value="Product Manager",
+            key=f"agile_reviewer_{review.review_id}_{review.revision}",
+        )
+        revise = st.form_submit_button("Revise and reassess")
+    if revise:
+        try:
+            revised_review = AgileReviewService(
+                _agile_review_retriever(), APP_DATABASE_FILE
+            ).revise(
+                review,
+                tuple(revised_artifacts),
+                expected_revision=review.revision,
+                reviewer_id=reviewer,
+            )
+            st.session_state[AGILE_REVIEW_STATE_KEY] = revised_review
+        except AgileReviewError as error:
+            st.error(str(error))
+            return
+        st.rerun()
+
+    accept_column, reject_column = st.columns(2)
+    accept = accept_column.button(
+        "Accept Agile batch",
+        type="primary",
+        disabled=not review.can_accept,
+        key=f"agile_accept_{review.review_id}_{review.revision}",
+        width="stretch",
+    )
+    with reject_column.form(f"agile_reject_form_{review.review_id}_{review.revision}"):
+        rejection_reason = st.text_input(
+            "Rejection reason *",
+            key=f"agile_rejection_reason_{review.review_id}_{review.revision}",
+        )
+        reject = st.form_submit_button("Reject Agile batch", width="stretch")
+    if reject:
+        try:
+            st.session_state[AGILE_REVIEW_STATE_KEY] = AgileReviewService(
+                _agile_review_retriever(), APP_DATABASE_FILE
+            ).reject(
+                review,
+                expected_revision=review.revision,
+                reviewer_id=reviewer,
+                reason=rejection_reason,
+            )
+        except AgileReviewError as error:
+            st.error(str(error))
+            return
+        st.rerun()
+    if not accept:
+        return
+    try:
+        result = AgileReviewService(
+            _agile_review_retriever(), APP_DATABASE_FILE
+        ).accept(
+            review,
+            expected_revision=review.revision,
+            reviewer_id=reviewer,
+        )
+        st.session_state[AGILE_REVIEW_STATE_KEY] = result.review
+    except AgileReviewError as error:
+        st.error(str(error))
+        return
+    st.rerun()
+
+
+def render_agile_assistant() -> None:
+    """Expose Checkpoints 7–10 through source-scoped, governed controls."""
+
+    st.subheader("Governed Agile artifacts")
+    st.caption(
+        "Generate Epics, Capabilities, Features, User Stories, or structured "
+        "acceptance criteria from intentionally selected Approved sources."
+    )
+    try:
+        products = list_products(APP_DATABASE_FILE)
+    except (DatabaseSchemaError, sqlite3.Error):
+        display_database_error()
+        return
+    if not products:
+        st.info("No products are available. Create a product before Agile generation.")
+        return
+    products_by_id = {product.id: product for product in products if product.id}
+    product_id = st.selectbox(
+        "Product",
+        [None, *products_by_id],
+        format_func=lambda value: "Select a product" if value is None else product_option_label(products_by_id[value]),
+        key="agile_product_id",
+    )
+    documents = (
+        list_documents_for_product(product_id, APP_DATABASE_FILE)
+        if isinstance(product_id, int)
+        else []
+    )
+    approved = {
+        document.id: document
+        for document in documents
+        if document.id and document.document_status is DocumentStatus.APPROVED
+    }
+    selected_documents = st.multiselect(
+        "Approved BRD/PRD grounding sources",
+        options=list(approved),
+        format_func=lambda value: document_option_label(approved[value]),
+        key="agile_document_ids",
+    )
+    if product_id is not None and not approved:
+        st.info("This product has no Approved BRD or PRD sources. Drafts are ineligible.")
+
+    selected_label = st.selectbox(
+        "Agile artifact type",
+        options=[item[0] for item in AGILE_TYPE_OPTIONS],
+        key="agile_artifact_type",
+    )
+    _, task, artifact_type = next(
+        item for item in AGILE_TYPE_OPTIONS if item[0] == selected_label
+    )
+    if task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA:
+        artifact_type = st.selectbox(
+            "Artifact type for the criteria",
+            options=list(AgileArtifactType),
+            format_func=lambda value: value.value.replace("_", " ").title(),
+            key="agile_criteria_artifact_type",
+        )
+    prompt = get_agile_prompt(
+        "agile-acceptance-criteria" if task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA else f"agile-{artifact_type.value}",
+        "1.0.0",
+        task,
+        artifact_type,
+    )
+    st.info(f"Approved prompt: {prompt.name} · {prompt.prompt_id} · version {prompt.version}")
+
+    profile_by_value = {
+        definition.profile.value: definition for definition in AGILE_PROFILE_DEFINITIONS
+    }
+    profile_value = st.selectbox(
+        "Approved behavior profile",
+        options=list(profile_by_value),
+        index=list(profile_by_value).index(DEFAULT_AGILE_PROFILE.value),
+        format_func=lambda value: profile_by_value[value].display_name,
+        key="agile_profile",
+    )
+    st.caption(profile_by_value[profile_value].description)
+    top_k = st.number_input(
+        "Retrieval Top-K",
+        min_value=1,
+        max_value=50,
+        value=5,
+        help="This retrieval limit is separate from internal generation controls.",
+        key="agile_top_k",
+    )
+    st.caption(
+        "Generation sampling, optimization, and hallucination-control settings are "
+        "internal and are not configurable here or in the PRD."
+    )
+
+    accepted_artifacts = []
+    if isinstance(product_id, int):
+        for batch in list_accepted_agile_batches_for_product(product_id, APP_DATABASE_FILE):
+            accepted_artifacts.extend(batch.artifacts)
+    required_parent_type = (
+        artifact_type
+        if task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA
+        else PARENT_TYPE[artifact_type]
+    )
+    candidates = {
+        artifact.artifact_id: artifact
+        for artifact in accepted_artifacts
+        if artifact.artifact_type is required_parent_type
+    }
+    parent_id = None
+    if required_parent_type is not None:
+        parent_id = st.selectbox(
+            (
+                "Artifact receiving the criteria *"
+                if task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA
+                else f"Applicable {required_parent_type.value.replace('_', ' ').title()} parent"
+            ),
+            options=[None, *candidates],
+            format_func=lambda value: "Select an artifact" if value is None else f"{candidates[value].title} · {value}",
+            key="agile_parent_id",
+        )
+        if task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA and not candidates:
+            st.info("Accept a matching Agile artifact before generating its criteria.")
+
+    with st.form("agile_generation_form"):
+        request_text = st.text_area(
+            "Product Manager request *",
+            max_chars=10_000,
+            placeholder="Describe the grounded Agile outcome to generate.",
+            key="agile_request_text",
+        )
+        reviewer_id = st.text_input(
+            "Reviewer identity *",
+            value="Product Manager",
+            key="agile_generation_reviewer",
+        )
+        generate = st.form_submit_button("Generate Agile draft", type="primary")
+
+    if generate:
+        if product_id is None:
+            st.error("Select a product before generation.")
+        elif not selected_documents:
+            st.error("Select one or more Approved BRD/PRD grounding sources.")
+        elif task is AgilePromptTask.GENERATE_ACCEPTANCE_CRITERIA and parent_id is None:
+            st.error("Select the artifact that will receive the acceptance criteria.")
+        else:
+            parent = None
+            if parent_id is not None:
+                selected_parent = candidates[parent_id]
+                parent = AgileParentContext(
+                    selected_parent.artifact_id,
+                    selected_parent.artifact_type,
+                    selected_parent.product_id,
+                    selected_parent.title,
+                )
+            generation_request = AgileGenerationRequest(
+                product_id=product_id,
+                selected_document_ids=tuple(selected_documents),
+                artifact_type=artifact_type,
+                task=task,
+                prompt_id=prompt.prompt_id,
+                prompt_version=prompt.version,
+                request_text=request_text,
+                profile=profile_value,
+                retrieval_controls=RetrievalControls(int(top_k)),
+                parent=parent,
+            )
+            signature = (
+                product_id,
+                tuple(selected_documents),
+                task.value,
+                artifact_type.value,
+                parent_id,
+                profile_value,
+                int(top_k),
+                request_text.strip(),
+            )
+            previous = st.session_state.get(AGILE_SUBMISSION_STATE_KEY)
+            if previous == signature and isinstance(
+                st.session_state.get(AGILE_REVIEW_STATE_KEY), AgileReviewBatch
+            ):
+                st.info("This Agile submission was already processed; no duplicate call was made.")
+            else:
+                try:
+                    retriever, ai_service = _agile_runtime()
+                    generation = GroundedAgileGenerationService(
+                        retriever,
+                        ai_service,
+                        capabilities=ModelCapabilities(
+                            "openai", ai_service.model, True, False, False
+                        ),
+                    ).generate(generation_request)
+                    if generation.state not in {
+                        AgileGenerationState.GENERATED,
+                        AgileGenerationState.SUPPORT_BLOCKED,
+                    }:
+                        st.warning(generation.message)
+                    else:
+                        st.session_state[AGILE_REVIEW_STATE_KEY] = AgileReviewService(
+                            retriever, APP_DATABASE_FILE
+                        ).begin_review(
+                            generation_request,
+                            generation,
+                            reviewer_id=reviewer_id,
+                        )
+                        st.session_state[AGILE_SUBMISSION_STATE_KEY] = signature
+                except (AIConfigurationError, AIServiceError, AgileGenerationError, AgileReviewError) as error:
+                    st.error(str(error))
+                except (DatabaseSchemaError, sqlite3.Error, ValueError):
+                    st.error("Agile generation failed safely; no content was saved.")
+
+    review = st.session_state.get(AGILE_REVIEW_STATE_KEY)
+    if isinstance(review, AgileReviewBatch):
+        render_agile_review(review)
+    else:
+        st.info("Nothing is saved automatically. Generate, inspect every gate, then accept, revise, or reject.")
+
+
+def render_ai_assistant() -> None:
+    """Render governed Agile and original grounded-draft workflows."""
+
+    st.header("AI Assistant")
+    agile_tab, general_tab = st.tabs(("Agile generation and review", "General draft"))
+    with agile_tab:
+        render_agile_assistant()
+    with general_tab:
+        render_general_assistant()
 
 
 def status_label(status: ProductStatus) -> str:
@@ -592,18 +1049,189 @@ def editable_document_values(
     """Return prepopulated create values or a saved editing snapshot."""
 
     if document is not None:
+        contributors = [
+            {"entry_id": row.entry_id, "position": row.position,
+             "contributor_name": row.contributor_name, "contributor_role": row.contributor_role}
+            for row in document.contributors
+        ]
+        if not contributors and document_type is DocumentType.PRD and document.sections.get("contributors_roles"):
+            contributors = [{"entry_id": "", "position": 1,
+                             "contributor_name": document.sections["contributors_roles"],
+                             "contributor_role": ""}]
+        milestones = [
+            {"entry_id": row.entry_id, "position": row.position,
+             "date": row.date, "milestone": row.milestone}
+            for row in document.key_dates_milestones
+        ]
+        if not milestones and document_type is DocumentType.PRD:
+            legacy_date = document.sections.get("key_dates", "")
+            legacy_milestone = document.sections.get("milestones", "")
+            if legacy_date or legacy_milestone:
+                milestones = [{"entry_id": "", "position": 1,
+                               "date": legacy_date, "milestone": legacy_milestone}]
+        brd_hierarchy = []
+        for row in document.brd_hierarchy:
+            item = {"row_id": row.row_id, "position": row.position}
+            for level in ("epic", "capability", "feature", "user_story"):
+                item[f"{level}_id"] = getattr(row, f"{level}_id")
+                item[level] = getattr(row, level)
+                if level != "epic":
+                    item[f"{level}_parent_id"] = getattr(row, f"{level}_parent_id")
+                item[f"{level}_acceptance_criteria"] = [
+                    {"criterion_id": criterion.criterion_id,
+                     "position": criterion.position, "text": criterion.text}
+                    for criterion in getattr(row, f"{level}_acceptance_criteria")
+                ]
+            brd_hierarchy.append(item)
+        if not brd_hierarchy and document_type is DocumentType.BRD:
+            legacy_keys = {"epic": "epics", "capability": "capabilities",
+                           "feature": "features", "user_story": "user_stories"}
+            if any(document.sections.get(key) for key in (*legacy_keys.values(), "acceptance_criteria")):
+                brd_hierarchy = [{
+                    "row_id": "", "position": 1,
+                    **{level: document.sections.get(key, "") for level, key in legacy_keys.items()},
+                    **{f"{level}_id": "" for level in legacy_keys},
+                    "capability_parent_id": "", "feature_parent_id": "", "user_story_parent_id": "",
+                    "epic_acceptance_criteria": [], "capability_acceptance_criteria": [],
+                    "feature_acceptance_criteria": [],
+                    "user_story_acceptance_criteria": ([{"criterion_id": "", "position": 1,
+                        "text": document.sections.get("acceptance_criteria", "")}]
+                        if document.sections.get("acceptance_criteria") else []),
+                }]
+        brd_risks = [
+            {"entry_id": row.entry_id, "position": row.position,
+             "business_risk": row.business_risk, "mitigation_strategy": row.mitigation_strategy}
+            for row in document.brd_risks
+        ]
+        if not brd_risks and document_type is DocumentType.BRD:
+            risk = document.sections.get("business_risks", "")
+            mitigation = document.sections.get("mitigation_strategies", "")
+            if risk or mitigation:
+                brd_risks = [{"entry_id": "", "position": 1,
+                              "business_risk": risk, "mitigation_strategy": mitigation}]
         return {
             "title": document.title,
             "version": document.version,
             "document_status": document.document_status,
             "sections": dict(document.sections),
+            "success_matrix": [
+                {
+                    "entry_id": entry.entry_id,
+                    "position": entry.position,
+                    "requirement_outcome": entry.requirement_outcome,
+                    "metric": entry.metric,
+                    "baseline": entry.baseline or "",
+                    "target": entry.target,
+                    "minimum_acceptance_threshold": entry.minimum_acceptance_threshold,
+                    "measurement_method": entry.measurement_method,
+                    "data_source": entry.data_source,
+                    "evaluation_period": entry.evaluation_period,
+                    "validation_owner": entry.validation_owner,
+                    "status": entry.status.value if entry.status else "",
+                }
+                for entry in document.success_matrix
+            ],
+            "agile_hierarchy": [
+                {
+                    "artifact_id": artifact.artifact_id,
+                    "artifact_type": artifact.artifact_type,
+                    "position": artifact.position,
+                    "title": artifact.title,
+                    "description": artifact.description,
+                    "parent_artifact_id": artifact.parent_artifact_id,
+                    "acceptance_criteria": [
+                        {
+                            "criterion_id": criterion.criterion_id,
+                            "position": criterion.position,
+                            "text": criterion.text,
+                        }
+                        for criterion in artifact.acceptance_criteria
+                    ],
+                }
+                for artifact in document.agile_hierarchy
+            ],
+            "contributors": contributors,
+            "key_dates_milestones": milestones,
+            "brd_hierarchy": brd_hierarchy,
+            "brd_risks": brd_risks,
         }
     return {
         "title": derived_document_title(product, document_type),
         "version": "1.0",
         "document_status": DocumentStatus.DRAFT,
         "sections": prepopulated_sections(product, document_type),
+        "success_matrix": [],
+        "agile_hierarchy": [],
+        "contributors": [],
+        "key_dates_milestones": [],
+        "brd_hierarchy": [],
+        "brd_risks": [],
     }
+
+
+def repeatable_count_controls(
+    key_prefix: str, field: str, label: str, starting_count: int
+) -> int:
+    """Expose explicit Add/Remove actions while retaining stable indexed state."""
+
+    count_key = f"{key_prefix}_{field}_count"
+    if count_key not in st.session_state:
+        st.session_state[count_key] = starting_count
+    add_column, remove_column, summary_column = st.columns((1, 1, 2))
+    if add_column.button(f"Add {label}", key=f"{count_key}_add"):
+        st.session_state[count_key] = int(st.session_state[count_key]) + 1
+    if remove_column.button(
+        f"Remove {label}", key=f"{count_key}_remove",
+        disabled=int(st.session_state[count_key]) == 0,
+    ):
+        st.session_state[count_key] = max(0, int(st.session_state[count_key]) - 1)
+    count = int(st.number_input(
+        f"Number of {label} entries", min_value=0, step=1,
+        key=count_key,
+        help="This is an informational editing control; no predetermined item count is required.",
+    ))
+    summary_column.caption(f"{label} count: {count}")
+    return count
+
+
+def prepare_prd_hierarchy_controls(
+    key_prefix: str,
+    document: ProductDocument | None,
+) -> None:
+    """Render repeatable hierarchy counts outside the document save form."""
+
+    existing = tuple(document.agile_hierarchy) if document is not None else ()
+    st.markdown("##### Structured Agile hierarchy")
+    st.caption(
+        "Epic → Capability → Feature → User Story. Functional requirements remain "
+        "a separate PRD section and are not a hierarchy level."
+    )
+    for artifact_type in AgileArtifactType:
+        entries = tuple(
+            item for item in existing if item.artifact_type is artifact_type
+        )
+        label = artifact_type.value.replace("_", " ").title()
+        count = repeatable_count_controls(
+            key_prefix, f"agile_{artifact_type.value}", label, len(entries)
+        )
+        for index in range(count):
+            artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+            artifact_id_key = f"{artifact_key}_id"
+            if artifact_id_key not in st.session_state:
+                st.session_state[artifact_id_key] = (
+                    entries[index].artifact_id
+                    if index < len(entries)
+                    else f"prd-agile-{uuid4().hex}"
+                )
+            criterion_count = (
+                len(entries[index].acceptance_criteria)
+                if index < len(entries)
+                else 0
+            )
+            repeatable_count_controls(
+                artifact_key, "criterion",
+                f"criterion for {label} {index + 1}", criterion_count,
+            )
 
 
 def render_document_fields(
@@ -642,21 +1270,430 @@ def render_document_fields(
         key=f"{key_prefix}_status",
     )
 
-    st.markdown("#### Guided sections")
+    st.markdown("#### Guided professional outline")
     sections: dict[str, str] = {}
+    current_group: str | None = None
+    hidden_structured_keys = {
+        DocumentType.PRD: {"contributors_roles", "key_dates", "milestones"},
+        DocumentType.BRD: {
+            "epics", "capabilities", "features", "user_stories",
+            "acceptance_criteria", "business_risks", "mitigation_strategies",
+        },
+    }
+    special_help = {
+        "tracking_strategy": (
+            "Explain how, where, and how frequently product performance will be monitored. "
+            "Example: Track scheduling starts, completions, abandonment, errors, and "
+            "appointment outcomes through product analytics dashboards. Review weekly "
+            "during beta and monthly after launch."
+        ),
+        "analytics_telemetry": (
+            "List the specific product events, signals, or logs required for measurement. "
+            "Examples: scheduling_started, availability_viewed, appointment_selected, "
+            "appointment_confirmed, appointment_rescheduled, appointment_cancelled, "
+            "scheduling_failed. Examples are guidance only and are not saved automatically."
+        ),
+    }
     for definition in document_template(document_type):
+        if definition.group != current_group:
+            st.markdown(f"##### {definition.group}")
+            current_group = definition.group
+        if definition.key in hidden_structured_keys[document_type]:
+            sections[definition.key] = st.text_area(
+                f"Legacy {definition.label} (preserved)",
+                value=values["sections"].get(definition.key, ""),
+                max_chars=DOCUMENT_SECTION_MAX_LENGTH,
+                help=(
+                    "Backward-compatible source text. It is retained without overwrite; "
+                    "use the structured editor for new content."
+                ),
+                disabled=True,
+                label_visibility="collapsed",
+                key=f"{key_prefix}_section_{definition.key}",
+            )
+            continue
         sections[definition.key] = st.text_area(
             definition.label,
             value=values["sections"].get(definition.key, ""),
             max_chars=DOCUMENT_SECTION_MAX_LENGTH,
-            help=definition.guidance,
+            help=special_help.get(definition.key, definition.guidance),
             key=f"{key_prefix}_section_{definition.key}",
         )
+
+    contributors: list[dict[str, object]] = []
+    key_dates_milestones: list[dict[str, object]] = []
+    brd_hierarchy: list[dict[str, object]] = []
+    brd_risks: list[dict[str, object]] = []
+    success_matrix: list[dict[str, object]] = []
+    if document_type is DocumentType.PRD:
+        st.markdown("##### Contributors and Roles")
+        contributor_count = int(st.session_state.get(
+            f"{key_prefix}_contributors_count", len(values["contributors"])
+        ))
+        for index in range(contributor_count):
+            existing = values["contributors"][index] if index < len(values["contributors"]) else {}
+            with st.expander(f"Contributor {index + 1}", expanded=True):
+                contributors.append({
+                    "entry_id": existing.get("entry_id", ""), "position": index + 1,
+                    "contributor_name": st.text_input(
+                        "Contributor name *", value=str(existing.get("contributor_name", "")),
+                        key=f"{key_prefix}_contributor_{index}_name"),
+                    "contributor_role": st.text_input(
+                        "Contributor role *", value=str(existing.get("contributor_role", "")),
+                        key=f"{key_prefix}_contributor_{index}_role"),
+                })
+
+        st.markdown("##### Key Dates and Milestones")
+        milestone_count = int(st.session_state.get(
+            f"{key_prefix}_key_dates_milestones_count", len(values["key_dates_milestones"])
+        ))
+        for index in range(milestone_count):
+            existing = values["key_dates_milestones"][index] if index < len(values["key_dates_milestones"]) else {}
+            with st.expander(f"Key Date and Milestone {index + 1}", expanded=True):
+                key_dates_milestones.append({
+                    "entry_id": existing.get("entry_id", ""), "position": index + 1,
+                    "date": st.text_input("Date *", value=str(existing.get("date", "")),
+                                          key=f"{key_prefix}_milestone_{index}_date"),
+                    "milestone": st.text_input("Milestone *", value=str(existing.get("milestone", "")),
+                                               key=f"{key_prefix}_milestone_{index}_milestone"),
+                })
+
+        st.markdown("##### Structured Agile hierarchy")
+        st.write(
+            "Author repeatable items using the explicit Epic → Capability → Feature "
+            "→ User Story hierarchy. Each item owns its acceptance criteria; criteria "
+            "are never copied to or used as proof for another level."
+        )
+        existing_by_type = {
+            artifact_type: [
+                item
+                for item in values["agile_hierarchy"]
+                if item["artifact_type"] is artifact_type
+            ]
+            for artifact_type in AgileArtifactType
+        }
+        artifact_specs: dict[AgileArtifactType, list[tuple[str, dict[str, object]]]] = {}
+        for artifact_type in AgileArtifactType:
+            count = int(
+                st.session_state.get(
+                    f"{key_prefix}_agile_{artifact_type.value}_count",
+                    len(existing_by_type[artifact_type]),
+                )
+            )
+            artifact_specs[artifact_type] = []
+            for index in range(count):
+                artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+                existing = (
+                    existing_by_type[artifact_type][index]
+                    if index < len(existing_by_type[artifact_type])
+                    else {}
+                )
+                artifact_id = str(
+                    st.session_state.get(
+                        f"{artifact_key}_id",
+                        existing.get("artifact_id") or f"prd-agile-{uuid4().hex}",
+                    )
+                )
+                st.session_state[f"{artifact_key}_id"] = artifact_id
+                artifact_specs[artifact_type].append((artifact_id, existing))
+
+        agile_hierarchy: list[dict[str, object]] = []
+        for artifact_type in AgileArtifactType:
+            parent_type = PARENT_TYPE[artifact_type]
+            parent_options = (
+                []
+                if parent_type is None
+                else [item[0] for item in artifact_specs[parent_type]]
+            )
+            for index, (artifact_id, existing) in enumerate(
+                artifact_specs[artifact_type]
+            ):
+                artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+                with st.expander(
+                    f"{artifact_type.value.replace('_', ' ').title()} {index + 1}",
+                    expanded=True,
+                ):
+                    parent_id = None
+                    if parent_type is not None:
+                        existing_parent = existing.get("parent_artifact_id")
+                        options = [None, *parent_options]
+                        parent_id = st.selectbox(
+                            f"Parent {parent_type.value.replace('_', ' ').title()} *",
+                            options=options,
+                            index=(
+                                options.index(existing_parent)
+                                if existing_parent in options
+                                else 0
+                            ),
+                            format_func=lambda value: (
+                                "Select parent" if value is None else value
+                            ),
+                            key=f"{artifact_key}_parent",
+                        )
+                    title = st.text_input(
+                        f"{artifact_type.value.replace('_', ' ').title()} title *",
+                        value=str(existing.get("title", "")),
+                        max_chars=200,
+                        key=f"{artifact_key}_title",
+                    )
+                    description = st.text_area(
+                        f"{artifact_type.value.replace('_', ' ').title()} description *",
+                        value=str(existing.get("description", "")),
+                        max_chars=10_000,
+                        key=f"{artifact_key}_description",
+                    )
+                    existing_criteria = list(existing.get("acceptance_criteria", ()))
+                    criterion_count = int(
+                        st.session_state.get(
+                            f"{artifact_key}_criterion_count",
+                            len(existing_criteria),
+                        )
+                    )
+                    criteria: list[dict[str, object]] = []
+                    st.markdown("**Acceptance criteria**")
+                    for criterion_index in range(criterion_count):
+                        criterion_key = (
+                            f"{artifact_key}_criterion_{criterion_index}"
+                        )
+                        existing_criterion = (
+                            existing_criteria[criterion_index]
+                            if criterion_index < len(existing_criteria)
+                            else {}
+                        )
+                        criterion_id_key = f"{criterion_key}_id"
+                        if criterion_id_key not in st.session_state:
+                            st.session_state[criterion_id_key] = (
+                                existing_criterion.get("criterion_id")
+                                or f"prd-criterion-{uuid4().hex}"
+                            )
+                        criteria.append(
+                            {
+                                "criterion_id": st.session_state[criterion_id_key],
+                                "position": criterion_index + 1,
+                                "text": st.text_area(
+                                    f"Criterion {criterion_index + 1} *",
+                                    value=str(existing_criterion.get("text", "")),
+                                    max_chars=2_000,
+                                    key=f"{criterion_key}_text",
+                                ),
+                            }
+                        )
+                    agile_hierarchy.append(
+                        {
+                            "artifact_id": artifact_id,
+                            "artifact_type": artifact_type,
+                            "position": index + 1,
+                            "title": title,
+                            "description": description,
+                            "parent_artifact_id": parent_id,
+                            "acceptance_criteria": criteria,
+                        }
+                    )
+        hierarchy_counts = {
+            artifact_type: len([row for row in agile_hierarchy if row["artifact_type"] is artifact_type])
+            for artifact_type in AgileArtifactType
+        }
+        acceptance_count = sum(
+            len(row["acceptance_criteria"]) for row in agile_hierarchy
+        )
+        st.caption(
+            "Informational hierarchy summary — "
+            f"Epics: {hierarchy_counts[AgileArtifactType.EPIC]} · "
+            f"Capabilities: {hierarchy_counts[AgileArtifactType.CAPABILITY]} · "
+            f"Features: {hierarchy_counts[AgileArtifactType.FEATURE]} · "
+            f"User Stories: {hierarchy_counts[AgileArtifactType.USER_STORY]} · "
+            f"Acceptance criteria: {acceptance_count}"
+        )
+        st.markdown("##### PRD Success Matrix")
+        st.write(
+            "Define measurable product outcomes here. These entries are separate "
+            "from individual user-story acceptance criteria. Draft rows may be "
+            "incomplete; approval requires the measurable fields in every row."
+        )
+        st.caption(
+            "Express grounding quality as a measurable product outcome. Temperature, "
+            "retrieval Top-K, generation Top-P, GEPA settings, and hallucination flags "
+            "are internal controls and are not PRD fields."
+        )
+        entry_count = int(
+            st.session_state.get(
+                f"{key_prefix}_success_matrix_count",
+                len(values["success_matrix"]),
+            )
+        )
+        st.caption(f"Success Matrix entries: {entry_count}")
+        field_labels = (
+            ("requirement_outcome", "Requirement or desired outcome *"),
+            ("metric", "Metric *"),
+            ("baseline", "Baseline (when known)"),
+            ("target", "Target *"),
+            ("minimum_acceptance_threshold", "Minimum acceptance threshold *"),
+            ("measurement_method", "Measurement method *"),
+            ("data_source", "Data source *"),
+            ("evaluation_period", "Evaluation period *"),
+            ("validation_owner", "Validation owner *"),
+        )
+        for index in range(entry_count):
+            existing = (
+                values["success_matrix"][index]
+                if index < len(values["success_matrix"])
+                else {}
+            )
+            with st.expander(f"Success Matrix entry {index + 1}", expanded=True):
+                row: dict[str, object] = {
+                    "entry_id": existing.get("entry_id", ""),
+                    "position": index + 1,
+                }
+                for field, label in field_labels:
+                    row[field] = st.text_input(
+                        label,
+                        value=str(existing.get(field, "") or ""),
+                        max_chars=2_000,
+                        key=f"{key_prefix}_success_{index}_{field}",
+                    )
+                status_options: list[SuccessMatrixStatus | None] = [
+                    None,
+                    *SuccessMatrixStatus,
+                ]
+                existing_status = existing.get("status", "")
+                selected_status = (
+                    SuccessMatrixStatus(existing_status)
+                    if existing_status
+                    else None
+                )
+                row["status"] = st.selectbox(
+                    "Status *",
+                    options=status_options,
+                    index=status_options.index(selected_status),
+                    format_func=lambda value: (
+                        "Select status"
+                        if value is None
+                        else value.value.replace("_", " ").title()
+                    ),
+                    key=f"{key_prefix}_success_{index}_status",
+                )
+                success_matrix.append(row)
+    else:
+        agile_hierarchy = []
+        st.markdown("##### BRD Agile hierarchy")
+        st.caption(
+            "Use a readable row editor for Epic → Capability → Feature → User Story. "
+            "Enter multiple acceptance criteria on separate lines; each level owns its criteria."
+        )
+        hierarchy_count = int(st.session_state.get(
+            f"{key_prefix}_brd_hierarchy_count", len(values["brd_hierarchy"])
+        ))
+        levels = ("epic", "capability", "feature", "user_story")
+        for index in range(hierarchy_count):
+            existing = values["brd_hierarchy"][index] if index < len(values["brd_hierarchy"]) else {}
+            row_id_key = f"{key_prefix}_brd_hierarchy_{index}_row_id"
+            if row_id_key not in st.session_state:
+                st.session_state[row_id_key] = existing.get("row_id") or f"brd-hierarchy-{uuid4().hex}"
+            row_id = str(st.session_state[row_id_key])
+            row: dict[str, object] = {"row_id": row_id, "position": index + 1}
+            previous_id = ""
+            with st.expander(f"BRD hierarchy row {index + 1}", expanded=True):
+                for level in levels:
+                    label = level.replace("_", " ").title()
+                    item_id_key = f"{key_prefix}_brd_hierarchy_{index}_{level}_id"
+                    if item_id_key not in st.session_state:
+                        st.session_state[item_id_key] = existing.get(f"{level}_id") or f"brd-{level}-{uuid4().hex}"
+                    item_id = str(st.session_state[item_id_key])
+                    row[f"{level}_id"] = item_id
+                    if level != "epic":
+                        row[f"{level}_parent_id"] = previous_id
+                    row[level] = st.text_area(
+                        label, value=str(existing.get(level, "")),
+                        key=f"{key_prefix}_brd_hierarchy_{index}_{level}")
+                    existing_criteria = list(existing.get(f"{level}_acceptance_criteria", ()))
+                    criteria_text = st.text_area(
+                        f"{label} Acceptance Criteria",
+                        value="\n".join(str(item.get("text", "")) for item in existing_criteria),
+                        help="One measurable acceptance criterion per line.",
+                        key=f"{key_prefix}_brd_hierarchy_{index}_{level}_criteria")
+                    criteria_lines = [line.strip() for line in criteria_text.splitlines() if line.strip()]
+                    criteria = []
+                    for criterion_index, text in enumerate(criteria_lines):
+                        criterion_id_key = f"{key_prefix}_brd_hierarchy_{index}_{level}_criterion_{criterion_index}_id"
+                        if criterion_id_key not in st.session_state:
+                            st.session_state[criterion_id_key] = (
+                                existing_criteria[criterion_index].get("criterion_id")
+                                if criterion_index < len(existing_criteria)
+                                else f"brd-criterion-{uuid4().hex}"
+                            )
+                        criteria.append({"criterion_id": st.session_state[criterion_id_key],
+                                         "position": criterion_index + 1, "text": text})
+                    row[f"{level}_acceptance_criteria"] = criteria
+                    previous_id = item_id
+            brd_hierarchy.append(row)
+
+        st.markdown("##### Business Risk and Mitigation Strategy")
+        risk_count = int(st.session_state.get(
+            f"{key_prefix}_brd_risks_count", len(values["brd_risks"])
+        ))
+        for index in range(risk_count):
+            existing = values["brd_risks"][index] if index < len(values["brd_risks"]) else {}
+            with st.expander(f"Business Risk and Mitigation Strategy {index + 1}", expanded=True):
+                brd_risks.append({
+                    "entry_id": existing.get("entry_id", ""), "position": index + 1,
+                    "business_risk": st.text_area(
+                        "Business Risk *", value=str(existing.get("business_risk", "")),
+                        key=f"{key_prefix}_brd_risk_{index}_risk"),
+                    "mitigation_strategy": st.text_area(
+                        "Mitigation Strategy *", value=str(existing.get("mitigation_strategy", "")),
+                        key=f"{key_prefix}_brd_risk_{index}_mitigation"),
+                })
+    if document_type is DocumentType.PRD:
+        if not contributors and sections.get("contributors_roles"):
+            contributors = [{
+                "entry_id": "legacy-contributor-1", "position": 1,
+                "contributor_name": sections["contributors_roles"], "contributor_role": "",
+            }]
+        if not key_dates_milestones and (sections.get("key_dates") or sections.get("milestones")):
+            key_dates_milestones = [{
+                "entry_id": "legacy-milestone-1", "position": 1,
+                "date": sections.get("key_dates", ""),
+                "milestone": sections.get("milestones", ""),
+            }]
+    else:
+        if not brd_hierarchy and any(sections.get(key) for key in (
+            "epics", "capabilities", "features", "user_stories", "acceptance_criteria"
+        )):
+            ids = {level: f"legacy-brd-{level}-1" for level in (
+                "epic", "capability", "feature", "user_story"
+            )}
+            brd_hierarchy = [{
+                "row_id": "legacy-brd-hierarchy-1", "position": 1,
+                "epic_id": ids["epic"], "epic": sections.get("epics", ""),
+                "epic_acceptance_criteria": [],
+                "capability_id": ids["capability"], "capability_parent_id": ids["epic"],
+                "capability": sections.get("capabilities", ""), "capability_acceptance_criteria": [],
+                "feature_id": ids["feature"], "feature_parent_id": ids["capability"],
+                "feature": sections.get("features", ""), "feature_acceptance_criteria": [],
+                "user_story_id": ids["user_story"], "user_story_parent_id": ids["feature"],
+                "user_story": sections.get("user_stories", ""),
+                "user_story_acceptance_criteria": ([{
+                    "criterion_id": "legacy-brd-user-story-criterion-1", "position": 1,
+                    "text": sections.get("acceptance_criteria", ""),
+                }] if sections.get("acceptance_criteria") else []),
+            }]
+        if not brd_risks and (sections.get("business_risks") or sections.get("mitigation_strategies")):
+            brd_risks = [{
+                "entry_id": "legacy-brd-risk-1", "position": 1,
+                "business_risk": sections.get("business_risks", ""),
+                "mitigation_strategy": sections.get("mitigation_strategies", ""),
+            }]
     return {
         "title": title,
         "version": version,
         "document_status": document_status,
         "sections": sections,
+        "success_matrix": success_matrix,
+        "agile_hierarchy": agile_hierarchy,
+        "contributors": contributors,
+        "key_dates_milestones": key_dates_milestones,
+        "brd_hierarchy": brd_hierarchy,
+        "brd_risks": brd_risks,
     }
 
 
@@ -707,6 +1744,36 @@ def apply_pending_state_changes() -> None:
     requested_navigation = st.session_state.pop(PENDING_NAVIGATION_KEY, None)
     if requested_navigation in NAVIGATION_OPTIONS:
         st.session_state[NAVIGATION_STATE_KEY] = requested_navigation
+
+
+def clear_stale_page_state(selected_section: str) -> None:
+    """Prevent transient form or review evidence leaking across page changes."""
+
+    previous = st.session_state.get(LAST_NAVIGATION_KEY)
+    if previous is None:
+        st.session_state[LAST_NAVIGATION_KEY] = selected_section
+        return
+    if previous == selected_section:
+        return
+    preserved = {NAVIGATION_STATE_KEY, LAST_NAVIGATION_KEY}
+    transient_prefixes = (
+        "primary_create_",
+        "generated_content_",
+        "grounded_generation_",
+        "agile_",
+    )
+    for key in tuple(st.session_state):
+        if key not in preserved and (
+            key in {
+                GENERATED_REVIEW_STATE_KEY,
+                GENERATION_SUBMISSION_STATE_KEY,
+                AGILE_REVIEW_STATE_KEY,
+                AGILE_SUBMISSION_STATE_KEY,
+            }
+            or key.startswith(transient_prefixes)
+        ):
+            st.session_state.pop(key, None)
+    st.session_state[LAST_NAVIGATION_KEY] = selected_section
 
 
 def set_workflow_flash(level: str, message: str) -> None:
@@ -776,9 +1843,145 @@ def display_document_preview(document: ProductDocument, product: Product) -> Non
     )
     st.markdown(f"**Associated product:** {product.name} (ID {product.id})")
     st.divider()
+    current_group: str | None = None
+    hidden_structured_keys = {
+        DocumentType.PRD: {"contributors_roles", "key_dates", "milestones"},
+        DocumentType.BRD: {
+            "epics", "capabilities", "features", "user_stories",
+            "acceptance_criteria", "business_risks", "mitigation_strategies",
+        },
+    }
     for definition in document_template(document.document_type):
+        if definition.group != current_group:
+            st.markdown(f"## {definition.group}")
+            current_group = definition.group
+        if definition.key in hidden_structured_keys[document.document_type]:
+            continue
         st.markdown(f"### {definition.label}")
         st.write(document.sections.get(definition.key) or "Not provided")
+    if document.document_type is DocumentType.PRD:
+        st.markdown("## Contributors and Roles")
+        if document.contributors:
+            st.dataframe(
+                [{"Contributor name": row.contributor_name,
+                  "Contributor role": row.contributor_role}
+                 for row in document.contributors],
+                hide_index=True, width="stretch",
+            )
+        else:
+            st.write("No Contributors and Roles entries provided.")
+        st.markdown("## Key Dates and Milestones")
+        if document.key_dates_milestones:
+            st.dataframe(
+                [{"Date": row.date, "Milestone": row.milestone}
+                 for row in document.key_dates_milestones],
+                hide_index=True, width="stretch",
+            )
+        else:
+            st.write("No Key Dates and Milestones entries provided.")
+        st.markdown("## Structured Agile hierarchy")
+        if document.agile_hierarchy:
+            for artifact in document.agile_hierarchy:
+                st.markdown(
+                    f"### {artifact.artifact_type.value.replace('_', ' ').title()} "
+                    f"{artifact.position}: {artifact.title or 'Untitled'}"
+                )
+                st.caption(
+                    f"ID: {artifact.artifact_id} · "
+                    f"Parent: {artifact.parent_artifact_id or 'None'}"
+                )
+                st.write(artifact.description or "Not provided")
+                st.markdown("**Acceptance criteria**")
+                if artifact.acceptance_criteria:
+                    for criterion in artifact.acceptance_criteria:
+                        st.write(
+                            f"{criterion.position}. {criterion.text or 'Not provided'} "
+                            f"({criterion.criterion_id})"
+                        )
+                else:
+                    st.write("No acceptance criteria provided.")
+        else:
+            st.write(
+                "No structured hierarchy entries provided. Legacy PRD section text "
+                "remains available above."
+            )
+        hierarchy_counts = {
+            artifact_type: len([
+                row for row in document.agile_hierarchy
+                if row.artifact_type is artifact_type
+            ])
+            for artifact_type in AgileArtifactType
+        }
+        acceptance_count = sum(len(row.acceptance_criteria) for row in document.agile_hierarchy)
+        st.caption(
+            "Informational hierarchy summary — "
+            f"Epics: {hierarchy_counts[AgileArtifactType.EPIC]} · "
+            f"Capabilities: {hierarchy_counts[AgileArtifactType.CAPABILITY]} · "
+            f"Features: {hierarchy_counts[AgileArtifactType.FEATURE]} · "
+            f"User Stories: {hierarchy_counts[AgileArtifactType.USER_STORY]} · "
+            f"Acceptance criteria: {acceptance_count}"
+        )
+        st.markdown("## PRD Success Matrix")
+        st.caption(
+            "Measurable PRD outcomes; distinct from user-story acceptance criteria."
+        )
+        st.caption(f"Success Matrix entries: {len(document.success_matrix)}")
+        if document.success_matrix:
+            st.dataframe(
+                [
+                    {
+                        "ID": entry.entry_id,
+                        "Order": entry.position,
+                        "Requirement or desired outcome": entry.requirement_outcome,
+                        "Metric": entry.metric,
+                        "Baseline": entry.baseline or "Not known",
+                        "Target": entry.target,
+                        "Minimum acceptance threshold": entry.minimum_acceptance_threshold,
+                        "Measurement method": entry.measurement_method,
+                        "Data source": entry.data_source,
+                        "Evaluation period": entry.evaluation_period,
+                        "Validation owner": entry.validation_owner,
+                        "Status": entry.status.value if entry.status else "Not provided",
+                    }
+                    for entry in document.success_matrix
+                ],
+                hide_index=True,
+                width="stretch",
+            )
+        else:
+            st.write("No Success Matrix entries provided.")
+    else:
+        st.markdown("## BRD Agile hierarchy")
+        if document.brd_hierarchy:
+            def criteria_text(criteria: object) -> str:
+                return "\n".join(
+                    f"{item.position}. {item.text}" for item in criteria
+                )
+            st.dataframe(
+                [{
+                    "Epic": row.epic,
+                    "Epic Acceptance Criteria": criteria_text(row.epic_acceptance_criteria),
+                    "Capability": row.capability,
+                    "Capability Acceptance Criteria": criteria_text(row.capability_acceptance_criteria),
+                    "Feature": row.feature,
+                    "Feature Acceptance Criteria": criteria_text(row.feature_acceptance_criteria),
+                    "User Story": row.user_story,
+                    "User Story Acceptance Criteria": criteria_text(row.user_story_acceptance_criteria),
+                } for row in document.brd_hierarchy],
+                hide_index=True, width="stretch",
+            )
+        else:
+            st.write("No structured BRD hierarchy rows provided; legacy text remains preserved.")
+        st.markdown("## Business Risk and Mitigation Strategy")
+        if document.brd_risks:
+            st.dataframe(
+                [{"Business Risk": row.business_risk,
+                  "Mitigation Strategy": row.mitigation_strategy}
+                 for row in document.brd_risks],
+                hide_index=True, width="stretch",
+            )
+        else:
+            st.write("No structured Business Risk and Mitigation Strategy entries provided.")
     st.caption(
         f"Created: {document.created_at or 'Not available'}  ·  "
         f"Updated: {document.updated_at or 'Not available'}"
@@ -848,6 +2051,47 @@ def render_accepted_artifact_history(product: Product) -> None:
             )
 
 
+def render_accepted_agile_history(product: Product) -> None:
+    """Display accepted governed Agile batches separately from documents."""
+
+    if product.id is None:
+        return
+    st.divider()
+    st.subheader("Accepted Agile artifacts")
+    st.caption(
+        "Read-only accepted batches with immutable source traceability. Pending, "
+        "blocked, revised, and rejected candidates never appear here."
+    )
+    try:
+        batches = list_accepted_agile_batches_for_product(
+            product.id, APP_DATABASE_FILE
+        )
+    except (DatabaseSchemaError, sqlite3.Error):
+        st.error("Accepted Agile history could not be loaded safely.")
+        return
+    if not batches:
+        st.info("No accepted Agile batches for this product yet.")
+        return
+    for batch in batches:
+        with st.expander(
+            f"Batch {batch.batch_id} · {batch.behavior_profile.value.replace('_', ' ').title()}"
+        ):
+            st.caption(
+                f"Prompt version {batch.prompt_version} · revision {batch.revision} · "
+                f"accepted {batch.accepted_at}"
+            )
+            for artifact in batch.artifacts:
+                st.markdown(
+                    f"**{artifact.position}. {artifact.artifact_type.value.replace('_', ' ').title()}: "
+                    f"{artifact.title}**"
+                )
+                st.write(artifact.description)
+                for criterion in artifact.acceptance_criteria:
+                    st.write(f"- {criterion.text}")
+                st.markdown("Sources")
+                _display_agile_sources(artifact.source_references)
+
+
 def render_document_editor(
     product: Product,
     document_type: DocumentType,
@@ -869,6 +2113,30 @@ def render_document_editor(
     )
     identity = document.id if document is not None else "new"
     form_key = f"{selector_key}_document_form_{identity}_{document_type.value}"
+    starting_values = editable_document_values(product, document_type, document)
+    if document_type is DocumentType.PRD:
+        prepare_prd_hierarchy_controls(form_key, document)
+        repeatable_count_controls(
+            form_key, "contributors", "Contributor and Role",
+            len(starting_values["contributors"]),
+        )
+        repeatable_count_controls(
+            form_key, "key_dates_milestones", "Key Date and Milestone",
+            len(starting_values["key_dates_milestones"]),
+        )
+        repeatable_count_controls(
+            form_key, "success_matrix", "Success Matrix entry",
+            len(starting_values["success_matrix"]),
+        )
+    else:
+        repeatable_count_controls(
+            form_key, "brd_hierarchy", "BRD hierarchy row",
+            len(starting_values["brd_hierarchy"]),
+        )
+        repeatable_count_controls(
+            form_key, "brd_risks", "Business Risk and Mitigation Strategy",
+            len(starting_values["brd_risks"]),
+        )
     with st.form(form_key):
         editable = render_document_fields(
             key_prefix=form_key,
@@ -1585,6 +2853,7 @@ def render_product_actions(product: Product, *, selector_key: str) -> None:
 
     render_product_documents(product, selector_key=selector_key)
     render_accepted_artifact_history(product)
+    render_accepted_agile_history(product)
 
 
 def render_product_list(
@@ -1726,6 +2995,7 @@ def main() -> None:
         label_visibility="collapsed",
         key=NAVIGATION_STATE_KEY,
     )
+    clear_stale_page_state(selected_section)
 
     st.title(APP_TITLE)
     st.caption("A focused workspace for product strategy and context.")

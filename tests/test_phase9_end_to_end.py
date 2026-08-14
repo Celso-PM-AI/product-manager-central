@@ -20,6 +20,7 @@ from src.generated_content import GeneratedContentReviewService, ReviewDecision
 from src.grounded_generation import GroundedGenerationService
 from src.models import DocumentStatus, DocumentType
 from src.prompt_catalog import GROUNDED_DRAFT_PROMPT_ID, AssistantTask
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 from src.rag_evaluation import (
     Phase9EvaluationCase,
     evaluate_phase9_case,
@@ -96,6 +97,18 @@ class Phase9EndToEndEvaluationTests(unittest.TestCase):
                     section.key: f"{title} evidence for {section.label}."
                     for section in document_template(document_type)
                 },
+                "success_matrix": (
+                    complete_success_matrix()
+                    if document_type is DocumentType.PRD
+                    and status is DocumentStatus.APPROVED
+                    else []
+                ),
+                "agile_hierarchy": (
+                    complete_prd_agile_hierarchy(f"phase9-{title.lower().replace(' ', '-')}")
+                    if document_type is DocumentType.PRD
+                    and status is DocumentStatus.APPROVED
+                    else []
+                ),
             },
             self.database_path,
         )

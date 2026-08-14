@@ -76,6 +76,71 @@ def _approved_prd_data(product_id: int) -> dict[str, object]:
         "title": SAMPLE_APPROVED_PRD_TITLE,
         "version": "1.0",
         "document_status": DocumentStatus.APPROVED,
+        "success_matrix": [
+            {
+                "entry_id": "trailwise-success-1",
+                "position": 1,
+                "requirement_outcome": "Travelers complete a grounded trip plan.",
+                "metric": "Grounded plan completion rate",
+                "baseline": "Not yet measured",
+                "target": "90%",
+                "minimum_acceptance_threshold": "80%",
+                "measurement_method": "Measure completed plans with approved-source citations.",
+                "data_source": "Fictional Trailwise product analytics",
+                "evaluation_period": "First 30 days after launch",
+                "validation_owner": "Trailwise Product Manager",
+                "status": "not_started",
+            }
+        ],
+        "agile_hierarchy": [
+            {
+                "artifact_id": f"trailwise-{artifact_type}",
+                "artifact_type": artifact_type,
+                "position": 1,
+                "title": title,
+                "description": description,
+                "parent_artifact_id": (
+                    f"trailwise-{parent}" if parent is not None else None
+                ),
+                "acceptance_criteria": [
+                    {
+                        "criterion_id": f"trailwise-{artifact_type}-criterion-1",
+                        "position": 1,
+                        "text": criterion,
+                    }
+                ],
+            }
+            for artifact_type, parent, title, description, criterion in (
+                (
+                    "epic",
+                    None,
+                    "Grounded trip planning",
+                    "Help a trip leader complete a safe, accessible plan.",
+                    "A reviewed plan covers route, people, equipment, and contingencies.",
+                ),
+                (
+                    "capability",
+                    "epic",
+                    "Readiness assessment",
+                    "Collect the information needed for a readiness decision.",
+                    "Every readiness category has a recorded result.",
+                ),
+                (
+                    "feature",
+                    "capability",
+                    "Readiness summary",
+                    "Present route and participant needs in one summary.",
+                    "The summary identifies every unresolved readiness item.",
+                ),
+                (
+                    "user_story",
+                    "feature",
+                    "Review one plan",
+                    "As a trip leader, I can review one readiness summary.",
+                    "The leader can record a final reviewed decision.",
+                ),
+            )
+        ],
         "sections": _sample_sections(
             DocumentType.PRD,
             {

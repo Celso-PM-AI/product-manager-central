@@ -30,6 +30,7 @@ from src.sample_data import (
     SampleDataLoadStatus,
     load_fictional_sample_data,
 )
+from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete_success_matrix
 
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
@@ -53,6 +54,8 @@ def _approved_document_data(product_id: int) -> dict[str, object]:
         "title": "User-authored Approved PRD",
         "version": "1.0",
         "document_status": DocumentStatus.APPROVED,
+        "success_matrix": complete_success_matrix(),
+        "agile_hierarchy": complete_prd_agile_hierarchy("onboarding"),
         "sections": {
             section.key: f"User-authored evidence for {section.label}."
             for section in document_template(DocumentType.PRD)
