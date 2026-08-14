@@ -34,3 +34,8 @@ API; users are responsible for ensuring they are authorized to send that data.
 
 Security fixes must preserve the trusted-source, citation, human-review,
 explicit-acceptance, and source-separation safeguards established in Phase 9.
+
+Word and PDF export is local and read-only. PMC does not send exported content
+to Microsoft Word, a hosted converter, OpenAI, or another provider. Export
+filenames are sanitized and bytes are generated in memory; users remain
+responsible for protecting downloaded files that may contain product content.

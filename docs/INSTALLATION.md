@@ -15,13 +15,20 @@ The clean-install release workflow was natively validated on:
 
 - macOS 26.5.2, Apple silicon (`arm64`)
 - Python 3.14.6
-- Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0
+- Streamlit 1.61.1, pandas 3.0.5, OpenAI 2.53.0, python-docx 1.2.0,
+  and ReportLab 5.0.0
 
 PMC's source and pinned direct dependencies require Python 3.11 through 3.14.
 Python 3.11 is the dependency-imposed floor, but Python 3.11–3.13 and Windows
 have automated structural coverage only and are not yet claimed as natively
 validated. Native Windows and additional Python-version validation remain
 release work.
+
+python-docx is MIT-licensed and ReportLab is BSD-licensed. They are the only
+new direct runtime dependencies for local Word and PDF export. PMC generates
+both formats directly and does not require Microsoft Word, LibreOffice, a
+hosted conversion service, an API key, or a network connection to export a
+saved document.
 
 Install Python from [python.org](https://www.python.org/downloads/) before
 starting. The setup helpers stop with an actionable error if Python is missing,

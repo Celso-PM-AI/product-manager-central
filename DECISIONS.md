@@ -20,6 +20,7 @@
 - DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
 - DEC-019 Guided Workspace, Professional Document Builders, and PRD Success Matrix
 - DEC-020 Explicit PRD Agile Hierarchy
+- DEC-021 Local In-Memory Word and PDF Export
 
 This document records significant product, architecture, and technical decisions made during the development of Product Manager Central (PMC).
 
@@ -47,6 +48,7 @@ This document records significant product, architecture, and technical decisions
 - DEC-018 Re-grounded Agile Review and Fail-Closed Acceptance
 - DEC-019 Guided Workspace, Professional Document Builders, and PRD Success Matrix
 - DEC-020 Explicit PRD Agile Hierarchy
+- DEC-021 Local In-Memory Word and PDF Export
 
 ## Decision 001
 
@@ -963,6 +965,73 @@ The PRD model, validation, additive SQLite schema, builder, preview, fictional
 sample, documentation, and focused tests expand. Accepted generated Agile
 artifacts retain their existing Checkpoints 7–10 lifecycle and storage.
 Checkpoint 12 export remains unimplemented.
+
+**Status:**
+Approved
+
+## Decision 021
+
+**Date:** August 14, 2026
+
+**Category:** Product-document export and local file safety
+
+**Title:** Saved BRDs and PRDs use local in-memory Word and PDF exporters
+
+**Decision:**
+Checkpoint 12 exports any saved Draft or Approved BRD or PRD through one shared,
+ordered content model. The model preserves product and document metadata,
+generated-at time, every stable template section, PRD Contributors and Roles,
+Key Dates and Milestones, the explicit PRD Agile hierarchy and independently
+owned criteria, the PRD Success Matrix, the BRD Agile hierarchy and criteria,
+and linked Business Risk/Mitigation rows. Legacy section text remains available:
+legacy-derived structured rows are emitted once, while genuinely distinct
+legacy text is labeled as preserved content rather than discarded or silently
+duplicated.
+
+Word files are generated directly with `python-docx` using the
+`standard_business_brief` design preset and a restrained memo masthead. They use
+US Letter pages, explicit margins and style spacing, fixed-width tables,
+running status/page furniture, macro-free Open XML, no external template, and
+scrubbed personal metadata. PDFs are generated directly with ReportLab using
+the same content order, embedded local Unicode font data, repeated table
+headers, page-flow handling, and visible status/page furniture. Neither format
+uses Microsoft Word, a hosted converter, an OpenAI service, or a network call.
+
+Exports are built entirely in memory and returned to Streamlit download
+controls. Deterministic, sanitized filenames contain only a safe product slug,
+document type and ID, version slug, and approved extension. User content is
+escaped where a renderer accepts markup-like syntax and is otherwise treated
+only as document data. Export errors cross the UI as one user-safe message.
+The service accepts already-loaded records and has no database write or provider
+boundary; source records and schema remain unchanged.
+
+The minimum direct runtime dependency set expands by `python-docx==1.2.0` and
+`reportlab==5.0.0`. Both were installed into the project environment and are
+included through the existing pinned-requirements and explicit-manifest package
+workflow. Native Google Docs export remains deferred.
+
+**Reason:**
+- One shared content model prevents Word and PDF section-order drift.
+- Direct local renderers avoid cloud authorization, conversion services, and
+  Microsoft Word automation.
+- In-memory bytes and sanitized filenames eliminate repository or arbitrary
+  path writes during a normal download.
+- Explicit legacy handling preserves Checkpoint 11 backward compatibility.
+- Fixed geometry and render inspection make document quality testable.
+
+**Alternatives Considered:**
+- Microsoft Word or LibreOffice as a runtime export dependency.
+- A hosted document-conversion API.
+- HTML-to-document conversion.
+- A single wide table for all Success Matrix or BRD hierarchy fields.
+- Temporary repository files or user-controlled output paths.
+- Native Google Docs export in Checkpoint 12.
+
+**Impact:**
+One export module, two pinned direct dependencies, document-preview download
+controls, focused tests, package allowlisting, and documentation are added.
+There is no database migration or schema change, no source-document mutation,
+no live provider call, and no Checkpoint 13 implementation.
 
 **Status:**
 Approved

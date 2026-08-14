@@ -63,6 +63,7 @@ class ManifestValidationTests(ReleasePackageTestCase):
         self.assertIn("scripts/setup_macos.command", entries)
         self.assertIn("scripts/setup_windows.ps1", entries)
         self.assertIn("src/sample_data.py", entries)
+        self.assertIn("src/document_export.py", entries)
         self.assertNotIn("data/pmc.db", entries)
         self.assertNotIn(PROTECTED_SCREENSHOT, entries)
         self.assertFalse(any("*" in entry for entry in entries))

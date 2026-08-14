@@ -138,6 +138,12 @@ class DocumentWorkflowTests(unittest.TestCase):
         self.app.number_input(
             key=f"{prefix}_success_matrix_count"
         ).set_value(1).run()
+        self.app.number_input(
+            key=f"{prefix}_contributors_count"
+        ).set_value(1).run()
+        self.app.number_input(
+            key=f"{prefix}_key_dates_milestones_count"
+        ).set_value(1).run()
         hierarchy = complete_prd_agile_hierarchy("workflow")
         for artifact in hierarchy:
             artifact_type = artifact["artifact_type"]
@@ -171,6 +177,18 @@ class DocumentWorkflowTests(unittest.TestCase):
             ).set_value(matrix[field])
         self.app.selectbox(key=f"{prefix}_success_0_status").set_value(
             SuccessMatrixStatus.NOT_STARTED
+        )
+        self.app.text_input(key=f"{prefix}_contributor_0_name").set_value(
+            "Avery Chen"
+        )
+        self.app.text_input(key=f"{prefix}_contributor_0_role").set_value(
+            "Product Manager"
+        )
+        self.app.text_input(key=f"{prefix}_milestone_0_date").set_value(
+            "2026-09-01"
+        )
+        self.app.text_input(key=f"{prefix}_milestone_0_milestone").set_value(
+            "Approval review"
         )
         for artifact in hierarchy:
             artifact_type = artifact["artifact_type"]

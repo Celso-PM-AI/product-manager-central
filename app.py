@@ -4,6 +4,7 @@ import os
 import sqlite3
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Final
 from uuid import uuid4
 
@@ -55,6 +56,11 @@ from src.document_templates import (
     derived_document_title,
     document_template,
     prepopulated_sections,
+)
+from src.document_export import (
+    DocumentExportError,
+    ExportFormat,
+    create_document_export,
 )
 from src.grounded_generation import (
     DatabaseGroundedGenerationService,
@@ -1988,6 +1994,51 @@ def display_document_preview(document: ProductDocument, product: Product) -> Non
     )
 
 
+def render_document_downloads(document: ProductDocument, product: Product) -> None:
+    """Provide read-only, in-memory Word and PDF downloads for one saved document."""
+
+    st.markdown("### Download saved document")
+    st.caption(
+        "Exports use the saved document content shown above. Downloading does not "
+        "change the document or require an API key."
+    )
+    generated_at = datetime.now(timezone.utc)
+    try:
+        word = create_document_export(
+            product,
+            document,
+            ExportFormat.DOCX,
+            generated_at=generated_at,
+        )
+        pdf = create_document_export(
+            product,
+            document,
+            ExportFormat.PDF,
+            generated_at=generated_at,
+        )
+    except DocumentExportError:
+        st.error("This saved document could not be exported safely. Please try again.")
+        return
+
+    word_column, pdf_column = st.columns(2)
+    word_column.download_button(
+        "Download Word (.docx)",
+        data=word.content,
+        file_name=word.filename,
+        mime=word.mime_type,
+        width="stretch",
+        key=f"document_word_export_{document.id}",
+    )
+    pdf_column.download_button(
+        "Download PDF (.pdf)",
+        data=pdf.content,
+        file_name=pdf.filename,
+        mime=pdf.mime_type,
+        width="stretch",
+        key=f"document_pdf_export_{document.id}",
+    )
+
+
 def render_accepted_artifact_history(product: Product) -> None:
     """Display a product's separately stored accepted AI artifacts read-only."""
 
@@ -2259,6 +2310,7 @@ def render_document_preview_or_edit(
         return True
 
     display_document_preview(document, product)
+    render_document_downloads(document, product)
     edit_column, back_column = st.columns(2)
     if edit_column.button(
         "Edit document",

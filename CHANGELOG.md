@@ -17,6 +17,9 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add a recruiter-facing case study, Mermaid architecture guide, sanitized
   fictional screenshots, a 2–4 minute demo storyboard, and draft LinkedIn,
   résumé, interview, and portfolio materials without publishing them.
+- Add local, read-only Word and PDF downloads for saved Draft and Approved BRDs
+  and PRDs, including all structured Checkpoint 11 content, with safe filenames
+  and no database mutation or provider call.
 - Preserve all Phase 9 trusted-source, citation, review, acceptance, and
   source-separation safeguards.
 

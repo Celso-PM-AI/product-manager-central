@@ -19,6 +19,9 @@ flowchart LR
     CONTROL --> AGEN[Scoped Agile generation<br/>agile_generation.py]
     AGEN --> CLAIM[Claim support assessment<br/>claim_support.py]
     UI --> DOCS[BRD and PRD templates<br/>document_templates.py]
+    DOCS --> EXPORT[Read-only shared export model<br/>document_export.py]
+    EXPORT --> WORD[In-memory Word bytes<br/>python-docx]
+    EXPORT --> PDF[In-memory PDF bytes<br/>ReportLab]
     DOCS --> MATRIX[Ordered PRD Success Matrix<br/>separate child records]
     DOCS --> PRDAGILE[PRD Agile hierarchy<br/>Epic → Capability → Feature → User Story]
     PRDAGILE --> PRDAC[Independent ordered criteria<br/>owned at every level]
@@ -62,6 +65,23 @@ models and centralized validation provide the application contract. Existing
 section rows remain sources for backward-compatible editor initialization.
 BRD acceptance criteria remain owned by their original Epic, Capability,
 Feature, or User Story and are never copied between levels.
+
+Checkpoint 12 adds no schema or persistence path. `document_export.py` receives
+an already-loaded Product and saved ProductDocument, validates their stable-ID
+association, and builds one immutable ordered content sequence. Both renderers
+consume that sequence, so headings, sections, structured rows, blank Draft
+labels, and preserved legacy content cannot drift between formats. DOCX and PDF
+bytes remain in memory until Streamlit serves a download; user-controlled paths
+are never accepted and repository temporary files are never created.
+
+The Word renderer uses explicit US Letter geometry, the
+`standard_business_brief` style tokens, fixed-width tables, a restrained memo
+masthead, status/page furniture, macro-free Open XML, and scrubbed personal
+metadata. The PDF renderer uses the same page geometry and content hierarchy,
+an embedded local Unicode font, escaped paragraph input, repeated table headers,
+and split-by-row page flow. Safe deterministic filenames are derived from a
+sanitized Product slug plus document type/ID/version. Neither path reaches
+SQLite, OpenAI, Microsoft Word, a hosted converter, or the network.
 
 ## Typed Agile contracts and accepted storage
 
@@ -247,6 +267,7 @@ GitHub Release, or public posting requires later explicit approval.
 | Retrieval/generation control mapping | `src/model_controls.py` |
 | Validation and normalization | `src/validation.py` |
 | BRD/PRD structure | `src/document_templates.py` |
+| Word/PDF content model, filenames, and rendering | `src/document_export.py` |
 | SQLite persistence and eligible-source reads | `src/database.py` |
 | Provider isolation | `src/ai_service.py` |
 | Approved prompt definitions | `src/prompt_catalog.py` |

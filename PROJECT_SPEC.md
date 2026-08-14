@@ -119,7 +119,8 @@ Approved statuses are:
 - Each document has a stable SQLite ID and remains associated with one product.
 - A product may have multiple BRDs and PRDs.
 - Saved documents have formatted previews and ID-based editing.
-- Export and document deletion controls are not included in Phase 8.
+- Document deletion controls are not included. Checkpoint 12 adds read-only
+  Word and PDF downloads for saved documents.
 
 Document title is limited to 200 characters, version to 50 characters, and
 each long-form section to 10,000 characters. Version is nonblank free text.
@@ -214,6 +215,8 @@ Charts and advanced analytics are not part of the MVP.
 - `src/models.py` owns the `Product` model, status enum, and field categories.
 - `src/document_templates.py` owns persistent document section keys, labels,
   guidance, order, and one-time product prepopulation.
+- `src/document_export.py` owns the shared ordered export model, safe filenames,
+  and local in-memory Word and PDF renderers.
 - `src/validation.py` owns normalization and reusable validation.
 - `src/database.py` owns schema detection, canonical initialization,
   parameterized product/document persistence, approved-source retrieval,
@@ -233,8 +236,8 @@ Charts and advanced analytics are not part of the MVP.
   and the Phase 9 release decision.
 - `tests/` contains temporary-database model, validation, persistence,
   presentation-helper, and Streamlit workflow tests.
-- `requirements.txt` contains the Streamlit, pandas, and official OpenAI Python
-  SDK runtime dependencies.
+- `requirements.txt` contains the pinned Streamlit, pandas, official OpenAI
+  Python SDK, python-docx, and ReportLab runtime dependencies.
 
 The application accepts `PMC_DATABASE_FILE` for isolated automated or manual
 verification. Without it, the only live data source is `data/pmc.db`.
@@ -726,5 +729,26 @@ parent relationships, and measurable criteria. Additive persistence and safe
 legacy initialization preserve all existing section text without copying or
 overwriting it.
 
-Checkpoint 12 remains not started. Its Word/PDF exports must include the Success
-Matrix but no export implementation is part of Checkpoint 11.
+At Checkpoint 11 completion, Checkpoint 12 remained not started. Its Word/PDF
+exports were required to include the Success Matrix, and no export
+implementation was part of Checkpoint 11.
+
+#### Checkpoint 12 implementation record
+
+Checkpoint 12 is complete on August 14, 2026. Every saved Draft or Approved BRD
+and PRD preview now offers Word and PDF downloads. One shared ordered export
+model preserves associated Product metadata, document title/type/ID/version/
+status, generated-at time, all stable professional-outline sections, PRD
+Contributors and Roles, Key Dates and Milestones, PRD Agile hierarchy and
+owner-specific criteria, the PRD Success Matrix, BRD hierarchy and criteria,
+and linked Business Risk/Mitigation rows. Legacy-derived structured content is
+emitted once; distinct legacy section content is labeled and preserved.
+
+`python-docx==1.2.0` generates macro-free Open XML with explicit Letter-page
+geometry, styles, fixed-width tables, metadata, and page furniture. ReportLab
+5.0.0 generates local PDFs from the same content model with embedded Unicode
+font data, wrapping, repeated headers, and multi-page flow. Both formats are
+returned as in-memory bytes through sanitized deterministic filenames. Export
+does not write the database, create a schema migration, call a provider, require
+an API key, invoke Microsoft Word, or use a hosted converter. Native Google Docs
+export remains deferred, and Checkpoint 13 has not started.

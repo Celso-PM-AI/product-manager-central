@@ -79,6 +79,8 @@ class GovernanceFileTests(unittest.TestCase):
                 "streamlit==1.61.1",
                 "pandas==3.0.5",
                 "openai==2.53.0",
+                "python-docx==1.2.0",
+                "reportlab==5.0.0",
             ],
         )
         contributing = repository_text("CONTRIBUTING.md")

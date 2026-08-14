@@ -16,8 +16,9 @@
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 10 are complete; Checkpoint 11 implementation
-  and the approved Product Manager UI corrections are complete.
+- Phase 10 Checkpoints 1 through 12 are complete; Checkpoint 11 implementation
+  and the approved Product Manager UI corrections remain unchanged, and
+  Checkpoint 12 adds read-only Word/PDF document export.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1695,6 +1696,8 @@ No Word/PDF export code is included.
 
 ### Checkpoint 12 — Word and PDF export for BRDs and PRDs
 
+**Completed:** August 14, 2026
+
 - Add deterministic, read-only export services for saved BRDs and PRDs in
   `.docx` and PDF formats, preserving product/document metadata and ordered
   sections, including ordered PRD Success Matrix entries.
@@ -1711,6 +1714,21 @@ No Word/PDF export code is included.
 Exit gate: generated Word and PDF files open, render correctly, contain the
 expected data, expose no secret/local path, and leave source records byte-for-
 byte unchanged.
+
+Completion evidence: one shared ordered content model feeds direct local Word
+and PDF renderers for every saved Draft or Approved BRD/PRD. Exports include
+metadata, generated-at time, every ordered section, PRD Contributors/Roles,
+Key Dates/Milestones, the PRD Agile hierarchy and independently owned criteria,
+the PRD Success Matrix, the BRD hierarchy and criteria, and linked Business
+Risk/Mitigation rows. Distinct legacy content is preserved without duplicating
+legacy-derived rows. In-memory Streamlit downloads use deterministic sanitized
+filenames and user-safe errors. `python-docx==1.2.0` and `reportlab==5.0.0` are
+the only new direct dependencies and the export module is explicitly
+allowlisted for packaging. Focused automated, render, complete regression,
+package, compilation, safety, and protected-file results are recorded in the
+Checkpoint 12 handoff. There is no schema migration, database write, API key,
+live provider call, Microsoft Word runtime requirement, hosted conversion,
+official package, stage, commit, push, or Checkpoint 13 implementation.
 
 ### Checkpoint 13 — Integrated security, UAT, documentation, and release regression
 

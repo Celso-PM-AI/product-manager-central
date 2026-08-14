@@ -27,6 +27,8 @@ with `PMC_DATABASE_FILE`. Never test against `data/pmc.db`.
   backups, archives, caches, virtual environments, temporary files, personal
   data, proprietary data, or the protected local screenshot.
 - Do not make live OpenAI calls in automated tests.
+- Keep document-export tests local and in memory; render representative Word
+  and PDF fixtures and inspect every page before requesting review.
 - Run the complete suite, Python compilation, `git diff --check`, a secret scan,
   and an isolated application smoke test before requesting review.
 

@@ -17,6 +17,8 @@ Checkpoint 10. Checkpoint 11 exposes the governed Agile interface, guided
 workspace, professional BRD/PRD outlines, and PRD Success Matrix.
 The PRD builder uses the explicit Epic → Capability → Feature → User Story
 hierarchy with independently owned acceptance criteria at every level.
+Checkpoint 12 adds local, read-only Word and PDF export for every saved Draft
+or Approved BRD and PRD.
 
 PMC is preparing a source-based local v1.0.0 portfolio release under the
 [MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
@@ -90,6 +92,9 @@ evidence boundaries.
 - A governed Agile UI for Product and Approved-source selection, all five output
   types, prompt/profile/Top-K visibility, traceability, claim gates, revision,
   rejection, explicit acceptance, and read-only accepted history.
+- In-memory Word (`.docx`) and PDF downloads for saved BRDs and PRDs, including
+  every ordered section and Checkpoint 11 structured collection, with safe
+  deterministic filenames and no database write or API-key requirement.
 
 Duplicate product names are allowed. Updates and deletion always target the
 product ID rather than its name.
@@ -173,6 +178,8 @@ diagrams in [Architecture](docs/ARCHITECTURE.md).
   Temperature, Top-P, and structured-output settings.
 - `src/document_templates.py` defines stable BRD/PRD section keys, labels,
   professional group order, guidance, and prepopulation mappings.
+- `src/document_export.py` builds one read-only ordered export model and renders
+  macro-free Word and local PDF bytes entirely in memory.
 - `src/validation.py` provides reusable validation and normalization.
 - `src/database.py` owns parameterized SQLite initialization, product and
   document persistence, approved-source retrieval, search, dashboard metrics,
@@ -189,8 +196,8 @@ diagrams in [Architecture](docs/ARCHITECTURE.md).
 - `src/rag_evaluation.py` owns deterministic Phase 9 scoring and release gates.
 - `tests/` contains isolated validation, database, presentation-helper, and
   Streamlit workflow tests.
-- `requirements.txt` lists the Streamlit, pandas, and OpenAI runtime
-  dependencies.
+- `requirements.txt` lists the Streamlit, pandas, OpenAI, python-docx, and
+  ReportLab runtime dependencies.
 - `data/pmc.db` is the only live application data source.
 
 Documents are normalized across `documents` and `document_sections` tables.
@@ -211,7 +218,8 @@ Python 3.11–3.13 have automated structural coverage only and are not yet claim
 as natively validated.
 
 `requirements.txt` pins only the clean-tested direct runtime dependencies:
-Streamlit 1.61.1, pandas 3.0.5, and OpenAI 2.53.0. See the
+Streamlit 1.61.1, pandas 3.0.5, OpenAI 2.53.0, python-docx 1.2.0, and
+ReportLab 5.0.0. See the
 [installation and local-data guide](docs/INSTALLATION.md) for Mac and Windows
 setup, launch, security prompts, backup, restore, update, uninstall, and checksum
 instructions.
@@ -496,8 +504,21 @@ Saved documents are listed only under their associated product and identified
 by stable database IDs. A product can have multiple BRDs and PRDs. Opening a
 document displays a formatted preview; Edit updates that same document ID.
 Prepopulated content is a starting snapshot and does not change when the product
-is edited later. Word/PDF export remains deferred to Checkpoint 12, where the
-PRD Success Matrix must be included.
+is edited later.
+
+Every saved Draft or Approved BRD and PRD preview offers **Download Word
+(.docx)** and **Download PDF (.pdf)**. Both exports preserve the associated
+product, document type and ID, title, version, status, generated-at time, every
+ordered section, and all structured Checkpoint 11 content. That includes PRD
+Contributors and Roles, Key Dates and Milestones, Epic → Capability → Feature →
+User Story records and their own criteria, the PRD Success Matrix, BRD hierarchy
+criteria, and Business Risk/Mitigation pairs. Distinct legacy text is retained
+and labeled; legacy-derived rows are not duplicated.
+
+Exports are built locally in memory with deterministic path-safe filenames.
+They do not write to the database, call OpenAI or another provider, require an
+API key, run Microsoft Word, or use a hosted converter. Native Google Docs
+export remains deferred.
 
 The interface uses readable status labels, guided empty states, consistent
 user-safe messages, and full-width detail sections so long product context
@@ -553,7 +574,7 @@ publication.
   persisted evaluation history
 - User-authored/editable prompts, database prompt storage, prompt history,
   product-specific prompts, sharing, import/export, experiments, and optimization
-- Word/PDF document export
+- Native Google Docs document export
 - Authentication, multi-user permissions, and cloud deployment
 - Analytics integrations, charts, and advanced styling frameworks
 - ORM, service-layer, separate view-layer, or general migration frameworks
@@ -594,7 +615,9 @@ revision-triggered re-grounding, structured fail-closed gates, rejection,
 exact-source acceptance checks, and idempotent transactional persistence; 24
 focused tests and all 339 baseline tests passed before Checkpoint 11. Checkpoint
 11 adds the guided workspace, professional builders, PRD Success Matrix, and
-governed Agile review UI. Checkpoint 12 export is not started.
+governed Agile review UI. Checkpoint 12 adds local in-memory Word and PDF
+downloads for saved BRDs and PRDs without changing source records or the schema.
+Checkpoint 13 is not started.
 
 ## Governance and release policy
 
