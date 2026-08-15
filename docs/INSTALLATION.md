@@ -30,6 +30,13 @@ both formats directly and does not require Microsoft Word, LibreOffice, a
 hosted conversion service, an API key, or a network connection to export a
 saved document.
 
+Export does not require an API key. Checkpoint 13 reverified local no-key
+startup, all seven application destinations, the macOS launcher, Windows
+launcher structure, Draft/Approved Word and PDF export, and isolated package
+startup with temporary databases. This adds regression evidence, not a broader
+native-platform support claim. Checkpoint 14 release-candidate verification
+remains not started, and there is no published PMC package or release.
+
 Install Python from [python.org](https://www.python.org/downloads/) before
 starting. The setup helpers stop with an actionable error if Python is missing,
 outside the prerequisite range, unable to create a virtual environment, or

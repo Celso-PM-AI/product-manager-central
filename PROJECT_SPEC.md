@@ -308,10 +308,10 @@ operations are outside Phase 10.
 Environment support is evidence-based. An operating-system and Python-version
 combination is supported only after a clean virtual environment installs all
 direct runtime dependencies and passes the complete test suite and isolated
-application smoke test without an API key. No Python or OS version is currently
-claimed as v1.0-supported; the compatibility matrix is pending later Phase 10
-clean-install validation. The existing environment's test result alone is not a
-support claim.
+application smoke test without an API key. Native clean-install evidence covers
+macOS 26.5.2 arm64 with Python 3.14.6. Windows and Python 3.11–3.13 retain
+structural coverage only and are not claimed as natively validated. The
+existing environment's test result alone is not a broader support claim.
 
 `requirements.txt` continues to list direct runtime dependencies. Direct
 versions will be pinned only after compatibility evidence exists. Phase 10 does
@@ -751,4 +751,33 @@ font data, wrapping, repeated headers, and multi-page flow. Both formats are
 returned as in-memory bytes through sanitized deterministic filenames. Export
 does not write the database, create a schema migration, call a provider, require
 an API key, invoke Microsoft Word, or use a hosted converter. Native Google Docs
-export remains deferred, and Checkpoint 13 has not started.
+export remains deferred.
+
+#### Checkpoint 13 integrated verification record
+
+Checkpoint 13 is complete on August 15, 2026. Integrated UAT covers the
+Dashboard and all seven destinations; Product CRUD/search/safe deletion; Draft
+and Approved BRD/PRD creation, editing, preview, structured hierarchy, separate
+acceptance criteria, and PRD Success Matrix behavior; Approved-only retrieval;
+no-key and empty states; governed Agile generation, review, revision,
+rejection, acceptance, and every claim/citation/freshness/hierarchy/gap/proposal
+gate; accepted/source separation; fictional onboarding; local launchers; and
+Draft/Approved Word/PDF export content, formatting, and safe filenames.
+
+Security review and deterministic adversarial regression cover prompt injection,
+cross-product leakage, malformed structured output, unsupported-content bypass,
+stale-source races, input limits, export/path injection, repository temporary
+files, and provider-error redaction. Verification used temporary databases,
+fictional records, injected providers, and no real key or live provider call.
+Fourteen focused Checkpoint 13 tests, 397 complete-regression tests, 20 release-
+metadata tests, 10 package tests, and 6 launcher tests passed. PDF visual review
+covered all 19 generated pages and DOCX package/content validation passed. The
+user subsequently opened and approved the regenerated four DOCX and four PDF
+files in their associated macOS applications, including content, English-name
+display, and formatting.
+No application code, schema, dependency, screenshot, or release-manifest change
+was required; documentation drift and the disposable manual-review fixture's
+non-English personal names were corrected. Unicode export coverage remains in
+isolated automated test data. Checkpoint 14 release-
+candidate verification remains not started, and PMC has not been packaged,
+tagged, published, or released.

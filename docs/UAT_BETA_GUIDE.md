@@ -1,13 +1,15 @@
 # Product Manager Central UAT, Beta, and Responsible-Use Guide
 
-This guide defines Phase 10 Checkpoint 4 acceptance preparation for Product
-Manager Central (PMC) v1.0.0. It consolidates internal user acceptance testing
-(UAT), the planned Product Manager beta, troubleshooting, known limitations,
-and responsible use of AI-generated content.
+This guide began as the Phase 10 Checkpoint 4 acceptance plan for Product
+Manager Central (PMC) v1.0.0 and now records the expanded Checkpoint 13
+integrated UAT. It consolidates internal user acceptance testing (UAT), the
+planned Product Manager beta, troubleshooting, known limitations, and
+responsible use of AI-generated content.
 
-Checkpoint 4 does not publish PMC or create an official release package. It
+Checkpoint 13 does not publish PMC or create an official release package. It
 also does not claim that an external beta, native Windows validation, or native
-Python 3.11 through 3.13 validation has occurred.
+Python 3.11 through 3.13 validation has occurred. Checkpoint 14 release-
+candidate verification remains not started.
 
 ## Validation states and evidence boundaries
 
@@ -40,7 +42,7 @@ without explicit acceptance is an immediate failure and release blocker.
 
 ### Internal UAT prerequisites and environment
 
-- Start from a clean Git worktree at the approved Checkpoint 3 baseline.
+- Start from clean `main` at the approved Checkpoint 12 baseline.
 - Use the pinned direct dependencies in `requirements.txt`.
 - Set `PMC_DATABASE_FILE` to a new path inside an isolated temporary directory.
 - Ensure `OPENAI_API_KEY` is absent. Use only injected fakes or mocks for AI
@@ -297,6 +299,196 @@ without explicit acceptance is an immediate failure and release blocker.
   `docs/INSTALLATION.md`.
 - **Status:** Passed structurally; native Windows validation remains pending.
 
+### UAT-18 — Dashboard and all seven workspace destinations
+
+- **Preconditions:** Clean temporary database; no API key; PMC running locally.
+- **Steps:** Open Dashboard, Create Product, Create PRD, Create BRD, AI
+  Assistant, View Products, and Search Products in order; revisit Dashboard.
+- **Expected result:** Every destination opens without an exception, keeps the
+  Product workspace label, and presents an actionable empty state where data is
+  required.
+- **Pass/fail:** Pass only if all seven destinations render and navigation does
+  not retain stale Product, document, or Agile review state.
+- **Evidence:** Checkpoint 13 local no-key Streamlit walkthrough and
+  `test_checkpoint13_integrated_uat.Checkpoint13IntegratedRuntimeTests.test_dashboard_and_all_seven_destinations_work_without_a_key`.
+- **Status:** Passed by local no-key UAT and deterministic AppTest validation.
+
+### UAT-19 — Structured BRD hierarchy and risk workflow
+
+- **Preconditions:** Fictional Product in a temporary database; BRD builder open.
+- **Steps:** Save an incomplete Draft BRD; add Epic, Capability, Feature, and
+  User Story values with independent criteria; add linked Business Risk and
+  Mitigation rows; preview, edit, and approve the complete BRD.
+- **Expected result:** Draft rows remain editable; approval requires complete
+  hierarchy, owner-specific measurable criteria, and complete linked risks;
+  preview order and stable row IDs persist.
+- **Pass/fail:** Pass only if no criterion is copied between levels and an
+  incomplete Approved BRD is rejected atomically.
+- **Evidence:** Structured BRD cases in `tests/test_checkpoint11_workspace.py`,
+  export coverage in `tests/test_checkpoint12_exports.py`, and the complete
+  Checkpoint 13 regression.
+- **Status:** Passed by deterministic temporary-database validation.
+
+### UAT-20 — PRD Epic to User Story hierarchy and independent criteria
+
+- **Preconditions:** Fictional Product in a temporary database; PRD builder open.
+- **Steps:** Add multiple ordered Epics, Capabilities, Features, and User Stories;
+  select each required parent; add separate measurable criteria at every level;
+  save Draft, preview, edit, and approve.
+- **Expected result:** Stable IDs, type-relative order, explicit Epic →
+  Capability → Feature → User Story parents, and independently owned criteria
+  survive persistence and editing. Functional Requirements remains separate.
+- **Pass/fail:** Missing levels, invalid parents, incomplete content, or a level
+  without its own criterion must block approval.
+- **Evidence:** PRD hierarchy contract, persistence, validation, and UI cases in
+  `tests/test_checkpoint11_workspace.py` plus focused Checkpoint 13 export UAT.
+- **Status:** Passed by deterministic temporary-database validation.
+
+### UAT-21 — Ordered PRD Success Matrix with stable identifiers
+
+- **Preconditions:** Fictional Draft PRD in a temporary database.
+- **Steps:** Add two Success Matrix rows; reorder and edit them; save Draft;
+  attempt approval with a required measurable field absent; complete the rows
+  and approve.
+- **Expected result:** Entry IDs stay stable, stored position follows visible
+  order, Draft accepts incomplete rows, and Approved requires at least one row
+  with every measurable field except optional baseline.
+- **Pass/fail:** Pass only if the Success Matrix remains separate from Agile
+  acceptance criteria and is present in preview, Word, and PDF output.
+- **Evidence:** Success Matrix validation/persistence tests in
+  `tests/test_checkpoint11_workspace.py` and ordered export tests in
+  `tests/test_checkpoint12_exports.py`.
+- **Status:** Passed by deterministic temporary-database and export validation.
+
+### UAT-22 — Draft versus Approved validation across BRDs and PRDs
+
+- **Preconditions:** Incomplete and complete fictional BRDs/PRDs in a temporary
+  database.
+- **Steps:** Save each incomplete document as Draft; attempt Approved; inspect
+  every reported field; complete structured and section content; approve again.
+- **Expected result:** Draft preserves incomplete work. Approved validation
+  reports all missing sections and structured fields and performs no partial
+  update; the complete document saves atomically.
+- **Pass/fail:** Any partial Approved update or generic error that hides the
+  incomplete field fails.
+- **Evidence:** Document and Checkpoint 11 validation/workflow modules plus the
+  complete Checkpoint 13 regression.
+- **Status:** Passed by deterministic temporary-database validation.
+
+### UAT-23 — Governed Agile generation for every supported task and profile
+
+- **Preconditions:** Temporary database with selected Approved fictional
+  sources; deterministic embedding and structured-generation providers.
+- **Steps:** Generate Epic, Capability, Feature, User Story, and structured
+  acceptance-criteria results under Strictly Grounded, Balanced, and
+  Exploratory behavior; vary retrieval Top-K independently.
+- **Expected result:** Only selected Product and Approved-document evidence
+  reaches the provider; all outputs retain typed hierarchy, artifact- and
+  criterion-level citations, and profile-conforming gap/proposal behavior.
+  Top-K never changes the profile or model controls.
+- **Pass/fail:** Any cross-product source, Draft source, missing owner citation,
+  unstructured response acceptance, or control substitution fails.
+- **Evidence:** `tests/test_checkpoint8_contracts.py` and
+  `tests/test_checkpoint9_grounded_agile.py`.
+- **Status:** Passed by offline deterministic provider validation; no live call.
+
+### UAT-24 — Claim, citation, hierarchy, gap, and proposal gates
+
+- **Preconditions:** Deterministic safe and adversarial Agile provider fixtures.
+- **Steps:** Exercise supported claims, citation-only claims, ambiguous
+  paraphrases, contradictions, invented actors/dates/metrics, malformed parents,
+  missing criteria, source gaps, and Exploratory proposals.
+- **Expected result:** Only fully supported, traceable, structurally valid output
+  can enter review as acceptable. Every unsupported, ambiguous, missing-source,
+  gap-bearing, or proposal-bearing result remains non-saveable.
+- **Pass/fail:** Any warning-only bypass or partial acceptance fails.
+- **Evidence:** Checkpoint 9 claim-assessment cases and Checkpoint 10 trusted
+  acceptance-boundary bypass cases.
+- **Status:** Passed by deterministic adversarial validation.
+
+### UAT-25 — Agile review, revision, rejection, acceptance, and freshness
+
+- **Preconditions:** Pending grounded Agile review from current Approved sources.
+- **Steps:** Review citations and gates; revise and reassess; reject one batch;
+  accept another; repeat acceptance; separately edit, delete, move, or unapprove
+  a source immediately before acceptance.
+- **Expected result:** Revision reruns every gate, rejection saves nothing,
+  acceptance is explicit and idempotent, stale or out-of-scope sources block the
+  full transaction, and accepted provenance remains immutable.
+- **Pass/fail:** Any pending/rejected row, partial write, duplicate batch, stale
+  save, or source-document mutation fails.
+- **Evidence:** `tests/test_checkpoint10_agile_review.py` and governed UI cases
+  in `tests/test_checkpoint11_workspace.py`.
+- **Status:** Passed by deterministic temporary-database validation.
+
+### UAT-26 — Draft and Approved Word/PDF exports
+
+- **Preconditions:** Saved fictional Draft and Approved BRDs and PRDs with
+  Unicode, multiline text, structured hierarchy, criteria, risks, milestones,
+  contributors, and a PRD Success Matrix.
+- **Steps:** Download Word and PDF from each saved preview; open and render every
+  page; compare metadata, ordered headings, tables, blank Draft labels, and
+  structured collections with the saved records.
+- **Expected result:** All four document/status combinations export locally and
+  include complete ordered content with readable hierarchy and formatting.
+- **Pass/fail:** Missing content, duplicated legacy-derived text, clipped or
+  overlapping layout, unreadable glyphs, or a provider/database call fails.
+- **Evidence:** `tests/test_checkpoint12_exports.py`, focused Checkpoint 13
+  four-document export UAT, automated PDF render review, and completed native
+  manual review of the regenerated four DOCX and four PDF files.
+- **Status:** Passed. Automated validation covered DOCX package/content safety
+  and all 19 rendered PDF pages. The regenerated English-name review set was
+  then opened in the associated macOS applications and the reviewer approved
+  all eight documents for content, name display, and formatting.
+
+### UAT-27 — Export injection, filenames, memory, and error safety
+
+- **Preconditions:** Saved fictional documents containing markup-like text,
+  Unicode, traversal characters, long content, and hostile-looking filenames.
+- **Steps:** Export Word/PDF; inspect filenames, relationships, macros, metadata,
+  repository files, temporary paths, errors, and database bytes before/after.
+- **Expected result:** Filenames are deterministic and path-safe; user text is
+  document data; Word is macro-free with no external relationships; exported
+  bytes are in memory; errors expose no key, path, SQL, or provider detail; the
+  database and repository receive no export file.
+- **Pass/fail:** Path traversal, external relationship, macro, secret/path leak,
+  repository temporary file, or database mutation fails.
+- **Evidence:** Checkpoint 12 filename/boundary tests and focused Checkpoint 13
+  security/export regression.
+- **Status:** Passed by deterministic security and integrity validation.
+
+### UAT-28 — User-safe failures, empty states, and no-key/no-source behavior
+
+- **Preconditions:** Empty temporary database; no API key; injected failures for
+  database, provider, sample loading, generation, review, and export boundaries.
+- **Steps:** Visit all empty destinations; attempt AI without a key or Approved
+  sources; trigger each injected failure and a missing/deleted selection.
+- **Expected result:** PMC gives actionable, non-sensitive guidance, performs no
+  live provider call, saves no partial data, and exposes no credential, local
+  path, raw SQL, provider payload, or hidden instruction.
+- **Pass/fail:** Any raw exception, sensitive detail, silent failure, or partial
+  state fails.
+- **Evidence:** App, onboarding, AI service, assistant, generation, review, and
+  export workflow tests plus the local no-key Streamlit walkthrough.
+- **Status:** Passed by deterministic failure injection and local no-key UAT.
+
+### UAT-29 — Release regression and protected-artifact integrity
+
+- **Preconditions:** Expected clean Checkpoint 12 `main`; recorded pre-UAT hashes;
+  all work uses temporary databases and package directories.
+- **Steps:** Run focused Checkpoint 13 tests, the complete suite, release metadata
+  and package tests, tracked-Python compilation, script checks, two reproducible
+  package builds, extracted no-key startup, diff/secret/prohibited-artifact
+  scans, and before/after protected-file comparisons.
+- **Expected result:** Every mandatory gate passes; package membership matches
+  the allowlist; no database, cache, secret, generated export, archive, or
+  package remains in the repository; `data/pmc.db` and the protected screenshot
+  retain their pre-Checkpoint 13 hashes.
+- **Pass/fail:** Any failing test, artifact drift, live provider call, secret,
+  package mismatch, protected-file change, or release action fails.
+- **Evidence:** Checkpoint 13 handoff results and release/package test output.
+- **Status:** Passed by final Checkpoint 13 regression and integrity verification.
+
 ## Four-to-six-Product-Manager beta plan
 
 ### Objectives
@@ -323,8 +515,8 @@ complete the study.
    beta build and distribution path receive separate authorization.
 2. Explain local storage, optional AI, fictional-only study content, and how to
    stop the application before backup or removal.
-3. Ask participants to complete representative UAT-01 through UAT-13 workflows
-   with isolated study data.
+3. Ask participants to complete representative UAT workflows from the complete
+   UAT-01 through UAT-29 catalog with isolated study data.
 4. Observe where instructions, status labels, citations, review state, or error
    recovery are unclear. Do not collect API keys, source documents, database
    files, screenshots containing private content, or provider payloads.
@@ -462,9 +654,10 @@ approved source. Continue only when the independently computed SHA-256 matches.
 - Semantic retrieval may omit relevant wording or rank imperfect evidence.
   Approved status and citations improve control but do not establish truth.
 - AI output may be incomplete, incorrect, stale, biased, or unsupported.
-- Accepted artifacts are read-only in PMC; there is no artifact edit, delete,
-  regeneration, export, or automatic source-document update operation.
-- PMC does not export BRDs/PRDs to Word or PDF and has no analytics integration.
+- Accepted generated artifacts are read-only in PMC; there is no artifact edit,
+  delete, regeneration, export, or automatic source-document update operation.
+- Saved Draft and Approved BRDs/PRDs export locally to Word and PDF. Native
+  Google Docs export and analytics integration remain unavailable.
 - The external beta has not been conducted. No beta outcome or general user
   suitability is claimed.
 - Portfolio screenshots use deterministic fictional Trailwise data. They do not
@@ -527,4 +720,33 @@ file comparisons also passed.
 The demo has not been recorded, the external beta has not been conducted, and
 no material was posted, published, sent, or uploaded. Native Windows and Python
 3.11–3.13 validation, an official release candidate, tagging, publication, and
-GitHub Release creation remain future work. Checkpoint 6 is not started.
+GitHub Release creation remain future work. The historical Checkpoint 6
+release-candidate step was moved to Checkpoint 14.
+
+## Checkpoint 13 completion record
+
+Checkpoint 13 integrated UAT passed UAT-01 through UAT-29 at the documented
+internal, local macOS, deterministic-provider, render-review, or structural
+evidence level. The pre-change 382-test baseline passed. Focused Checkpoint 13,
+complete regression, release metadata/package, compilation, launcher/script,
+reproducible package, extracted no-key startup, secret/prohibited-artifact,
+Git-integrity, and protected-file checks passed with temporary databases and no
+live provider call. The measured automated results were 14 focused Checkpoint
+13 tests, 397 complete regression tests, 20 release-metadata tests, 10 package
+tests, and 6 launcher tests, all passing.
+
+The gaps found were documentation drift from Checkpoints 11 and 12 and non-
+English personal names in the disposable manual-review fixture. The fixture now
+uses Jordan Lee and Taylor Morgan, while generic Unicode export coverage remains
+isolated in automated test data. Application code, schema, dependencies,
+screenshots, and release-manifest membership did not require a change. Manual
+in-app-browser automation
+was unavailable because the installed browser runtime could not initialize, so
+the running local Streamlit app was validated through its health endpoint and
+the full seven-destination Streamlit test harness instead. DOCX package/content
+validation and automated review of all 19 rendered PDF pages passed. The user
+also completed native manual review of the regenerated four DOCX and four PDF
+files and approved their content, English-name display, and formatting. The two
+authorized temporary review directories were removed after approval. Checkpoint
+14 remains not started.
+No package, tag, publication, external beta, or release was created.

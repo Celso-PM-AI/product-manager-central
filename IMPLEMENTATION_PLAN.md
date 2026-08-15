@@ -12,13 +12,14 @@
 
 ## Current phase status
 
-**Updated:** August 14, 2026
+**Updated:** August 15, 2026
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 12 are complete; Checkpoint 11 implementation
-  and the approved Product Manager UI corrections remain unchanged, and
-  Checkpoint 12 adds read-only Word/PDF document export.
+- Phase 10 Checkpoints 1 through 13 are complete; Checkpoint 11 implementation
+  and the approved Product Manager UI corrections remain unchanged, Checkpoint
+  12 adds read-only Word/PDF document export, and Checkpoint 13 completes
+  integrated security, UAT, documentation, and release regression.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1751,6 +1752,32 @@ official package, stage, commit, push, or Checkpoint 13 implementation.
 Exit gate: every mandatory groundedness, human-control, source-separation,
 traceability, unsupported-content, export-safety, and regression gate is perfect;
 no external beta, publication, tag, or release is claimed.
+
+**Completed:** August 15, 2026
+
+Completion evidence: the expected Checkpoint 12 `main` and live `origin/main`
+matched with zero divergence and a clean worktree/index. The 382-test baseline
+passed before changes. Integrated UAT then covered all seven destinations,
+Product and document lifecycles, BRD and PRD structured hierarchy, independently
+owned criteria, the PRD Success Matrix, governed Agile generation/review/
+acceptance gates, fictional samples, no-key and empty states, launchers, and
+Draft/Approved Word/PDF export. Focused security and adversarial checks covered
+prompt injection, cross-product scope, unsupported-content bypass, stale-source
+races, malformed structured output, input limits, export/path injection,
+temporary files, and provider-error redaction.
+
+All work used fictional content, temporary databases, injected providers, and
+local in-memory exporters. Fourteen focused Checkpoint 13 tests, all 397 tests
+in the complete suite, 20 release-metadata tests, 10 package tests, and 6
+launcher tests passed. The release metadata/package tests,
+tracked-Python compilation, script checks, reproducible temporary packages,
+extracted no-key startup, `git diff --check`, secret/prohibited-artifact scans,
+and protected-file comparisons passed. The defects found were documentation
+drift and non-English personal-name values in the disposable manual-review
+fixture; no application code, schema, dependency, screenshot, or release-
+manifest membership change was required. Unicode export coverage remains in
+isolated automated test data. No live provider call, official package, stage,
+commit, push, tag, publication, external beta, or release occurred.
 
 ### Checkpoint 14 — Release-candidate verification and GitHub release preparation
 

@@ -193,6 +193,14 @@ artifact- and criterion-level citations, claim findings, gaps, proposals, and
 every acceptance gate. It delegates revision, rejection, and acceptance to
 `agile_review.py`; it does not reproduce trust decisions in `app.py`.
 
+Checkpoint 13 adds no runtime component. Integrated security and regression
+tests exercise the existing boundaries together: untrusted prompt/source roles,
+Product/document source scoping, request and output limits, structured parsing,
+claim and hierarchy gates, revision reassessment, source-freshness races,
+transactional acceptance, export/path safety, error redaction, and package
+exclusions. The result is verification and documentation reconciliation rather
+than a schema, dependency, or architecture change.
+
 The database is local application data. It is never allowlisted into a release
 archive, and fictional samples are loaded only after an explicit user action.
 
@@ -251,6 +259,12 @@ overwrite, and rejects prohibited artifact classes.
 
 This is build capability, not publication authority. An official archive, tag,
 GitHub Release, or public posting requires later explicit approval.
+
+Checkpoint 13 verified this architecture with temporary databases, fictional
+content, deterministic or mocked providers, local in-memory exports, and
+reproducible temporary package builds. It made no live provider call and did
+not create an official package, tag, publication, or release. Checkpoint 14
+release-candidate verification remains not started.
 
 ## Responsibility map
 

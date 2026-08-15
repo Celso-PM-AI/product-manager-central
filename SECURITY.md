@@ -35,7 +35,46 @@ API; users are responsible for ensuring they are authorized to send that data.
 Security fixes must preserve the trusted-source, citation, human-review,
 explicit-acceptance, and source-separation safeguards established in Phase 9.
 
+## Grounded-generation and acceptance controls
+
+- Prompt injection and prompt-injection-like text in a BRD or PRD remain
+  untrusted source data. They
+  cannot replace application instructions, the selected Product, source scope,
+  prompt version, behavior profile, artifact type, or structured-output schema.
+- Source selection and retrieval are constrained to the selected Product and
+  selected Approved BRDs/PRDs. Cross-product or Draft evidence is rejected.
+- Strict structured output, stable source references, hierarchy validation,
+  and owner-specific citations reject malformed or fabricated relationships.
+- Citation presence alone never proves an unsupported claim. Unsupported,
+  ambiguous, contradicted, or missing-source claims, absent measurable
+  criteria, source gaps, and non-saveable proposals block every profile.
+- Revision reruns the same checks. Acceptance revalidates source eligibility
+  and freshness, and the database boundary independently repeats claim and
+  full-section checks inside the transaction. A stale source or failed gate
+  saves no partial record.
+- Product Manager requests, source records, parent context, retrieval Top-K,
+  structured responses, accepted text, product/document fields, and export
+  components have explicit input limits to reduce denial-of-service risk.
+- Provider errors are replaced with user-safe messages. Credentials, hidden
+  instructions, provider payloads, raw SQL, and local paths are not displayed
+  or persisted as error detail.
+
 Word and PDF export is local and read-only. PMC does not send exported content
 to Microsoft Word, a hosted converter, OpenAI, or another provider. Export
 filenames are sanitized and bytes are generated in memory; users remain
 responsible for protecting downloaded files that may contain product content.
+
+User-controlled export names cannot select a directory or path: traversal,
+separator, control, markup-like, and unsupported filename characters are
+normalized into bounded deterministic components. Word output is macro-free
+and has no external relationships; PDF markup-sensitive text is escaped.
+Path traversal is therefore rejected. Normal export creates no repository
+temporary files, and a rendering failure is
+reported without exposing a local path. Release-package tests reject databases,
+sidecars, generated DOCX/PDF files, archives, secrets, caches, and temporary
+artifacts.
+
+Checkpoint 13 regression verified these boundaries with fictional content,
+temporary databases, injected providers, and no real API key or live provider
+call. This verification is not a claim that PMC is released or supported for
+multi-user, hosted, regulated, or adversarially shared environments.

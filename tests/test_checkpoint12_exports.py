@@ -30,6 +30,7 @@ from tests.success_matrix_fixtures import complete_prd_agile_hierarchy, complete
 
 APP_FILE = Path(__file__).resolve().parents[1] / "app.py"
 FIXED_TIME = datetime(2026, 8, 14, 19, 0, tzinfo=timezone.utc)
+MANUAL_REVIEW_CONTRIBUTOR_NAMES = ("Jordan Lee", "Taylor Morgan")
 
 
 def product_data(name: str = "Atlas Café / ../ Roadmap") -> dict[str, object]:
@@ -46,7 +47,7 @@ def product_data(name: str = "Atlas Café / ../ Roadmap") -> dict[str, object]:
 def _sections(document_type: DocumentType, *, approved: bool = True) -> dict[str, str]:
     return {
         definition.key: (
-            f"Saved {definition.label} with Unicode café 東京 and multiline:\n"
+            f"Saved {definition.label} with fictional review content and multiline:\n"
             "• First preserved statement\n• Second preserved statement"
             if approved else ""
         )
@@ -92,8 +93,8 @@ def document_data(product_id: int, document_type: DocumentType, *, approved: boo
             "success_matrix": complete_success_matrix(),
             "agile_hierarchy": complete_prd_agile_hierarchy("export"),
             "contributors": [
-                {"entry_id": "contributor-1", "contributor_name": "Zoë 李", "contributor_role": "Product Manager"},
-                {"entry_id": "contributor-2", "contributor_name": "Renée", "contributor_role": "Analytics Lead"},
+                {"entry_id": "contributor-1", "contributor_name": MANUAL_REVIEW_CONTRIBUTOR_NAMES[0], "contributor_role": "Product Manager"},
+                {"entry_id": "contributor-2", "contributor_name": MANUAL_REVIEW_CONTRIBUTOR_NAMES[1], "contributor_role": "Analytics Lead"},
             ],
             "key_dates_milestones": [
                 {"entry_id": "milestone-1", "date": "2026-09-01", "milestone": "Beta begins"},
@@ -221,15 +222,31 @@ class OrderedContentTests(ExportTestCase):
 
 
 class WordExportTests(ExportTestCase):
-    def test_docx_opens_and_preserves_unicode_multiline_metadata_and_status(self):
+    def test_docx_opens_and_preserves_manual_review_content_metadata_and_status(self):
         document = self.create(DocumentType.PRD)
         result = create_document_export(self.product, document, "docx", generated_at=FIXED_TIME)
         opened = Document(BytesIO(result.content))
         text = "\n".join(paragraph.text for paragraph in opened.paragraphs)
         table_text = "\n".join(cell.text for table in opened.tables for row in table.rows for cell in row.cells)
-        for expected in ("Atlas PRD <script>alert(1)</script>", "Approved", "2026-08-14 19:00 UTC", "café 東京", "Zoë 李", "Outcome completion rate"):
+        for expected in (
+            "Atlas PRD <script>alert(1)</script>", "Approved",
+            "2026-08-14 19:00 UTC", "Jordan Lee", "Taylor Morgan",
+            "Outcome completion rate",
+        ):
             self.assertIn(expected, text + table_text)
         self.assertIn("First preserved statement\n• Second preserved statement", text + table_text)
+
+    def test_docx_preserves_legitimate_unicode_user_content_in_isolated_test_data(self):
+        data = document_data(self.product.id, DocumentType.PRD)
+        data["sections"]["product_overview"] = (
+            "Legitimate Unicode user content: café, résumé, and 東京 localization.\n"
+            "• First preserved statement\n• Second preserved statement"
+        )
+        document = create_document(data, self.database)
+        result = create_document_export(self.product, document, "docx", generated_at=FIXED_TIME)
+        opened = Document(BytesIO(result.content))
+        text = "\n".join(paragraph.text for paragraph in opened.paragraphs)
+        self.assertIn("café, résumé, and 東京 localization", text)
 
     def test_docx_is_macro_free_has_no_external_relationships_and_scrubs_personal_metadata(self):
         document = self.create(DocumentType.BRD)

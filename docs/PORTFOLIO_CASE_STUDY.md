@@ -31,6 +31,9 @@ portfolio. The core workflow is:
    **Accept and save** action when the result is ready to retain.
 7. Review accepted generated artifacts without changing the original source
    documents.
+8. Build and review typed Epic → Capability → Feature → User Story structures
+   with independently owned measurable acceptance criteria.
+9. Download any saved Draft or Approved BRD/PRD as a local Word or PDF file.
 
 ![Fictional product and document workflow](images/pmc-v1-product-documents-fictional.png)
 
@@ -69,6 +72,12 @@ is authorized to be sent to the optional configured AI provider.
 - **Packaging fails closed:** a deterministic release builder includes only
   paths in an explicit manifest and rejects databases, secrets, backups,
   archives, caches, and other prohibited artifacts.
+- **Agile output remains governed:** typed artifacts, hierarchy, criteria,
+  citations, claim support, source gaps, and proposals are reviewed together;
+  every profile uses the same fail-closed acceptance boundary.
+- **Document export stays local and read-only:** Word and PDF use one ordered
+  content model, path-safe filenames, and in-memory bytes without a provider or
+  database write.
 
 ![Fictional AI review with citations](images/pmc-v1-ai-review-fictional.png)
 
@@ -82,16 +91,17 @@ data and trust flows are documented in [Architecture](ARCHITECTURE.md).
 
 ## Verification evidence
 
-At Phase 10 Checkpoint 5, the repository provides deterministic automated
-coverage for validation, persistence, Streamlit workflows, onboarding,
-launchers, release metadata, package membership, retrieval, citations, human
-review, acceptance-time revalidation, and source separation. Tests use isolated
-temporary databases and fake or mocked providers; they do not require a real
-API key or live OpenAI call.
+At Phase 10 Checkpoint 13, the repository provides integrated deterministic
+coverage for validation, persistence, all seven Streamlit destinations,
+onboarding, launchers, release metadata, package membership, Approved-only
+retrieval, citations, typed Agile hierarchy and criteria, claim support, human
+review, acceptance-time revalidation, source separation, and Draft/Approved
+Word/PDF export. Tests use isolated temporary databases and fake or mocked
+providers; they do not require a real API key or live OpenAI call.
 
 Native clean-install validation is limited to macOS 26.5.2 arm64 with Python
 3.14.6. Windows launchers and Python 3.11 through 3.13 have structural automated
-coverage but have not completed native validation. Checkpoint 5 does not claim
+coverage but have not completed native validation. Checkpoint 13 does not claim
 an external beta, real-user outcomes, production usage, or a published release.
 
 ## Known limitations
@@ -106,9 +116,10 @@ an external beta, real-user outcomes, production usage, or a published release.
   conclusion is correct.
 - AI output may be incomplete, incorrect, stale, biased, or unsupported and
   remains subject to human review.
-- Accepted artifacts are read-only and cannot be edited, deleted, regenerated,
-  exported, or promoted automatically into source documents.
-- No Word/PDF export, analytics integration, or external beta results.
+- Accepted generated artifacts are read-only and cannot be edited, deleted,
+  regenerated, exported, or promoted automatically into source documents.
+- Saved BRDs/PRDs export to Word and PDF, but native Google Docs export,
+  analytics integration, and external beta results remain unavailable.
 
 ## Product-management lessons and next steps
 
@@ -117,7 +128,7 @@ citations, review, and acceptance are visible parts of the workflow, and tests
 cover failure states such as missing configuration, ineligible sources, stale
 citations, rejection, and repeated acceptance.
 
-The responsible next step is Checkpoint 6 release-candidate verification and
+The responsible next step is Checkpoint 14 release-candidate verification and
 GitHub Release preparation. It remains not started and requires separate
 approval. Future validation should include native Windows and additional Python
 versions, followed by the separately planned four-to-six-Product-Manager beta

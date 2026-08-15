@@ -18,7 +18,9 @@ workspace, professional BRD/PRD outlines, and PRD Success Matrix.
 The PRD builder uses the explicit Epic → Capability → Feature → User Story
 hierarchy with independently owned acceptance criteria at every level.
 Checkpoint 12 adds local, read-only Word and PDF export for every saved Draft
-or Approved BRD and PRD.
+or Approved BRD and PRD. Checkpoint 13 completes integrated security review,
+UAT, documentation reconciliation, and release regression without beginning
+release-candidate work.
 
 PMC is preparing a source-based local v1.0.0 portfolio release under the
 [MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
@@ -375,6 +377,13 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
   tests.test_checkpoint10_agile_review -v
 ```
 
+Run the focused Checkpoint 13 integrated UAT and security regression with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest \
+  tests.test_checkpoint13_integrated_uat -v
+```
+
 The evaluator scores eight criteria from 0 to 1: retrieval precision, retrieval
 recall, source trust, citation completeness, citation/source correspondence,
 grounded generation, human control, and source separation. Their unweighted
@@ -588,7 +597,7 @@ accepted-artifact persistence, the code-controlled prompt catalog, and hardened
 assistant workflow are implemented. Deterministic offline evaluation and
 end-to-end release verification cover the complete Phase 9 workflow.
 
-Phase 10 is preparing a local source release. Checkpoints 1 through 10 are
+Phase 10 is preparing a local source release. Checkpoints 1 through 13 are
 complete. Checkpoint 1 establishes the MIT License, planned v1.0.0 metadata,
 changelog, contribution
 and security policies, and evidence-based environment/dependency rules.
@@ -617,7 +626,14 @@ focused tests and all 339 baseline tests passed before Checkpoint 11. Checkpoint
 11 adds the guided workspace, professional builders, PRD Success Matrix, and
 governed Agile review UI. Checkpoint 12 adds local in-memory Word and PDF
 downloads for saved BRDs and PRDs without changing source records or the schema.
-Checkpoint 13 is not started.
+Checkpoint 13 completes integrated UAT across the seven-destination workspace,
+Product and document lifecycles, structured BRD/PRD hierarchy and Success
+Matrix behavior, governed Agile generation/review/acceptance, local exports,
+fictional onboarding, launchers, no-key behavior, user-safe failures, security
+gates, documentation, and release/package regression. Verification used only
+fictional data, temporary databases, and deterministic or mocked providers; no
+live provider call, release package, tag, publication, or external beta was
+created. Checkpoint 14 release-candidate verification remains not started.
 
 ## Governance and release policy
 

@@ -111,7 +111,7 @@ class Checkpoint4DocumentationTests(unittest.TestCase):
     def test_checkpoint4_guide_has_complete_scenarios_and_evidence_boundaries(self):
         guide = repository_text("docs/UAT_BETA_GUIDE.md")
         normalized_guide = " ".join(guide.split())
-        for number in range(1, 18):
+        for number in range(1, 30):
             scenario = f"UAT-{number:02d}"
             with self.subTest(scenario=scenario):
                 self.assertEqual(guide.count(f"### {scenario} —"), 1)
@@ -124,7 +124,7 @@ class Checkpoint4DocumentationTests(unittest.TestCase):
             "**Status:**",
         ):
             with self.subTest(required_field=required_field):
-                self.assertEqual(guide.count(required_field), 17)
+                self.assertEqual(guide.count(required_field), 29)
         for required_statement in (
             "four to six Product Managers",
             "no participant was contacted",
@@ -230,7 +230,7 @@ class Checkpoint5PortfolioTests(unittest.TestCase):
             "never appends to, overwrites, or otherwise modifies a source BRD or PRD",
             "Windows launchers and Python 3.11 through 3.13 have structural automated coverage",
             "does not claim an external beta",
-            "Checkpoint 6 release-candidate verification",
+            "Checkpoint 14 release-candidate verification",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, case_study)

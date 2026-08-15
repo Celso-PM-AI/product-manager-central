@@ -26,6 +26,12 @@ environment-configured boundary. I also built deterministic offline tests and
 an explicit-manifest source-package builder designed to exclude databases,
 secrets, backups, and other local artifacts.
 
+PMC now supports governed Epic → Capability → Feature → User Story generation
+with independently owned acceptance criteria, claim-level support review, and
+the same fail-closed acceptance gate across every behavior profile. Saved Draft
+and Approved BRDs/PRDs can also be downloaded locally as Word or PDF files with
+safe filenames and no database or provider write.
+
 The current portfolio materials use fictional Trailwise data. Native validation
 currently covers macOS 26.5.2 arm64 with Python 3.14.6; Windows and Python
 3.11–3.13 have structural coverage only. The external beta and public release
@@ -49,6 +55,9 @@ are hidden in a disclaimer.
 - Established evidence-based cross-platform release governance with pinned
   direct dependencies, Mac and Windows launch helpers, explicit compatibility
   boundaries, and a reproducible allowlist-based source-package builder.
+- Delivered structured PRD/BRD hierarchy authoring, a measurable PRD Success
+  Matrix, governed Agile review, and local read-only Word/PDF export with
+  deterministic security and regression coverage.
 - Developed UAT, responsible-use, beta-planning, architecture, demo, and
   recruiter-facing materials while distinguishing implemented capabilities
   from unvalidated external outcomes.
@@ -74,6 +83,8 @@ are hidden in a disclaimer.
   generation but before persistence.
 - Accepted content is stored separately so the source of record is never
   silently rewritten by AI output.
+- Epic, Capability, Feature, and User Story criteria remain independently
+  traceable; a citation or reviewer action cannot override an unsupported claim.
 
 ### Technical and delivery choices
 
@@ -84,13 +95,15 @@ are hidden in a disclaimer.
   deterministic without a live API call.
 - The release builder uses an explicit allowlist instead of broad repository
   zipping, making prohibited-file inclusion fail closed.
+- Word and PDF exports share one ordered content model, are generated in memory,
+  and never require Microsoft Word, a hosted converter, or a provider call.
 - Compatibility claims are evidence-based: native validation covers macOS
   26.5.2 arm64 with Python 3.14.6; Windows and Python 3.11–3.13 remain
   structurally tested only.
 
 ### What I would do next
 
-- Complete separately approved release-candidate verification.
+- Complete separately approved Checkpoint 14 release-candidate verification.
 - Validate native Windows and additional Python environments.
 - Run the planned four-to-six-Product-Manager beta with fictional or
   non-sensitive content and predefined stop conditions.
@@ -108,3 +121,8 @@ PRDs. The project includes deterministic offline evaluation, UAT and
 responsible-use guidance, cross-platform source launchers, and reproducible
 allowlist-based packaging. It does not yet claim an external beta, native
 Windows validation, production usage, or a published v1.0.0 release.
+
+PMC also provides typed Epic → Capability → Feature → User Story review with
+independent acceptance criteria and local Word/PDF downloads for saved product
+documents. Native Google Docs export remains deferred. Checkpoint 13 integrated
+UAT is complete; Checkpoint 14 release-candidate work is not started.
