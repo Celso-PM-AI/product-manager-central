@@ -29,7 +29,11 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Correct the disposable export-review fixture to use the English-language
   fictional contributor names Jordan Lee and Taylor Morgan while retaining
   Unicode export coverage in isolated automated test data.
+- Complete Phase 10 Checkpoint 14 local release-candidate verification with
+  fresh pinned installation, native macOS launcher/no-key startup, integrated
+  fictional-data UAT, dependency/license review, deterministic archive and
+  checksum validation, and draft GitHub Release notes.
 
-The v1.0.0 release has not been tagged or published. Its date and final contents
-will be recorded only after Checkpoint 14 release-candidate verification and
-separate publication approval pass.
+The verified local v1.0.0 candidate has not been tagged, published, uploaded, or
+made available through a GitHub Release. Its release date will be recorded only
+after separate publication approval.

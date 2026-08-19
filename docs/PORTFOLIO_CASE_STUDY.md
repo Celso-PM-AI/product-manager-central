@@ -128,9 +128,10 @@ citations, review, and acceptance are visible parts of the workflow, and tests
 cover failure states such as missing configuration, ineligible sources, stale
 citations, rejection, and repeated acceptance.
 
-The responsible next step is Checkpoint 14 release-candidate verification and
-GitHub Release preparation. It remains not started and requires separate
-approval. Future validation should include native Windows and additional Python
-versions, followed by the separately planned four-to-six-Product-Manager beta
-using fictional or non-sensitive content. No external beta or release has yet
-occurred.
+Checkpoint 14 release-candidate verification and GitHub Release preparation are
+complete. The deterministic local candidate, checksum, clean extracted
+installation, no-key startup, integrated workflows, and draft release materials
+passed their approved gates. Future validation should include native Windows
+and additional Python versions, followed by the separately planned four-to-six-
+Product-Manager beta using fictional or non-sensitive content. No tag, GitHub
+Release, public distribution, or external beta has occurred.

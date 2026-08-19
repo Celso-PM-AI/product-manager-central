@@ -76,7 +76,8 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
                 content = repository_text(filename)
                 self.assertIn("Checkpoint 13", content)
                 self.assertIn("Checkpoint 14", content)
-                self.assertIn("not started", content.lower())
+                normalized = " ".join(content.split()).lower()
+                self.assertTrue(any(word in normalized for word in ("not tagged", "not been tagged", "no tag")))
         self.assertEqual(__import__("src.version", fromlist=["RELEASE_STATUS"]).RELEASE_STATUS, "planned")
 
     def test_security_review_documents_every_checkpoint13_threat_boundary(self):
@@ -104,7 +105,8 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
             self.assertIn("Word", content)
             self.assertIn("PDF", content)
             self.assertNotIn("PMC does not export BRDs/PRDs to Word or PDF", content)
-        self.assertIn("has not been tagged or published", repository_text("CHANGELOG.md"))
+        changelog = " ".join(repository_text("CHANGELOG.md").split())
+        self.assertIn("has not been tagged, published", changelog)
 
     def test_installation_keeps_no_key_export_and_platform_boundaries_explicit(self):
         installation = " ".join(repository_text("docs/INSTALLATION.md").split())
@@ -113,7 +115,7 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
             "does not require an API key",
             "macOS 26.5.2",
             "Python 3.11–3.13 and Windows",
-            "not yet claimed as natively validated",
+            "not claimed as natively validated",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, installation)

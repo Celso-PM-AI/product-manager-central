@@ -38,7 +38,7 @@ class ReleaseVersionTests(unittest.TestCase):
     def test_changelog_does_not_claim_the_planned_release_is_published(self):
         changelog = repository_text("CHANGELOG.md")
         self.assertIn("## [Unreleased]", changelog)
-        self.assertIn("has not been tagged or published", changelog)
+        self.assertIn("has not been tagged, published", " ".join(changelog.split()))
 
 
 class GovernanceFileTests(unittest.TestCase):

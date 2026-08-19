@@ -1035,3 +1035,54 @@ no live provider call, and no Checkpoint 13 implementation.
 
 **Status:**
 Approved
+
+## Decision 022
+
+**Date:** August 15, 2026
+
+**Category:** Release-candidate verification and publication boundary
+
+**Title:** v1.0.0 uses a verified deterministic local candidate with separate publication approval
+
+**Decision:**
+Checkpoint 14 prepares one local v1.0.0 source-release candidate and checksum
+outside the repository from the explicit allowlist. Candidate readiness requires
+exact version and proposed GitHub metadata, direct dependency/license review,
+normalized archive membership/order/timestamps/permissions, byte
+reproducibility, checksum agreement, clean extraction, fresh pinned installation,
+native macOS launcher and no-key startup, integrated fictional-data workflow and
+export UAT, full regression, and data/secret/prohibited-artifact integrity gates.
+
+Native compatibility remains limited to macOS 26.5.2 arm64 with Python 3.14.6,
+the only available interpreter and environment completing those gates. Windows
+and Python 3.11 through 3.13 remain structural-only evidence. No compatibility
+claim may be inferred from declared Python ranges or launcher structure alone.
+
+The candidate ZIP, checksum, extraction, virtual environment, databases,
+exports, and render output remain disposable review artifacts outside the
+repository. `RELEASE_STATUS` remains `planned`. Creating a Git tag, GitHub
+Release, upload, publication, announcement, or external beta requires a later
+explicit authorization and is not part of Checkpoint 14.
+
+**Reason:**
+- Deterministic source packaging makes the exact review artifact reproducible.
+- Fresh installation and no-key startup test the user boundary rather than only
+  the development environment.
+- Explicit compatibility evidence prevents platform and Python overclaims.
+- A separate publication decision keeps verification reversible and reviewable.
+
+**Alternatives Considered:**
+- Tagging or publishing immediately after automated tests.
+- Claiming every declared Python version or Windows from structural tests.
+- Bundling a virtual environment, database, sample database, or generated
+  exports in the candidate.
+- Recording a candidate-specific checksum inside its own source archive.
+
+**Impact:**
+Checkpoint 14 adds focused release-candidate tests, draft v1.0.0 release notes,
+and evidence/status documentation. It changes no application runtime, database
+schema, dependency, product workflow, grounding boundary, export implementation,
+or protected artifact.
+
+**Status:**
+Approved

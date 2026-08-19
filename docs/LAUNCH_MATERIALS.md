@@ -1,8 +1,9 @@
 # Product Manager Central Launch Materials
 
 **Draft status:** These materials have not been posted, published, sent, or
-uploaded. PMC v1.0.0 has not been tagged or released, the demo video has not
-been recorded, and the planned external beta has not been conducted.
+uploaded. PMC v1.0.0 has a verified local release candidate but has not been
+tagged or released, the demo video has not been recorded, and the planned
+external beta has not been conducted.
 
 ## Draft LinkedIn post
 
@@ -103,7 +104,7 @@ are hidden in a disclaimer.
 
 ### What I would do next
 
-- Complete separately approved Checkpoint 14 release-candidate verification.
+- Obtain separate human approval before any v1.0.0 tag or GitHub Release.
 - Validate native Windows and additional Python environments.
 - Run the planned four-to-six-Product-Manager beta with fictional or
   non-sensitive content and predefined stop conditions.
@@ -125,4 +126,6 @@ Windows validation, production usage, or a published v1.0.0 release.
 PMC also provides typed Epic → Capability → Feature → User Story review with
 independent acceptance criteria and local Word/PDF downloads for saved product
 documents. Native Google Docs export remains deferred. Checkpoint 13 integrated
-UAT is complete; Checkpoint 14 release-candidate work is not started.
+UAT and Checkpoint 14 release-candidate verification are complete. The local
+candidate and GitHub Release materials remain unpublished and require separate
+human approval.

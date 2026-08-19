@@ -19,7 +19,7 @@ API key or show personal, employer, customer, or production information.
 | 1:45–2:15 | Open the prepared fictional AI review | Show the typed Epic review, traceable citations, claim-support results, and fail-closed gates. Clarify that the displayed output was prepared with a deterministic fake provider, not a live model call, and that a citation identifies supplied evidence but does not guarantee correctness. |
 | 2:15–2:45 | Review, revision, rejection, and **Accept and save** controls | Explain that generation does not persist automatically. Acceptance revalidates cited sources and stores an artifact separately; it never modifies the original PRD or BRD. |
 | 2:45–3:05 | Accepted history and Word/PDF downloads | Show that accepted content remains read-only and distinct from sources, then show local Word and PDF download controls for the saved PRD. Explain that export is read-only and requires no API key. |
-| 3:05–3:20 | Architecture diagram and limitations | Close with the local Streamlit/SQLite architecture, Approved-only trust boundary, native Google Docs and platform-validation limitations, and Checkpoint 14 release-candidate work, which is not started. |
+| 3:05–3:20 | Architecture diagram and limitations | Close with the local Streamlit/SQLite architecture, Approved-only trust boundary, native Google Docs and platform-validation limitations, and the verified but unpublished Checkpoint 14 release candidate. |
 
 ## Recording checklist
 

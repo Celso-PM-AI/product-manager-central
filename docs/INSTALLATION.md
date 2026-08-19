@@ -20,9 +20,9 @@ The clean-install release workflow was natively validated on:
 
 PMC's source and pinned direct dependencies require Python 3.11 through 3.14.
 Python 3.11 is the dependency-imposed floor, but Python 3.11–3.13 and Windows
-have automated structural coverage only and are not yet claimed as natively
+have automated structural coverage only and are not claimed as natively
 validated. Native Windows and additional Python-version validation remain
-release work.
+future work.
 
 python-docx is MIT-licensed and ReportLab is BSD-licensed. They are the only
 new direct runtime dependencies for local Word and PDF export. PMC generates
@@ -33,9 +33,11 @@ saved document.
 Export does not require an API key. Checkpoint 13 reverified local no-key
 startup, all seven application destinations, the macOS launcher, Windows
 launcher structure, Draft/Approved Word and PDF export, and isolated package
-startup with temporary databases. This adds regression evidence, not a broader
-native-platform support claim. Checkpoint 14 release-candidate verification
-remains not started, and there is no published PMC package or release.
+startup with temporary databases. Checkpoint 14 repeated the clean candidate
+installation, macOS launcher, no-key startup, complete regression,
+deterministic archive, and checksum gates on that native macOS/Python
+combination. This does not broaden the native-platform claim. Checkpoint 14 is
+complete, and there is still no published PMC package, tag, or GitHub Release.
 
 Install Python from [python.org](https://www.python.org/downloads/) before
 starting. The setup helpers stop with an actionable error if Python is missing,
@@ -193,5 +195,7 @@ The two hexadecimal SHA-256 values must match exactly. Stop if they do not.
 
 `scripts/build_release.py` can create a local test ZIP from the explicit
 `release_manifest.txt` allowlist. That capability does not make the output an
-official release. A Git tag, GitHub Release, published checksum, and approved
-release candidate require later, separate authorization and verification.
+official release. Checkpoint 14 produced and verified a disposable local
+candidate and prepared [draft v1.0.0 release notes](RELEASE_NOTES_v1.0.0.md).
+A Git tag, GitHub Release, published checksum, upload, or announcement still
+requires later, separate authorization.

@@ -257,14 +257,17 @@ compression, and permissions are normalized for repeatable output. The builder
 validates exact membership, produces a SHA-256 file, refuses accidental
 overwrite, and rejects prohibited artifact classes.
 
-This is build capability, not publication authority. An official archive, tag,
-GitHub Release, or public posting requires later explicit approval.
+This is build capability, not publication authority. Checkpoint 14 uses it to
+create a verified local candidate for review. An official archive publication,
+tag, GitHub Release, or public posting still requires later explicit approval.
 
 Checkpoint 13 verified this architecture with temporary databases, fictional
 content, deterministic or mocked providers, local in-memory exports, and
-reproducible temporary package builds. It made no live provider call and did
-not create an official package, tag, publication, or release. Checkpoint 14
-release-candidate verification remains not started.
+reproducible temporary package builds. Checkpoint 14 then verified the exact
+manifest, normalized member order/timestamps/permissions, byte
+reproducibility, checksum, clean extraction, fresh installation, and no-key
+startup. Neither checkpoint made a live provider call or created a tag,
+publication, or GitHub Release.
 
 ## Responsibility map
 

@@ -19,11 +19,14 @@ The PRD builder uses the explicit Epic → Capability → Feature → User Story
 hierarchy with independently owned acceptance criteria at every level.
 Checkpoint 12 adds local, read-only Word and PDF export for every saved Draft
 or Approved BRD and PRD. Checkpoint 13 completes integrated security review,
-UAT, documentation reconciliation, and release regression without beginning
-release-candidate work.
+UAT, documentation reconciliation, and release regression. Checkpoint 14
+completes local release-candidate verification and prepares GitHub Release
+materials for separate human approval without tagging or publishing.
 
-PMC is preparing a source-based local v1.0.0 portfolio release under the
-[MIT License](LICENSE). v1.0.0 has not been tagged, packaged, or published.
+PMC has a verified local source-based v1.0.0 release candidate under the
+[MIT License](LICENSE). v1.0.0 has not been tagged, published, or made
+available through a GitHub Release. See the
+[draft release notes](docs/RELEASE_NOTES_v1.0.0.md).
 
 ## MVP scope
 
@@ -213,11 +216,11 @@ boundary for configuration, SDK isolation, and testing.
 
 ### Environment support status
 
-PMC's clean installation, complete suite, and isolated no-key smoke test were
-natively validated on macOS 26.5.2 arm64 with Python 3.14.6. Python 3.11 is the
-minimum practical version imposed by the pinned dependencies. Windows and
-Python 3.11–3.13 have automated structural coverage only and are not yet claimed
-as natively validated.
+PMC's Checkpoint 14 clean candidate installation, complete suite, macOS
+launcher, and isolated no-key startup were natively validated on macOS 26.5.2
+arm64 with Python 3.14.6. Python 3.11 is the minimum practical version imposed
+by the pinned dependencies. Windows and Python 3.11–3.13 have automated
+structural coverage only and are not claimed as natively validated.
 
 `requirements.txt` pins only the clean-tested direct runtime dependencies:
 Streamlit 1.61.1, pandas 3.0.5, OpenAI 2.53.0, python-docx 1.2.0, and
@@ -633,7 +636,10 @@ fictional onboarding, launchers, no-key behavior, user-safe failures, security
 gates, documentation, and release/package regression. Verification used only
 fictional data, temporary databases, and deterministic or mocked providers; no
 live provider call, release package, tag, publication, or external beta was
-created. Checkpoint 14 release-candidate verification remains not started.
+created. Checkpoint 14 is complete with a reproducible local v1.0.0 candidate,
+fresh extracted installation and no-key startup, dependency/license and package
+audits, and draft GitHub Release materials. No tag, GitHub Release, publication,
+external beta, or public distribution has been created.
 
 ## Governance and release policy
 

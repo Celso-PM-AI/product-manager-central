@@ -16,10 +16,11 @@
 
 - Phases 0 through 8 and all six Phase 9 checkpoints are complete.
 - The Product Manager Central MVP acceptance criteria passed.
-- Phase 10 Checkpoints 1 through 13 are complete; Checkpoint 11 implementation
+- Phase 10 Checkpoints 1 through 14 are complete; Checkpoint 11 implementation
   and the approved Product Manager UI corrections remain unchanged, Checkpoint
-  12 adds read-only Word/PDF document export, and Checkpoint 13 completes
-  integrated security, UAT, documentation, and release regression.
+  12 adds read-only Word/PDF document export, Checkpoint 13 completes integrated
+  security, UAT, documentation, and release regression, and Checkpoint 14
+  completes unpublished local release-candidate verification.
 - Secure OpenAI configuration/client, approved-source boundaries, embeddings,
   semantic retrieval, and temporary grounded draft generation are implemented;
   human-reviewed acceptance, separate generated-artifact saving, and
@@ -1796,3 +1797,23 @@ commit, push, tag, publication, external beta, or release occurred.
 
 Exit gate: a separately approved final action may create the tag and GitHub
 Release; absent that approval, report readiness and stop without publication.
+
+**Completed:** August 15, 2026
+
+Completion evidence: the approved Checkpoint 13 commit matched live
+`origin/main` with zero divergence and a clean worktree/index before changes.
+The 397-test baseline passed. Checkpoint 14 then verified the pinned direct
+dependencies and licenses, the exact release manifest and exclusions, two
+byte-identical local archives with normalized member order/timestamps/
+permissions, their checksum sidecars, clean extraction, fresh macOS setup, the
+macOS launcher, no-key startup, optional fictional samples, integrated Product,
+BRD/PRD, governed Agile, accepted-artifact, and Word/PDF workflows, and
+user-safe failure states. Windows and Python 3.11–3.13 remain structural-only
+evidence and are not claimed as natively validated.
+
+The candidate, checksum, extracted installation, databases, rendered pages, and
+exports remained disposable and outside the repository. `data/pmc.db`, backups,
+protected images, credentials, and live providers were not used or changed.
+Draft v1.0.0 release notes and proposed GitHub Release metadata are prepared for
+separate human approval. No file was staged or committed, and no tag, push,
+upload, publication, GitHub Release, external post, or beta contact occurred.

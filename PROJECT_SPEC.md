@@ -296,9 +296,10 @@ production-database access.
 
 Phase 10 prepares a local, source-based Product Manager Central portfolio
 release and, before release, adds governed Agile-artifact generation and BRD/PRD
-export. The planned first public version is v1.0.0 under the MIT License. It is
-not yet tagged, packaged, or published. The product name and current working
-visual identity remain unchanged.
+export. The planned first public version is v1.0.0 under the MIT License. A
+verified local release candidate now exists outside the repository, but it has
+not been tagged, published, uploaded, or made available through a GitHub
+Release. The product name and current working visual identity remain unchanged.
 
 The approved distribution target is a GitHub Release ZIP with Mac and Windows
 setup and launch helpers. Native installers, cloud deployment, authentication,
@@ -778,6 +779,10 @@ display, and formatting.
 No application code, schema, dependency, screenshot, or release-manifest change
 was required; documentation drift and the disposable manual-review fixture's
 non-English personal names were corrected. Unicode export coverage remains in
-isolated automated test data. Checkpoint 14 release-
-candidate verification remains not started, and PMC has not been packaged,
-tagged, published, or released.
+isolated automated test data. Checkpoint 14 release-candidate verification is
+complete. A deterministic local candidate and checksum were prepared outside
+the repository, installed into a fresh extracted environment, and exercised
+without an API key using only fictional data and disposable databases. The
+manifest, permissions, checksums, dependency licenses, compatibility claims,
+integrated workflows, exports, and draft GitHub Release materials passed review.
+PMC has not been tagged, published, uploaded, or released.

@@ -9,7 +9,8 @@ responsible use of AI-generated content.
 Checkpoint 13 does not publish PMC or create an official release package. It
 also does not claim that an external beta, native Windows validation, or native
 Python 3.11 through 3.13 validation has occurred. Checkpoint 14 release-
-candidate verification remains not started.
+candidate verification is complete, but the candidate remains local and
+unpublished pending separate human approval.
 
 ## Validation states and evidence boundaries
 
@@ -750,3 +751,24 @@ files and approved their content, English-name display, and formatting. The two
 authorized temporary review directories were removed after approval. Checkpoint
 14 remains not started.
 No package, tag, publication, external beta, or release was created.
+
+## Checkpoint 14 completion record
+
+Checkpoint 14 reconfirmed UAT-01 through UAT-29 against the exact source-release
+boundary and a clean extracted candidate. Native verification used macOS 26.5.2
+arm64 with Python 3.14.6, a fresh `.venv`, the pinned dependencies, a disposable
+database, fictional data, and no API key. The macOS setup helper, launcher,
+seven-destination no-key workflow, explicit sample loading, Product and
+BRD/PRD lifecycles, Draft/Approved behavior, structured hierarchies, Success
+Matrix, Approved-only retrieval, deterministic governed Agile review and
+acceptance, accepted/source separation, and Word/PDF exports passed. No live
+provider call occurred.
+
+The release manifest and dependency/license inventory were audited. Two local
+candidate builds were byte-identical and retained exact member order,
+timestamps, permissions, filename, and checksum. Clean extraction, fresh
+installation, startup, compilation, regression, package, secret, prohibited-
+artifact, and protected-file gates passed. Windows and Python 3.11–3.13 remain
+structural-only evidence. The draft release notes and proposed tag, title,
+description, archive, and checksum names are ready for human review, but no tag,
+GitHub Release, upload, publication, external post, or beta contact occurred.
