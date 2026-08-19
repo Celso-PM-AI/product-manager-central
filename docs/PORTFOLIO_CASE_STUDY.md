@@ -6,6 +6,8 @@ Product Manager Central (PMC) is a local, single-user workspace for Product
 Managers to organize product context, create and approve BRDs and PRDs, search
 their portfolio, and review AI-assisted drafts grounded in approved documents.
 It is implemented as a Streamlit application with local SQLite persistence.
+It is a portfolio demonstration of responsible-AI product thinking, not a
+commercial production application or evidence of customer adoption.
 
 PMC addresses a common product-management problem: important decisions are
 spread across product records and long documents, while general-purpose AI
@@ -53,7 +55,9 @@ is authorized to be sent to the optional configured AI provider.
 ## Product and technical decisions
 
 - **Structured records before AI:** product, BRD, and PRD workflows work
-  without an API key. AI is optional and inactive by default.
+  without an API key. AI is optional and inactive by default. Its page provides
+  an explicit activation/status experience while keeping key authorization
+  separate from organizational permission to submit company information.
 - **Draft and Approved are meaningful states:** only complete, explicitly
   Approved BRDs and PRDs are eligible for retrieval.
 - **Citations stay visible and traceable:** generated drafts identify the
@@ -101,8 +105,9 @@ providers; they do not require a real API key or live OpenAI call.
 
 Native clean-install validation is limited to macOS 26.5.2 arm64 with Python
 3.14.6. Windows launchers and Python 3.11 through 3.13 have structural automated
-coverage but have not completed native validation. Checkpoint 13 does not claim
-an external beta, real-user outcomes, production usage, or a published release.
+coverage but have not completed native validation. v1.0.1 is positioned as a
+controlled-beta/portfolio release for technical evaluation; it does not claim
+an external beta, real-user outcomes, production usage, or customer adoption.
 
 ## Known limitations
 
@@ -128,10 +133,10 @@ citations, review, and acceptance are visible parts of the workflow, and tests
 cover failure states such as missing configuration, ineligible sources, stale
 citations, rejection, and repeated acceptance.
 
-Checkpoint 14 release-candidate verification and GitHub Release preparation are
-complete. The deterministic local candidate, checksum, clean extracted
-installation, no-key startup, integrated workflows, and draft release materials
-passed their approved gates. Future validation should include native Windows
-and additional Python versions, followed by the separately planned four-to-six-
-Product-Manager beta using fictional or non-sensitive content. No tag, GitHub
-Release, public distribution, or external beta has occurred.
+Checkpoint 14 verification and separately approved v1.0.0 publication are
+complete. Checkpoint 15 improves controlled-beta onboarding with a one-step
+macOS starter and moves optional AI configuration into the AI Assistant
+experience. Future validation should include native Windows and additional
+Python versions, followed by the separately planned four-to-six-Product-Manager
+beta using fictional or non-sensitive content. No external beta or customer
+outcome is claimed.

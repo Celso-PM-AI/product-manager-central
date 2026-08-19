@@ -1086,3 +1086,40 @@ or protected artifact.
 
 **Status:**
 Approved
+
+## Decision 023
+
+**Date:** August 19, 2026
+
+**Category:** Controlled-beta onboarding and optional AI configuration
+
+**Title:** v1.0.1 uses one macOS starter and keeps AI opt-in inside the product
+
+**Decision:**
+Checkpoint 15 adds `scripts/start_pmc_macos.command` as the documented macOS
+entry point. It creates or reuses the local virtual environment, installs only
+the pinned requirements when needed, checks the fixed local port, and starts
+PMC without asking for an API key. Compatibility helpers remain available, but
+normal macOS onboarding is one step.
+
+Optional AI is described inside the AI Assistant and remains inactive until a
+user explicitly supplies `OPENAI_API_KEY` to the launch process environment.
+The page reports Active or Inactive without revealing the key, identifies
+unavailable AI generation features, and explains temporary session setup. A
+valid user-supplied key authorizes the provider but does not grant access to
+company information or organizational permission to submit it. Enterprise
+evaluation requires an organization-approved key and data-use authorization;
+sensitive company, regulated, personal, export-controlled, or customer data
+must not be submitted without approval. PMC never stores or exposes the key.
+v1.0.1 is a controlled-beta/portfolio release for technical evaluation, not a
+production, adoption, or customer-outcome claim. The v1.0.0 tag, GitHub Release,
+and assets remain unchanged.
+
+**Reason:**
+- One starter removes avoidable setup/run friction for evaluators.
+- In-product opt-in guidance keeps credentials out of routine startup.
+- Explicit positioning makes the AI value clear without overstating evidence.
+- Existing trust, data, export, and compatibility boundaries remain intact.
+
+**Status:**
+Approved

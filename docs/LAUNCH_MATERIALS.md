@@ -1,9 +1,9 @@
 # Product Manager Central Launch Materials
 
-**Draft status:** These materials have not been posted, published, sent, or
-uploaded. PMC v1.0.0 has a verified local release candidate but has not been
-tagged or released, the demo video has not been recorded, and the planned
-external beta has not been conducted.
+**Draft status:** These materials have not been posted, sent, or uploaded.
+PMC v1.0.0 is published; v1.0.1 is an untagged, unpublished
+controlled-beta/portfolio candidate. The demo video has not been recorded and
+the planned external beta has not been conducted.
 
 ## Draft LinkedIn post
 
@@ -35,8 +35,9 @@ safe filenames and no database or provider write.
 
 The current portfolio materials use fictional Trailwise data. Native validation
 currently covers macOS 26.5.2 arm64 with Python 3.14.6; Windows and Python
-3.11–3.13 have structural coverage only. The external beta and public release
-are still future work.
+3.11–3.13 have structural coverage only. v1.0.1 is for controlled technical
+evaluation, not commercial production, and no external-beta or customer
+outcome is claimed.
 
 Building PMC reinforced a product lesson I care about: responsible AI controls
 are strongest when users can see and act on them in the workflow—not when they
@@ -104,7 +105,7 @@ are hidden in a disclaimer.
 
 ### What I would do next
 
-- Obtain separate human approval before any v1.0.0 tag or GitHub Release.
+- Obtain separate human approval before any v1.0.1 tag or GitHub Release.
 - Validate native Windows and additional Python environments.
 - Run the planned four-to-six-Product-Manager beta with fictional or
   non-sensitive content and predefined stop conditions.
@@ -120,12 +121,11 @@ requires human review and explicit acceptance, revalidates source eligibility
 before saving, and stores generated artifacts separately from original BRDs and
 PRDs. The project includes deterministic offline evaluation, UAT and
 responsible-use guidance, cross-platform source launchers, and reproducible
-allowlist-based packaging. It does not yet claim an external beta, native
-Windows validation, production usage, or a published v1.0.0 release.
+allowlist-based packaging. It does not claim an external beta, native Windows
+validation, production usage, commercial adoption, or customer outcomes.
 
 PMC also provides typed Epic → Capability → Feature → User Story review with
 independent acceptance criteria and local Word/PDF downloads for saved product
-documents. Native Google Docs export remains deferred. Checkpoint 13 integrated
-UAT and Checkpoint 14 release-candidate verification are complete. The local
-candidate and GitHub Release materials remain unpublished and require separate
-human approval.
+documents. Native Google Docs export remains deferred. v1.0.0 is published;
+Checkpoint 15 prepares v1.0.1 controlled-beta onboarding and launcher changes
+for separate technical verification and release approval.

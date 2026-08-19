@@ -2,10 +2,10 @@
 
 ## Current support status
 
-Product Manager Central is preparing its first public portfolio release. No
-published version is currently supported. The planned v1.0.0 release will be
-covered by this policy only after it has passed Phase 10 release verification
-and has been explicitly published.
+Product Manager Central v1.0.0 is the published portfolio baseline. The current
+source prepares v1.0.1 as a controlled-beta/portfolio release for technical
+evaluation. PMC is not a commercial production application and does not claim
+multi-user, hosted, regulated, or enterprise security support.
 
 ## Reporting a vulnerability
 
@@ -28,9 +28,15 @@ files may be able to read the local database.
 
 OpenAI capability is optional. Users supply their own key through the local
 process environment. Keys must not be stored in source, configuration committed
-to Git, screenshots, logs, prompts, databases, or release archives. When AI is
-enabled, selected Approved BRD and PRD content is sent to the configured OpenAI
-API; users are responsible for ensuring they are authorized to send that data.
+to Git, screenshots, logs, prompts, documents, exports, SQLite databases, or
+release packages. A key authorizes the configured AI provider; it does not grant
+automatic access to company information or establish permission to submit it.
+Enterprise users must obtain an organization-approved key and data-use
+authorization from their IT, security, AI-governance, or platform-administration
+team. Confidential, proprietary, regulated, personal, export-controlled, or
+customer information must not be sent to an external provider without
+organizational approval. When AI is enabled, only deliberately selected Approved
+BRD and PRD content is sent to the configured OpenAI API.
 
 Security fixes must preserve the trusted-source, citation, human-review,
 explicit-acceptance, and source-separation safeguards established in Phase 9.

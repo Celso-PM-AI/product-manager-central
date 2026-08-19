@@ -27,6 +27,7 @@ from src.version import RELEASE_STATUS, RELEASE_TAG, __version__
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 RELEASE_NOTES = REPOSITORY_ROOT / "docs/RELEASE_NOTES_v1.0.0.md"
+CURRENT_RELEASE_NOTES = REPOSITORY_ROOT / "docs/RELEASE_NOTES_v1.0.1.md"
 EXPECTED_DIRECT_DEPENDENCIES = {
     "streamlit==1.61.1": "Apache-2.0",
     "pandas==3.0.5": "BSD-3-Clause",
@@ -45,22 +46,22 @@ class ReleaseCandidateTestCase(unittest.TestCase):
 
 class ReleaseCandidateMetadataTests(ReleaseCandidateTestCase):
     def test_version_and_proposed_github_release_metadata_are_consistent(self):
-        notes = RELEASE_NOTES.read_text(encoding="utf-8")
-        self.assertEqual((__version__, RELEASE_TAG, RELEASE_STATUS), ("1.0.0", "v1.0.0", "planned"))
-        self.assertIn("**Tag:** `v1.0.0`", notes)
-        self.assertIn("**Title:** `Product Manager Central v1.0.0`", notes)
+        notes = CURRENT_RELEASE_NOTES.read_text(encoding="utf-8")
+        self.assertEqual((__version__, RELEASE_TAG, RELEASE_STATUS), ("1.0.1", "v1.0.1", "controlled-beta"))
+        self.assertIn("**Tag:** `v1.0.1`", notes)
+        self.assertIn("**Title:** `Product Manager Central v1.0.1`", notes)
         self.assertIn(f"**Source asset:** `{ARCHIVE_NAME}`", notes)
         self.assertIn(f"**Checksum asset:** `{CHECKSUM_NAME}`", notes)
 
     def test_release_notes_keep_publication_separate_and_list_limitations(self):
-        notes = RELEASE_NOTES.read_text(encoding="utf-8")
+        notes = CURRENT_RELEASE_NOTES.read_text(encoding="utf-8")
         normalized = " ".join(notes.split()).lower()
         for phrase in (
-            "has not been tagged, published, or made available through a GitHub Release",
-            "## Known limitations",
+            "not tagged, packaged, uploaded, or published as v1.0.1",
+            "## Positioning and compatibility",
             "single-user and local only",
-            "No live-provider quality claim",
-            "requires a separate explicit approval",
+            "not a commercial production application",
+            "requires separate approval",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase.lower(), normalized)
@@ -82,7 +83,7 @@ class ReleaseCandidateMetadataTests(ReleaseCandidateTestCase):
                 self.assertIn(f"{name} {version}".lower(), notes.lower())
                 self.assertIn(license_name.lower(), notes.lower())
 
-    def test_checkpoint14_status_is_complete_without_release_claim(self):
+    def test_checkpoint14_status_is_complete_with_v101_separate(self):
         for relative_path in (
             "README.md",
             "PROJECT_SPEC.md",
@@ -92,15 +93,16 @@ class ReleaseCandidateMetadataTests(ReleaseCandidateTestCase):
             with self.subTest(relative_path=relative_path):
                 text = (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn("Checkpoint 14", text)
-                self.assertIn("complete", text.lower())
+                self.assertIn("v1.0.1", text)
                 normalized = " ".join(text.split()).lower()
-                self.assertTrue(any(word in normalized for word in ("not tagged", "not been tagged", "no tag")))
+                self.assertNotIn("v1.0.1 was tagged", normalized)
 
 
 class ReleaseCandidateArchiveTests(ReleaseCandidateTestCase):
     def test_manifest_includes_release_notes_and_excludes_prohibited_artifacts(self):
         entries = load_release_manifest(REPOSITORY_ROOT)
         self.assertIn("docs/RELEASE_NOTES_v1.0.0.md", entries)
+        self.assertIn("docs/RELEASE_NOTES_v1.0.1.md", entries)
         forbidden = re.compile(r"(?:^|/)(?:data|backups|tests|\.git|\.venv)(?:/|$)|\.(?:db|docx|pdf|pyc|zip)$")
         self.assertFalse(any(forbidden.search(entry) for entry in entries))
         self.assertFalse(any("Screenshot 2026" in entry for entry in entries))

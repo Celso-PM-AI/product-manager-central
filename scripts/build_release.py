@@ -75,6 +75,7 @@ REQUIRED_RELEASE_FILES: Final[frozenset[str]] = frozenset(
         "README.md",
         "docs/INSTALLATION.md",
         "release_manifest.txt",
+        "scripts/start_pmc_macos.command",
         "scripts/setup_macos.command",
         "scripts/run_macos.command",
         "scripts/setup_windows.ps1",
@@ -217,7 +218,7 @@ def build_release(
 ) -> ReleaseBuildResult:
     """Build and verify one allowlisted source archive and checksum."""
 
-    if RELEASE_STATUS != "planned" or RELEASE_TAG != f"v{__version__}":
+    if RELEASE_STATUS != "controlled-beta" or RELEASE_TAG != f"v{__version__}":
         raise ReleaseBuildError("Release version metadata is inconsistent.")
     entries = load_release_manifest(repository_root)
     output_directory.mkdir(parents=True, exist_ok=True)

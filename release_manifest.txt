@@ -1,4 +1,4 @@
-# Product Manager Central v1.0.0 source-release allowlist.
+# Product Manager Central v1.0.1 source-release allowlist.
 # One repository-relative POSIX path per line. No globbing is permitted.
 
 app.py
@@ -15,6 +15,7 @@ release_manifest.txt
 docs/INSTALLATION.md
 docs/UAT_BETA_GUIDE.md
 docs/RELEASE_NOTES_v1.0.0.md
+docs/RELEASE_NOTES_v1.0.1.md
 docs/PORTFOLIO_CASE_STUDY.md
 docs/ARCHITECTURE.md
 docs/DEMO_STORYBOARD.md
@@ -23,6 +24,7 @@ docs/images/pmc-v1-dashboard-fictional.png
 docs/images/pmc-v1-product-documents-fictional.png
 docs/images/pmc-v1-ai-review-fictional.png
 scripts/build_release.py
+scripts/start_pmc_macos.command
 scripts/setup_macos.command
 scripts/run_macos.command
 scripts/setup_windows.ps1

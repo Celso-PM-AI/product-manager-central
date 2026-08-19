@@ -296,10 +296,10 @@ production-database access.
 
 Phase 10 prepares a local, source-based Product Manager Central portfolio
 release and, before release, adds governed Agile-artifact generation and BRD/PRD
-export. The planned first public version is v1.0.0 under the MIT License. A
-verified local release candidate now exists outside the repository, but it has
-not been tagged, published, uploaded, or made available through a GitHub
-Release. The product name and current working visual identity remain unchanged.
+export. v1.0.0 was published under the MIT License on August 19, 2026 after its
+verified candidate passed the approved gates. Checkpoint 15 prepares v1.0.1 as
+an untagged, unpublished controlled-beta/portfolio candidate. The product name
+and current working visual identity remain unchanged.
 
 The approved distribution target is a GitHub Release ZIP with Mac and Windows
 setup and launch helpers. Native installers, cloud deployment, authentication,
@@ -785,4 +785,22 @@ the repository, installed into a fresh extracted environment, and exercised
 without an API key using only fictional data and disposable databases. The
 manifest, permissions, checksums, dependency licenses, compatibility claims,
 integrated workflows, exports, and draft GitHub Release materials passed review.
-PMC has not been tagged, published, uploaded, or released.
+v1.0.0 was tagged and published after separate approval on August 19, 2026.
+Its tag, GitHub Release, and assets are immutable inputs to Checkpoint 15.
+
+#### Checkpoint 15 controlled-beta onboarding requirements
+
+Checkpoint 15 prepares v1.0.1 as a controlled-beta/portfolio release suitable
+for technical evaluation. One macOS starter must create or reuse `.venv`,
+install only pinned requirements when needed, open the local application on
+port 8501, and work from any current Terminal directory. Normal startup must
+not ask for an API key. Optional AI remains process-environment-only and is
+explained inside the AI Assistant.
+
+The Dashboard and portfolio materials must describe grounded Agile assistance
+from Approved BRDs/PRDs and the citation, freshness, claim-support, human-review,
+and explicit-acceptance controls. They must not claim independent AI decisions,
+commercial production readiness, adoption, customer outcomes, signed/notarized
+macOS packaging, or native Windows validation. Checkpoint 15 changes no schema,
+source-of-record behavior, grounding gate, review rule, acceptance boundary, or
+export contract.

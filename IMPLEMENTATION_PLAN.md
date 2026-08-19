@@ -1817,3 +1817,47 @@ protected images, credentials, and live providers were not used or changed.
 Draft v1.0.0 release notes and proposed GitHub Release metadata are prepared for
 separate human approval. No file was staged or committed, and no tag, push,
 upload, publication, GitHub Release, external post, or beta contact occurred.
+
+### Checkpoint 15 — v1.0.1 controlled-beta onboarding and launcher improvement
+
+- Replace the documented two-step macOS path with one self-locating starter
+  that creates `.venv`, installs pinned requirements only when needed, checks
+  port 8501, opens the browser, and provides plain-language failures.
+- Remove API-key questions from normal launchers. Keep all non-AI workflows
+  available and AI inactive until the user explicitly sets a session variable.
+- Put an explicit **Activate AI Assistant** experience and non-secret
+  Active/Inactive status inside the AI Assistant. Explain temporary session
+  configuration, unavailable AI features, enterprise key/data authorization,
+  sensitive-data restrictions, and the difference between provider access and
+  permission to submit company information while preserving Approved-only
+  sources, citations, freshness, claim support, review, acceptance, and source
+  separation.
+- Position v1.0.1 as controlled-beta/portfolio software for technical
+  evaluation, with no production, adoption, outcome, notarization, or native
+  Windows claim.
+- Verify focused launcher/documentation behavior, full regression, packaging,
+  compilation, secret/prohibited-artifact gates, a disposable extracted no-key
+  macOS start, and unchanged `data/pmc.db`.
+
+Exit gate: report evidence and remaining limitations without staging,
+committing, pushing, tagging, packaging for publication, publishing, modifying
+v1.0.0, contacting beta participants, or using a live provider.
+
+**Status:** Implemented and locally verified
+
+Verification evidence: 14 focused Checkpoint 15 launcher/UI/documentation tests,
+56 release/checkpoint/package tests, and all 417 regression tests passed with
+temporary databases and no live provider call. Compilation, shell syntax,
+`git diff --check`, secret scanning, prohibited-artifact checks, two
+byte-identical 50-member v1.0.1 archives, checksum validation, fresh pinned
+installation, local health, and a seven-destination extracted no-key AppTest
+session passed. `data/pmc.db` retained its starting hash, size, and modification
+time.
+
+Two pre-existing PMC processes occupied required port 8501, so the exact
+starter correctly stopped with its documented actionable error rather than
+switching ports. The freshly installed extracted candidate was therefore
+started and health-checked on disposable port 8502, then stopped; its complete
+no-key app session was exercised separately. Native observation of the exact
+starter's automatic browser opening remains the honest usability limitation for
+this checkpoint run.

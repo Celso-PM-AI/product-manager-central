@@ -1,39 +1,48 @@
 # Changelog
 
-All notable changes to Product Manager Central will be recorded here. Entries
-follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and release
-versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to Product Manager Central are recorded here. Entries follow
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and releases follow
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Planned v1.0.0 portfolio release
+### Planned v1.0.1 controlled-beta/portfolio release
 
-- Prepare a source-based GitHub Release ZIP for local Mac and Windows use.
-- Add optional fictional sample data, first-run guidance, cross-platform launch
-  helpers, UAT and beta materials, and recruiter-facing portfolio assets.
-- Add a consolidated internal UAT, Product Manager beta, troubleshooting, known
-  limitations, and AI responsible-use guide without claiming an external beta
-  or native Windows validation has occurred.
-- Add a recruiter-facing case study, Mermaid architecture guide, sanitized
-  fictional screenshots, a 2–4 minute demo storyboard, and draft LinkedIn,
-  résumé, interview, and portfolio materials without publishing them.
-- Add local, read-only Word and PDF downloads for saved Draft and Approved BRDs
-  and PRDs, including all structured Checkpoint 11 content, with safe filenames
-  and no database mutation or provider call.
-- Preserve all Phase 9 trusted-source, citation, review, acceptance, and
-  source-separation safeguards.
-- Complete Phase 10 Checkpoint 13 integrated UAT, security review,
-  documentation reconciliation, and full release/package regression across
-  Product, BRD/PRD, governed Agile, fictional onboarding, no-key, launcher, and
-  Word/PDF workflows using temporary databases and no live provider calls.
-- Correct the disposable export-review fixture to use the English-language
-  fictional contributor names Jordan Lee and Taylor Morgan while retaining
-  Unicode export coverage in isolated automated test data.
-- Complete Phase 10 Checkpoint 14 local release-candidate verification with
-  fresh pinned installation, native macOS launcher/no-key startup, integrated
-  fictional-data UAT, dependency/license review, deterministic archive and
-  checksum validation, and draft GitHub Release notes.
+- Add one clearly named macOS starter that creates `.venv`, installs only pinned
+  requirements when needed, checks port 8501, and launches PMC from any current
+  Terminal directory.
+- Remove API-key questions from normal macOS and Windows startup; keep optional
+  AI inactive until a user deliberately sets a session environment variable.
+- Add an **Activate AI Assistant** experience with non-secret Active/Inactive
+  status, unavailable-feature guidance, temporary session setup, enterprise
+  approval guidance, and a clear separation between provider authorization and
+  permission to submit company information. Preserve every no-key Product,
+  BRD/PRD, search, acceptance-history, and export workflow.
+- Clarify that grounded AI assists Product Managers with Agile artifacts from
+  Approved BRDs/PRDs while citations, freshness, claim-support assessment,
+  human review, and explicit acceptance retain human accountability.
+- Add a short macOS Quick Start, approved-asset guidance, Gatekeeper and port
+  troubleshooting, shutdown instructions, and controlled-beta positioning.
+- Preserve the MIT License, local data boundaries, v1.0.0 tag/Release/assets,
+  and evidence-based platform claims.
 
-The verified local v1.0.0 candidate has not been tagged, published, uploaded, or
-made available through a GitHub Release. Its release date will be recorded only
-after separate publication approval.
+v1.0.1 has not been committed, tagged, packaged, uploaded, published, or used
+for an external beta. Those actions require separate approval.
+
+## [1.0.0] - 2026-08-19
+
+### Added
+
+- Source-based GitHub Release ZIP and checksum for local technical evaluation.
+- Optional fictional sample data, first-run guidance, cross-platform launch
+  helpers, UAT/beta planning, and recruiter-facing portfolio materials.
+- Local Word and PDF downloads for saved Draft and Approved BRDs/PRDs.
+- Approved-only retrieval, grounded generation, citations, human review,
+  explicit acceptance, and source-separated accepted artifacts.
+- Typed Epic → Capability → Feature → User Story generation and review with
+  independently owned acceptance criteria and fail-closed acceptance gates.
+- Deterministic release packaging, integrated UAT, security review, dependency
+  review, clean extraction, no-key startup, and complete regression evidence.
+
+v1.0.0 was separately tagged and published after Checkpoint 14 approval. Its
+GitHub Release and uploaded assets remain unchanged.

@@ -839,6 +839,50 @@ def render_ai_assistant() -> None:
     """Render governed Agile and original grounded-draft workflows."""
 
     st.header("AI Assistant")
+    st.write(
+        "PMC uses optional grounded AI to help Product Managers draft and review "
+        "Agile artifacts from intentionally selected Approved BRDs and PRDs. "
+        "AI does not write or approve product decisions independently."
+    )
+    st.caption(
+        "Citations, source-freshness checks, claim-support assessment, human "
+        "review, and explicit acceptance are required responsible-AI controls."
+    )
+    configuration = get_ai_configuration()
+    if configuration.configured:
+        st.success(
+            "AI Assistant status: Active. A session API key is configured for this "
+            "PMC process. The provider validates the key when an AI feature is used."
+        )
+    else:
+        st.info(
+            "AI Assistant status: Inactive. AI-assisted Agile generation and General "
+            "draft generation are unavailable. Manual Product, BRD, PRD, search, "
+            "review-history, and export functions remain available without AI."
+        )
+    with st.expander("Activate AI Assistant", expanded=not configuration.configured):
+        st.markdown(
+            "AI-assisted generation requires a valid API key supplied by you. The "
+            "key authorizes use of the configured AI provider; it does **not** give "
+            "PMC or the provider automatic access to company information. Enterprise "
+            "users should request an organization-approved key and data-use "
+            "authorization from their IT, security, AI-governance, or platform-"
+            "administration team."
+        )
+        st.warning(
+            "Do not send confidential, proprietary, regulated, personal, export-"
+            "controlled, or customer information to an external provider without "
+            "organizational approval. Only deliberately selected Approved BRD/PRD "
+            "content is submitted by PMC when you request generation."
+        )
+        st.markdown(
+            "To activate AI temporarily on macOS, stop PMC and use the same Terminal "
+            "session to run `read -s OPENAI_API_KEY`, `export OPENAI_API_KEY`, and "
+            "`scripts/start_pmc_macos.command`. After pressing Control-C to stop PMC, "
+            "run `unset OPENAI_API_KEY`. Never paste a key into PMC or store or expose "
+            "it in source code, Git, SQLite, logs, documents, exports, screenshots, "
+            "or release packages. Normal startup never asks for a key."
+        )
     agile_tab, general_tab = st.tabs(("Agile generation and review", "General draft"))
     with agile_tab:
         render_agile_assistant()
@@ -2657,7 +2701,15 @@ def render_dashboard() -> None:
     """Render the approved product metrics."""
 
     st.header("Dashboard")
-    st.write("A quick overview of your saved product portfolio.")
+    st.write(
+        "PMC is a local portfolio application showing how grounded AI can help "
+        "Product Managers create and review Agile artifacts from Approved BRDs "
+        "and PRDs without handing product decisions to AI."
+    )
+    st.caption(
+        "Citations, source-freshness checks, claim-support assessment, human "
+        "review, and explicit acceptance keep evidence and accountability visible."
+    )
     render_getting_started()
     st.divider()
 

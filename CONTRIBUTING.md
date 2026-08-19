@@ -35,9 +35,9 @@ with `PMC_DATABASE_FILE`. Never test against `data/pmc.db`.
 ## Version and release conventions
 
 PMC uses Semantic Versioning. Source metadata uses `MAJOR.MINOR.PATCH`; Git tags
-use the corresponding `vMAJOR.MINOR.PATCH` form. The planned first public
-portfolio release is v1.0.0, but it is not released until Phase 10 verification
-passes and publication is explicitly approved.
+use the corresponding `vMAJOR.MINOR.PATCH` form. v1.0.0 is the published
+portfolio baseline. v1.0.1 is a controlled-beta/portfolio candidate and remains
+unpublished until its verification passes and publication is explicitly approved.
 
 - `MAJOR` denotes an incompatible application or stored-data contract change.
 - `MINOR` denotes backward-compatible user-facing capability.

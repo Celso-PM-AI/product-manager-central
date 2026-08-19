@@ -16,22 +16,5 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "PMC dependencies are missing or incomplete. Run scripts\setup_windows.ps1 again."
 }
 
-$SessionKeyAdded = $false
-if (-not $env:OPENAI_API_KEY) {
-    $KeyChoice = Read-Host "Configure the optional OpenAI API key for this PowerShell session? [y/N]"
-    if ($KeyChoice -match "^[Yy]$") {
-        $SecureKey = Read-Host "OpenAI API key (input hidden)" -AsSecureString
-        $Credential = [System.Management.Automation.PSCredential]::new("PMC", $SecureKey)
-        $env:OPENAI_API_KEY = $Credential.GetNetworkCredential().Password
-        $SessionKeyAdded = $true
-    }
-}
-
-try {
-    Write-Host "Starting Product Manager Central. Press Control-C in this window to stop."
-    & $VenvPython -m streamlit run (Join-Path $AppDir "app.py")
-} finally {
-    if ($SessionKeyAdded) {
-        Remove-Item Env:OPENAI_API_KEY -ErrorAction SilentlyContinue
-    }
-}
+Write-Host "Starting Product Manager Central. Press Control-C in this window to stop."
+& $VenvPython -m streamlit run (Join-Path $AppDir "app.py")

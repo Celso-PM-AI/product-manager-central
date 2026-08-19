@@ -15,11 +15,11 @@ def repository_text(relative_path: str) -> str:
 
 
 class ReleaseVersionTests(unittest.TestCase):
-    def test_version_metadata_uses_planned_semantic_v1_release(self):
+    def test_version_metadata_uses_controlled_beta_patch_release(self):
         self.assertRegex(__version__, r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
-        self.assertEqual(__version__, "1.0.0")
-        self.assertEqual(RELEASE_TAG, "v1.0.0")
-        self.assertEqual(RELEASE_STATUS, "planned")
+        self.assertEqual(__version__, "1.0.1")
+        self.assertEqual(RELEASE_TAG, "v1.0.1")
+        self.assertEqual(RELEASE_STATUS, "controlled-beta")
 
     def test_version_is_consistent_across_release_documents(self):
         for filename in (
@@ -33,12 +33,13 @@ class ReleaseVersionTests(unittest.TestCase):
         ):
             with self.subTest(filename=filename):
                 content = repository_text(filename)
-                self.assertIn("v1.0.0", content)
+                self.assertIn("v1.0.1", content)
 
-    def test_changelog_does_not_claim_the_planned_release_is_published(self):
+    def test_changelog_preserves_published_baseline_and_unpublished_candidate(self):
         changelog = repository_text("CHANGELOG.md")
         self.assertIn("## [Unreleased]", changelog)
-        self.assertIn("has not been tagged, published", " ".join(changelog.split()))
+        self.assertIn("## [1.0.0] - 2026-08-19", changelog)
+        self.assertIn("v1.0.1 has not been committed, tagged", " ".join(changelog.split()))
 
 
 class GovernanceFileTests(unittest.TestCase):
@@ -64,7 +65,7 @@ class GovernanceFileTests(unittest.TestCase):
         normalized_security = " ".join(security.split())
         for required in (
             "single-user local application",
-            "No published version is currently supported",
+            "v1.0.0 is the published portfolio baseline",
             "process environment",
             "Approved BRD and PRD content is sent",
             "Never include a real OpenAI API key",
@@ -230,7 +231,7 @@ class Checkpoint5PortfolioTests(unittest.TestCase):
             "never appends to, overwrites, or otherwise modifies a source BRD or PRD",
             "Windows launchers and Python 3.11 through 3.13 have structural automated coverage",
             "does not claim an external beta",
-            "Checkpoint 14 release-candidate verification",
+            "Checkpoint 15 improves controlled-beta onboarding",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, case_study)
@@ -269,8 +270,8 @@ class Checkpoint5PortfolioTests(unittest.TestCase):
             "Résumé bullets",
             "Interview talking points",
             "Concise portfolio summary",
-            "have not been posted, published, sent, or uploaded",
-            "external beta and public release are still future work",
+            "have not been posted, sent, or uploaded",
+            "no external-beta or customer outcome is claimed",
         ):
             with self.subTest(launch=required):
                 self.assertIn(required, launch)

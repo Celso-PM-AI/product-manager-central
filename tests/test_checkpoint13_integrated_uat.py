@@ -65,7 +65,7 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
         self.assertEqual(guide.count("**Status:**"), 29)
         self.assertIn("## Checkpoint 13 completion record", guide)
 
-    def test_checkpoint_status_is_consistent_and_release_is_not_claimed(self):
+    def test_checkpoint_status_preserves_published_baseline_and_unpublished_patch(self):
         for filename in (
             "README.md",
             "PROJECT_SPEC.md",
@@ -77,8 +77,11 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
                 self.assertIn("Checkpoint 13", content)
                 self.assertIn("Checkpoint 14", content)
                 normalized = " ".join(content.split()).lower()
-                self.assertTrue(any(word in normalized for word in ("not tagged", "not been tagged", "no tag")))
-        self.assertEqual(__import__("src.version", fromlist=["RELEASE_STATUS"]).RELEASE_STATUS, "planned")
+                self.assertIn("v1.0.1", normalized)
+        self.assertEqual(
+            __import__("src.version", fromlist=["RELEASE_STATUS"]).RELEASE_STATUS,
+            "controlled-beta",
+        )
 
     def test_security_review_documents_every_checkpoint13_threat_boundary(self):
         security = " ".join(repository_text("SECURITY.md").split()).lower()
@@ -106,13 +109,12 @@ class Checkpoint13DocumentationTests(unittest.TestCase):
             self.assertIn("PDF", content)
             self.assertNotIn("PMC does not export BRDs/PRDs to Word or PDF", content)
         changelog = " ".join(repository_text("CHANGELOG.md").split())
-        self.assertIn("has not been tagged, published", changelog)
+        self.assertIn("v1.0.1 has not been committed, tagged", changelog)
 
     def test_installation_keeps_no_key_export_and_platform_boundaries_explicit(self):
         installation = " ".join(repository_text("docs/INSTALLATION.md").split())
         for phrase in (
-            "does not require Microsoft Word",
-            "does not require an API key",
+            "needs neither Microsoft Word nor an API key",
             "macOS 26.5.2",
             "Python 3.11–3.13 and Windows",
             "not claimed as natively validated",

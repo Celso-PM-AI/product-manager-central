@@ -1,10 +1,10 @@
 # Product Manager Central
 
-Product Manager Central (PMC) is a focused Streamlit workspace for capturing,
-finding, reviewing, editing, and safely deleting structured product information.
-It also provides a template-guided builder for product-associated Business
-Requirements Documents (BRDs) and Product Requirements Documents (PRDs). Data
-is stored locally in SQLite. Phase 9 adds an optional,
+Product Manager Central (PMC) is a local portfolio application demonstrating
+how responsible AI can help Product Managers work more efficiently without
+handing product decisions to AI. It provides structured product information,
+Business Requirements Documents (BRDs), Product Requirements Documents (PRDs),
+search, review, and export in Streamlit with local SQLite storage. Phase 9 adds an optional,
 inactive-by-default OpenAI connection, semantic retrieval from Approved BRDs
 and PRDs, grounded draft generation with citations, and explicit human review
 with separate accepted-artifact persistence. Deterministic offline evaluation
@@ -20,13 +20,14 @@ hierarchy with independently owned acceptance criteria at every level.
 Checkpoint 12 adds local, read-only Word and PDF export for every saved Draft
 or Approved BRD and PRD. Checkpoint 13 completes integrated security review,
 UAT, documentation reconciliation, and release regression. Checkpoint 14
-completes local release-candidate verification and prepares GitHub Release
-materials for separate human approval without tagging or publishing.
+completed v1.0.0 verification and publication. Checkpoint 15 prepares v1.0.1
+as a controlled-beta/portfolio release for technical evaluation with simpler
+macOS onboarding and opt-in AI configuration.
 
-PMC has a verified local source-based v1.0.0 release candidate under the
-[MIT License](LICENSE). v1.0.0 has not been tagged, published, or made
-available through a GitHub Release. See the
-[draft release notes](docs/RELEASE_NOTES_v1.0.0.md).
+PMC v1.0.0 is published under the [MIT License](LICENSE). The current source is
+preparing an untagged, unpublished v1.0.1 controlled-beta candidate. See the
+[v1.0.1 release notes](docs/RELEASE_NOTES_v1.0.1.md). PMC is not a commercial
+production application and makes no claim of customer adoption or outcomes.
 
 ## MVP scope
 
@@ -262,11 +263,11 @@ revision context, dates, product association, and complete source citations. It
 does not provide artifact editing, deletion, regeneration, or any action that
 changes an original BRD or PRD.
 
-For macOS first-time setup and startup from any Terminal directory:
+For macOS first-time setup and every later start, use the single starter from
+Finder or any Terminal directory:
 
 ```bash
-./scripts/setup_macos.command
-./scripts/run_macos.command
+./scripts/start_pmc_macos.command
 ```
 
 For Windows PowerShell:
@@ -276,9 +277,13 @@ For Windows PowerShell:
 & .\scripts\run_windows.ps1
 ```
 
-The helpers resolve the application directory from their own paths, create or
-reuse `.venv`, install only declared dependencies, and stop on prerequisite or
-installation failures. Press Control-C in the launcher's terminal to stop PMC.
+The macOS starter resolves the application directory from its own path, creates
+`.venv` and installs only pinned requirements when needed, opens
+`http://localhost:8501`, and stops on prerequisite, port, or installation
+failures. Keep Terminal open and press Control-C there to stop PMC. See the
+[Quick Start for macOS](docs/INSTALLATION.md#quick-start-for-macos), including
+the one-time Gatekeeper steps and the distinction between approved PMC assets
+and GitHub's automatic source archives.
 
 PMC uses `data/pmc.db` inside the application directory. A source release
 contains no database; first startup creates a clean one. Back up this file while
@@ -297,7 +302,17 @@ AI capability is optional. PMC continues to run without an OpenAI API key.
 Phase 9 provides the secure connection, approved-source
 retrieval, grounded generation, human acceptance, code-controlled prompt
 catalog, and hardened assistant workflow. Generation is available only when the
-optional API configuration is active.
+optional API configuration is active with a valid user-supplied key. The AI
+Assistant page displays **Active** or **Inactive** without revealing the key and
+identifies the unavailable AI generation features when inactive.
+
+An API key authorizes the configured AI provider; it does not automatically
+provide access to company information or permission to send company data.
+Enterprise users should request an organization-approved API key and data-use
+authorization from their IT, security, AI-governance, or
+platform-administration team. Do not send confidential, proprietary, regulated,
+personal, export-controlled, or customer information to an external provider
+without organizational approval.
 
 ChatGPT Plus and OpenAI API billing are separate. A ChatGPT Plus subscription
 does not include API usage, and OpenAI API usage can incur charges. Review the
@@ -315,11 +330,13 @@ and set an appropriate budget before activation.
 4. Approve at least one complete BRD or PRD in PMC. Semantic retrieval uses
    only Approved BRDs and PRDs; Draft documents are excluded.
 
-The Mac and Windows run helpers offer masked, optional API-key entry when no key
-is already configured. The key is not echoed, written to a file, or added to a
-command argument. It exists only for the launcher and PMC process and is removed
-when that session ends. Declining the prompt preserves PMC's existing no-key
-behavior.
+Normal launchers never ask for an API key. To opt in, stop PMC and set
+`OPENAI_API_KEY` only in the Terminal or PowerShell session that will start PMC;
+the AI Assistant and [installation guide](docs/INSTALLATION.md#optional-ai-setup)
+provide concise safe steps. Unset the variable when finished. PMC never writes
+or exposes the key in source code, Git, SQLite, logs, documents, exports,
+screenshots, or release packages. No-key startup keeps AI inactive while manual
+Product, BRD, PRD, search, review-history, and export workflows remain available.
 
 PMC uses the balanced `gpt-5.6-terra` model by default. Product Managers do not
 need to change it. Developers evaluating another supported model can set the
@@ -573,7 +590,7 @@ directory:
 python scripts/build_release.py --output-dir /path/to/empty/output
 ```
 
-The builder creates `product-manager-central-v1.0.0.zip` and its `.sha256`
+The builder creates `product-manager-central-v1.0.1.zip` and its `.sha256`
 file, validates every ZIP member against the manifest, normalizes member order,
 timestamps, permissions, and compression for reproducibility, and refuses to
 replace an existing named output unless `--force` is explicitly supplied. This
@@ -636,10 +653,11 @@ fictional onboarding, launchers, no-key behavior, user-safe failures, security
 gates, documentation, and release/package regression. Verification used only
 fictional data, temporary databases, and deterministic or mocked providers; no
 live provider call, release package, tag, publication, or external beta was
-created. Checkpoint 14 is complete with a reproducible local v1.0.0 candidate,
-fresh extracted installation and no-key startup, dependency/license and package
-audits, and draft GitHub Release materials. No tag, GitHub Release, publication,
-external beta, or public distribution has been created.
+created. Checkpoint 14 produced the verified v1.0.0 candidate that was
+separately tagged and published on August 19, 2026. Checkpoint 15 prepares
+v1.0.1 controlled-beta onboarding and launcher improvements without changing
+the v1.0.0 tag, Release, or assets. No external beta, commercial adoption,
+production deployment, or customer outcome is claimed.
 
 ## Governance and release policy
 
@@ -651,5 +669,5 @@ external beta, or public distribution has been created.
 PMC uses Semantic Versioning. Source versions use `MAJOR.MINOR.PATCH`; release
 tags use `vMAJOR.MINOR.PATCH`. Release publication requires explicit approval
 after the applicable tests, UAT, archive audit, secret scan, and checksum
-verification pass. The planned first public tag is `v1.0.0`, but it does not yet
-exist.
+verification pass. v1.0.0 is the immutable published portfolio baseline;
+v1.0.1 remains untagged and unpublished until separately approved.

@@ -611,9 +611,15 @@ That is the correct clean-start state. Create a product, or deliberately choose
 
 ### AI is inactive
 
-Non-AI workflows require no key. For later authorized AI use, provide your own
-key only through the documented process environment or masked session launcher
-prompt. Never save it in `.env`, source, a screenshot, a database, or feedback.
+Non-AI workflows require no key. The AI Assistant must show **Inactive**, name
+the unavailable AI generation features, and retain manual Product, BRD, PRD,
+search, review-history, and export access. For later authorized AI use, provide
+a valid organization-approved key only through the documented temporary process
+environment. A key authorizes the provider; it does not authorize company-data
+use. Never store or expose it in `.env`, source, Git, SQLite, logs, documents,
+exports, screenshots, release packages, or feedback. Do not send confidential,
+proprietary, regulated, personal, export-controlled, or customer information
+without organizational approval.
 
 ### No Approved sources or no relevant evidence
 
@@ -772,3 +778,33 @@ artifact, and protected-file gates passed. Windows and Python 3.11–3.13 remain
 structural-only evidence. The draft release notes and proposed tag, title,
 description, archive, and checksum names are ready for human review, but no tag,
 GitHub Release, upload, publication, external post, or beta contact occurred.
+
+## Checkpoint 15 controlled-beta onboarding verification
+
+Checkpoint 15 prepares an untagged v1.0.1 controlled-beta/portfolio candidate
+for technical evaluation. Verification must cover a clean extracted macOS start
+through `scripts/start_pmc_macos.command`, creation and reuse of `.venv`, pinned
+dependency installation, browser startup on port 8501, no API-key prompt, and
+actionable failures for Gatekeeper guidance, Python, port, and virtual-
+environment problems.
+
+No-key verification must retain Product, BRD/PRD, search, accepted-history, and
+export access. AI evaluation uses only deterministic fake or mocked providers;
+no real API key or live call is permitted. The controlled-beta label does not
+mean an external beta occurred and does not support production, adoption,
+customer-outcome, notarization, or native Windows claims.
+
+Checkpoint 15 local verification passed the focused launcher/UI/documentation,
+complete regression, release/package, compilation, formatting, secret, and
+prohibited-artifact gates. Two candidate archives were byte-identical with 50
+exact allowlisted members. A fresh extracted `.venv` installed the pinned
+requirements without an API key; the candidate returned a healthy local page
+and all seven destinations passed an extracted AppTest session with zero
+provider calls and a disposable database.
+
+Port 8501 was occupied by two pre-existing PMC processes during the native
+check. The new starter stopped with the documented error, as designed, and no
+unrelated process was terminated. The extracted runtime was health-checked on
+disposable port 8502. Automatic browser opening through the exact starter was
+therefore not directly observed in this run and remains a documented usability
+limitation rather than an inferred success.

@@ -1,9 +1,10 @@
 # Product Manager Central v1.0.0 Release Notes
 
-**Release-candidate draft:** Prepared for final human approval. PMC v1.0.0 has
-not been tagged, published, or made available through a GitHub Release.
+**Published portfolio release:** v1.0.0 was published on August 19, 2026. These
+notes remain the historical record for that release; v1.0.1 changes are
+documented separately.
 
-## Proposed GitHub Release metadata
+## GitHub Release metadata
 
 - **Tag:** `v1.0.0`
 - **Title:** `Product Manager Central v1.0.0`
@@ -90,6 +91,6 @@ ReportLab 5.0.0 (BSD). PMC itself is licensed under the MIT License.
 
 ## Publication boundary
 
-Checkpoint 14 prepares and verifies a local candidate plus these proposed
-GitHub Release materials. A tag, GitHub Release, upload, announcement, package
-publication, or other distribution requires a separate explicit approval.
+Checkpoint 14 prepared and verified the candidate that was later published
+after separate approval. This historical file does not authorize modifying the
+v1.0.0 tag, GitHub Release, or uploaded assets.

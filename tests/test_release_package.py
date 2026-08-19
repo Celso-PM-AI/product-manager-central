@@ -61,6 +61,7 @@ class ManifestValidationTests(ReleasePackageTestCase):
         self.assertIn("app.py", entries)
         self.assertIn("requirements.txt", entries)
         self.assertIn("scripts/setup_macos.command", entries)
+        self.assertIn("scripts/start_pmc_macos.command", entries)
         self.assertIn("scripts/setup_windows.ps1", entries)
         self.assertIn("src/sample_data.py", entries)
         self.assertIn("src/document_export.py", entries)
