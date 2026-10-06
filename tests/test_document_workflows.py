@@ -216,6 +216,54 @@ class DocumentWorkflowTests(unittest.TestCase):
         self.assertIs(documents[0].document_status, DocumentStatus.APPROVED)
         self.assertIs(documents[0].document_type, DocumentType.PRD)
 
+    def test_parent_centered_quick_add_builds_the_agile_hierarchy(self):
+        prefix = self.open_new_document_form(DocumentType.PRD)
+
+        self.app.button(key=f"{prefix}_agile_epic_count_add").click().run()
+        epic_id = self.app.session_state[f"{prefix}_agile_epic_0_id"]
+        self.app.button(
+            key=f"{prefix}_quick_add_capability_{epic_id}"
+        ).click().run()
+
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_capability_count"], 1
+        )
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_capability_0_parent"],
+            epic_id,
+        )
+        capability_id = self.app.session_state[
+            f"{prefix}_agile_capability_0_id"
+        ]
+
+        self.app.button(
+            key=f"{prefix}_quick_add_feature_{capability_id}"
+        ).click().run()
+
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_feature_count"], 1
+        )
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_feature_0_parent"],
+            capability_id,
+        )
+        feature_id = self.app.session_state[f"{prefix}_agile_feature_0_id"]
+
+        self.app.button(
+            key=f"{prefix}_quick_add_story_{feature_id}"
+        ).click().run()
+
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_user_story_count"], 1
+        )
+        self.assertEqual(
+            self.app.session_state[f"{prefix}_agile_user_story_0_parent"],
+            feature_id,
+        )
+        rendered = "\n".join(element.value for element in self.app.markdown)
+        self.assertIn("Step 1 — Build the Agile hierarchy", rendered)
+        self.assertIn("Step 2 — Enter Agile item details", rendered)
+
     def test_edit_updates_by_stable_document_id(self):
         saved = create_document(
             document_data(self.product.id, DocumentType.PRD),

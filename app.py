@@ -1251,11 +1251,13 @@ def prepare_prd_hierarchy_controls(
     """Render repeatable hierarchy counts outside the document save form."""
 
     existing = tuple(document.agile_hierarchy) if document is not None else ()
-    st.markdown("##### Structured Agile hierarchy")
+    st.markdown("##### Step 1 — Build the Agile hierarchy")
     st.caption(
-        "Epic → Capability → Feature → User Story. Functional requirements remain "
-        "a separate PRD section and are not a hierarchy level."
+        "Start with an Epic, then add each child from its parent: Epic → Capability "
+        "→ Feature → User Story. Functional requirements remain a separate PRD "
+        "section and are not a hierarchy level."
     )
+    counts: dict[AgileArtifactType, int] = {}
     for artifact_type in AgileArtifactType:
         entries = tuple(
             item for item in existing if item.artifact_type is artifact_type
@@ -1264,6 +1266,7 @@ def prepare_prd_hierarchy_controls(
         count = repeatable_count_controls(
             key_prefix, f"agile_{artifact_type.value}", label, len(entries)
         )
+        counts[artifact_type] = count
         for index in range(count):
             artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
             artifact_id_key = f"{artifact_key}_id"
@@ -1282,6 +1285,135 @@ def prepare_prd_hierarchy_controls(
                 artifact_key, "criterion",
                 f"criterion for {label} {index + 1}", criterion_count,
             )
+
+    # Offer parent-centered shortcuts without changing the persisted flat artifact
+    # contract. The detailed editor below still owns validation and final parent
+    # selection, while these actions make the intended hierarchy discoverable.
+    artifact_ids: dict[AgileArtifactType, list[str]] = {
+        artifact_type: [
+            str(st.session_state[
+                f"{key_prefix}_agile_{artifact_type.value}_{index}_id"
+            ])
+            for index in range(counts[artifact_type])
+        ]
+        for artifact_type in AgileArtifactType
+    }
+    existing_parent_by_id = {
+        item.artifact_id: item.parent_artifact_id for item in existing
+    }
+    existing_title_by_id = {item.artifact_id: item.title for item in existing}
+
+    def display_name(artifact_type: AgileArtifactType, index: int) -> str:
+        artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+        artifact_id = artifact_ids[artifact_type][index]
+        title = str(
+            st.session_state.get(
+                f"{artifact_key}_title",
+                existing_title_by_id.get(artifact_id, ""),
+            )
+        ).strip()
+        label = artifact_type.value.replace("_", " ").title()
+        return title or f"{label} {index + 1}"
+
+    def effective_parent(artifact_type: AgileArtifactType, index: int) -> str | None:
+        artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+        artifact_id = artifact_ids[artifact_type][index]
+        return st.session_state.get(
+            f"{artifact_key}_parent",
+            existing_parent_by_id.get(artifact_id),
+        )
+
+    def add_child(
+        parent_type: AgileArtifactType,
+        parent_index: int,
+        child_type: AgileArtifactType,
+    ) -> None:
+        child_count_key = f"{key_prefix}_agile_{child_type.value}_count"
+        child_index = int(st.session_state.get(child_count_key, 0))
+        parent_id = artifact_ids[parent_type][parent_index]
+        child_key = f"{key_prefix}_agile_{child_type.value}_{child_index}"
+        st.session_state[child_count_key] = child_index + 1
+        st.session_state[f"{child_key}_id"] = f"prd-agile-{uuid4().hex}"
+        st.session_state[f"{child_key}_parent"] = parent_id
+
+    st.markdown("**Parent-centered quick add**")
+    st.caption(
+        "Use these buttons to create a child under the correct parent. You can "
+        "complete or move the item in Step 2."
+    )
+    for epic_index, epic_id in enumerate(artifact_ids[AgileArtifactType.EPIC]):
+        with st.container(border=True):
+            st.markdown(
+                f"**Epic: {display_name(AgileArtifactType.EPIC, epic_index)}**"
+            )
+            st.button(
+                "Add Capability to this Epic",
+                key=f"{key_prefix}_quick_add_capability_{epic_id}",
+                on_click=add_child,
+                args=(
+                    AgileArtifactType.EPIC,
+                    epic_index,
+                    AgileArtifactType.CAPABILITY,
+                ),
+            )
+            for capability_index, capability_id in enumerate(
+                artifact_ids[AgileArtifactType.CAPABILITY]
+            ):
+                if effective_parent(
+                    AgileArtifactType.CAPABILITY, capability_index
+                ) != epic_id:
+                    continue
+                st.markdown(
+                    "↳ **Capability: "
+                    f"{display_name(AgileArtifactType.CAPABILITY, capability_index)}**"
+                )
+                st.button(
+                    "Add Feature to this Capability",
+                    key=f"{key_prefix}_quick_add_feature_{capability_id}",
+                    on_click=add_child,
+                    args=(
+                        AgileArtifactType.CAPABILITY,
+                        capability_index,
+                        AgileArtifactType.FEATURE,
+                    ),
+                )
+                for feature_index, feature_id in enumerate(
+                    artifact_ids[AgileArtifactType.FEATURE]
+                ):
+                    if effective_parent(
+                        AgileArtifactType.FEATURE, feature_index
+                    ) != capability_id:
+                        continue
+                    st.markdown(
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;↳ **Feature: "
+                        f"{display_name(AgileArtifactType.FEATURE, feature_index)}**"
+                    )
+                    st.button(
+                        "Add User Story to this Feature",
+                        key=f"{key_prefix}_quick_add_story_{feature_id}",
+                        on_click=add_child,
+                        args=(
+                            AgileArtifactType.FEATURE,
+                            feature_index,
+                            AgileArtifactType.USER_STORY,
+                        ),
+                    )
+                    for story_index, _story_id in enumerate(
+                        artifact_ids[AgileArtifactType.USER_STORY]
+                    ):
+                        if effective_parent(
+                            AgileArtifactType.USER_STORY, story_index
+                        ) != feature_id:
+                            continue
+                        st.markdown(
+                            f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ "
+                            "**User Story: "
+                            f"{display_name(AgileArtifactType.USER_STORY, story_index)}**"
+                        )
+    st.info(
+        "After adding the hierarchy, continue to Step 2 below to enter titles, "
+        "descriptions, parent assignments, and acceptance criteria."
+    )
 
 
 def render_document_fields(
@@ -1408,10 +1540,10 @@ def render_document_fields(
                                                key=f"{key_prefix}_milestone_{index}_milestone"),
                 })
 
-        st.markdown("##### Structured Agile hierarchy")
+        st.markdown("##### Step 2 — Enter Agile item details")
         st.write(
-            "Author repeatable items using the explicit Epic → Capability → Feature "
-            "→ User Story hierarchy. Each item owns its acceptance criteria; criteria "
+            "Complete each item created in Step 1. Child items display and save their "
+            "parent relationship. Each item owns its acceptance criteria; criteria "
             "are never copied to or used as proof for another level."
         )
         existing_by_type = {
@@ -1448,6 +1580,16 @@ def render_document_fields(
                 artifact_specs[artifact_type].append((artifact_id, existing))
 
         agile_hierarchy: list[dict[str, object]] = []
+        artifact_title_by_id = {
+            artifact_id: str(
+                st.session_state.get(
+                    f"{key_prefix}_agile_{artifact_type.value}_{index}_title",
+                    existing.get("title", ""),
+                )
+            ).strip()
+            for artifact_type, specifications in artifact_specs.items()
+            for index, (artifact_id, existing) in enumerate(specifications)
+        }
         for artifact_type in AgileArtifactType:
             parent_type = PARENT_TYPE[artifact_type]
             parent_options = (
@@ -1459,8 +1601,11 @@ def render_document_fields(
                 artifact_specs[artifact_type]
             ):
                 artifact_key = f"{key_prefix}_agile_{artifact_type.value}_{index}"
+                item_label = artifact_type.value.replace("_", " ").title()
+                current_title = artifact_title_by_id.get(artifact_id, "")
                 with st.expander(
-                    f"{artifact_type.value.replace('_', ' ').title()} {index + 1}",
+                    f"{item_label} {index + 1}"
+                    + (f": {current_title}" if current_title else ""),
                     expanded=True,
                 ):
                     parent_id = None
@@ -1476,7 +1621,9 @@ def render_document_fields(
                                 else 0
                             ),
                             format_func=lambda value: (
-                                "Select parent" if value is None else value
+                                "Select parent"
+                                if value is None
+                                else artifact_title_by_id.get(value) or value
                             ),
                             key=f"{artifact_key}_parent",
                         )
